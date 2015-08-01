@@ -1,13 +1,40 @@
 dev.new()
 library(jsonlite)
-library(iNZightMaps)
 library(ggmap)
+library(lubridate)
 
-call <- "http://api.at.govt.nz/v1/gtfs/shapes/shapeId/6735?api_key=b15e1f5d-19d5-4795-8550-07c9022985f7"
-result <- fromJSON(call)
+routes <- read.csv("docs/routes.txt", header = TRUE)
+shapes <- read.csv("docs/shapes.txt", header = TRUE)
+trips <- read.csv("docs/trips.txt", header = TRUE)
+stops <- read.csv("docs/stops.txt", header = TRUE)
 
-lon <- result$response$shape_pt_lon
-lat <- result$response$shape_pt_lat
+api <- "?api_key=b15e1f5d-19d5-4795-8550-07c9022985f7"
+westgate.search <- fromJSON(paste0("http://api.at.govt.nz/v1/gtfs/routes/search/Westgate", api))
+westgate.search
+route.id <- "0901RT6710"
+route.trips <- fromJSON(paste0("http://api.at.govt.nz/v1/gtfs/trips/routeId/", route.id, api))
+
+for (i in 1:nrow(route.trips$response)) {
+    o <- fromJSON(paste0("http://api.at.govt.nz/v1/gtfs/stopTimes/tripId/", route.trips$response$trip_id[i], api))
+    arrive <- hms(o$response$arrival_time)
+    if (arrive[1] > hms("12:00:00")) {
+        trip.id <- route.trips$response$trip_id[i]
+        break
+    }
+}
+trip.id
+
+trip.stops <- fromJSON(paste0("http://api.at.govt.nz/v1/gtfs/stops/tripId/", trip.id, api))
+trip.shape <- fromJSON(paste0("http://api.at.govt.nz/v1/gtfs/shapes/tripId/", trip.id, api))
+
+bus.loc <- fromJSON(paste0("http://api.at.govt.nz/v1/public/realtime/vehiclelocations/", api, "&tripid=", trip.id))
+
+
+shape <- trip.shape$response
+stops <- trip.stops$response
+
+lon <- shape$shape_pt_lon
+lat <- shape$shape_pt_lat
 wst <- min(lon)
 est <- max(lon)
 nth <- max(lat)
@@ -19,16 +46,15 @@ latDiff = abs(wst - est)
 zoomLon = ceiling(log2(360*2 / lonDiff))
 zoomLat = ceiling(log2(180*2 / latDiff))
 zoom = min(zoomLon, zoomLat)
-location = c(nth, est, sth, wst)
 
+shape$lon <- shape$shape_pt_lon
+shape$lat <- shape$shape_pt_lat
 
-data <- result$response
-data$lon <- data$shape_pt_lon
-data$lat <- data$shape_pt_lat
+stops$lon <- stops$stop_lon
+stops$lat <- stops$stop_lat
 
-p <- drawMap(data.frame(north = location[1], east = location[2],
-                        south = location[3], west = location[4]), zoom = 12)
-p <- p + geom_path(aes(x = lon, y = lat), data = data)
-p
+map <- get_map(c(wst, sth, est, nth), zoom = zoom)
+ggmap(map) +
+    geom_path(aes(x = lon, y = lat), data = shape) +
+    geom_point(aes(x = lon, y = lat), data = stops)
 
-#draw(result$response, lon = shape_pt_lon, lat = shape_pt_lat, location = location, zoom = zoom, type = "point")
