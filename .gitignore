@@ -91,5 +91,5 @@ Thumbs.db
 
 *.dat
 
+**/gtfs/*
 
-current-model.jags
