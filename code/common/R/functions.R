@@ -94,7 +94,7 @@ trackVehicle <- function(vehicle_id) {
 
   while (length(trip.id) == 1) {
     trip <- getTrip(trip.id)
-    ggmap(plot(trip, feed = feed))
+    print(plot(trip, feed = feed))
 
 
     Sys.sleep(30)

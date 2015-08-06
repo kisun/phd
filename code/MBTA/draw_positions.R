@@ -12,3 +12,11 @@ feed <- read.csv('latest_feed.csv', header = TRUE)
 
 
 trackVehicle("1455")
+
+
+
+
+tt <- read.csv("gtfs/stop_times.txt", header = TRUE)
+
+
+summary(as.factor(tt$trip_id))
