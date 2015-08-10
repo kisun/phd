@@ -1,0 +1,57 @@
+---
+title: "Literature Review"
+output:
+  pdf_document:
+    toc: true
+    highlight: zenburn
+---
+
+# Literature Review
+
+## Modeling Techniques
+
+### Kalman Filtering
+
+Used by:
+- Dailey et al. (2001);
+
+Data requirements:
+- Realtime AVL data (e.g., GTFS-Realtime)
+- Historical statistics
+
+
+### ANN: Artificial Neural Network
+
+Used by:
+- X
+
+
+
+### SVN:
+
+Used by:
+- Y
+
+
+### Papers
+
+#### Dailey et al. (2004): "Transit Vehicle Arrival Prediction"
+
+Use of the Kalman Filter to predict the arrival of buses, based off of AVL data, at but stops (up to 1 hour in advance).
+
+- Time to arrival function:
+$$\bar T_a\left(x\right) = \frac{x}{\bar s\left(x\right)}$$
+- $\bar s\left(x\right)$ is the speed _assuming constant speed_ from location $x$ to the destination
+- estimate $\bar s\left(x\right)$ by a piecewise constant model using observed distance/time until arrival data
+- Points over the $k$th interval of size $\delta x_k$ (about $x_k$) assumed uniformally distribution over the region, $\bar T_a\left(x_k\right)$ computed using mean temporal (time until arrival) values
+$$\bar s_k = \frac{x_k}{\bar T_a\left(x_k\right)}$$
+- $\bar s_k$ is essentially the slope of the line from the centroid to the observed distance/time data pairs
+- $\bar s\left(x\right) = \bar s_k$
+- deviation from presumed linear behavior is assumed normal; tested using Kolmogorov-Smirnov test (see paper for details, pp. 47)
+
+Once assumptions are verified, Algorithm is outlined
+
+- state variables at the $k$th step:
+$$X_k = \begin{bmatrix}x_k\\t_k\\b_k\end{bmatrix} = \left\{\begin{array}{l}
+\text{vehicle location}\\\text{the time}\\\text{time until arrival}
+\end{array}\right.$$
