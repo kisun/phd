@@ -6,36 +6,40 @@ output:
     highlight: zenburn
 ---
 
-# Literature Review
+# Modeling Techniques
 
-## Modeling Techniques
-
-### Kalman Filtering
+## Kalman Filtering
 
 Used by:
+
 - Dailey et al. (2001);
+- Cathey \& Dailey (2003)
 
 Data requirements:
+
 - Realtime AVL data (e.g., GTFS-Realtime)
+- Schedule information (e.g., GTFS)
 - Historical statistics
 
 
-### ANN: Artificial Neural Network
+## ANN: Artificial Neural Network
 
 Used by:
+
 - X
 
 
 
-### SVN:
+## SVN: Support Vector Machines
 
 Used by:
+
 - Y
 
 
-### Papers
+# Papers
 
-#### Dailey et al. (2004): "Transit Vehicle Arrival Prediction"
+## Dailey et al. (2001): "Transit Vehicle Arrival Prediction"
 
 Use of the Kalman Filter to predict the arrival of buses, based off of AVL data, at but stops (up to 1 hour in advance).
 
@@ -55,3 +59,49 @@ Once assumptions are verified, Algorithm is outlined
 $$X_k = \begin{bmatrix}x_k\\t_k\\b_k\end{bmatrix} = \left\{\begin{array}{l}
 \text{vehicle location}\\\text{the time}\\\text{time until arrival}
 \end{array}\right.$$
+- observables:
+$$Z_k = \begin{bmatrix}\tau_k\\z_k\end{bmatrix} = \left\{\begin{array}{l}
+\text{reported position}\\\text{reported time of measurement}
+\end{array}\right.$$
+- time update equations:
+$$\begin{aligned}
+\bar x_{k+1} &= \bar x_k + \bar s_k\Delta t_k + w_k^x \\
+\hat t_{k+1} &= \hat t_k + \Delta t_k + w_k^t \\
+\bar b_{k+1} &= \bar b_k - \Delta t_k + w_k^b
+\end{aligned}$$
+- the rest is more about the Kalman Filter implementation ...
+- actual arrival time of buses at bus stops computed by interpolation of before/after location data
+
+
+## Cathey \& Dailey (2003): "A prescription for transit arrival/departure prediction using automatic vehicle location data"
+
+A detailed review of methods for tracking and predicting arrival times of buses using AVL. They detail both the "tracker" (i.e., determining position of bus on the route), "filter" (i.e., optimal estimates of vehicle location and speed) and "predictor" (i.e., making predictions of the buses' arrival/departure from stops ["time points"]).
+
+### Tracker
+
+The data:
+
+- _time-point_ ("bus stop"): coordinates vehicles are schedules to arrive/depart
+- _time-point-interval_: path between two TPs
+- _pattern_ ("route"): a sequence of TPIs (connected)
+- _trip_ ("schedule"): assignment of schedule times to TPs on a pattern
+- _block_: a series of trips assigned to a bus for the day
+
+__AVL Report:__
+This is the data returned by the transit vehicle (GTFS Realtime), and includes vehicle identifier, $N$, block- (or trip-) identifier, $B$, the time of the report, $t$, and the position, $\vec r$ (lat, lon).
+
+
+__Tracking and trip assignment:__
+Use of the AVL report to identify the position of a vehicle on a pattern.
+
+- vehicle-identified, $N$
+- last associated AVL report, $[t,\vec r,N,B]$
+- trip, $T$
+- distance-into-trip, $z$
+- TPI
+- distance-into-TPI, $d$
+- deviation, $\delta t$
+- validity (`true` or `false`)
+- number of rejected updates
+
+Detailed algorithms are outlined for producing/updating a _track_.
