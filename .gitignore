@@ -93,4 +93,5 @@ Thumbs.db
 
 **/gtfs/*
 **/gtfs-rt/*
-
+*.proto
+*.pb
