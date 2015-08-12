@@ -74,40 +74,49 @@ followVehicle <- function(id) {
 }
 
 ## First things first - find out what vehicles are currently in service:
+i = 0
+while (i < 100) {
 latest <- getVehicles()
+dput(latest, paste0("latest-", date(), ".dat"))
+cat("Wrote latest to disk ... (", i, ")\n")
+i <- i + 1
+Sys.sleep(30)
+}
+	
+
 
 ## Have a look at a single vehicle
-trackVehicle("v2196", proto = latest)
+#trackVehicle("v2196", proto = latest)
 
 ## All vehicles sequentially
-for (ID in activeIDs) {
-  trackVehicle(ID)
-  Sys.sleep(2)
-}
+#for (ID in activeIDs) {
+#  trackVehicle(ID)
+#  Sys.sleep(2)
+#}
 
 
 ## Follow a vehicle
-getVehicles()$activeIDs
-res <- followVehicle("v2196")
+#getVehicles()$activeIDs
+#res <- followVehicle("v2196")
 
 
 
 
 
 
-AVL <- trackVehicle("v2196", proto = latest)
-printGTFS(AVL)
+#AVL <- trackVehicle("v2196", proto = latest)
+#printGTFS(AVL)
 
-tripID <- AVL$trip$trip_id
-routeID <- trips$route_id[trips$trip_id == AVL$trip$trip_id]
-route.stops <- stop.times[stop.times$trip_id == AVL$trip$trip_id, ]
-k <- AVL$current_stop_sequence
+#tripID <- AVL$trip$trip_id
+#routeID <- trips$route_id[trips$trip_id == AVL$trip$trip_id]
+#route.stops <- stop.times[stop.times$trip_id == AVL$trip$trip_id, ]
+#k <- AVL$current_stop_sequence
 
-route.between <- route.stops[route.stops$stop_sequence %in% c(k-1, k), ]
-route.between.pos <- stops[stops$stop_id %in% route.between$stop_id, ]
+#route.between <- route.stops[route.stops$stop_sequence %in% c(k-1, k), ]
+#route.between.pos <- stops[stops$stop_id %in% route.between$stop_id, ]
 
-shapeID <- trips$shape_id[trips$trip_id == tripID]
-shape <- shapes[shapes$shape_id == shapeID, ]
+#shapeID <- trips$shape_id[trips$trip_id == tripID]
+#shape <- shapes[shapes$shape_id == shapeID, ]
 
 
 ## 42.35393, -71.13636
