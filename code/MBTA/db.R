@@ -28,3 +28,14 @@ DRAW <- function(db = dbConnect(SQLite(), "gtfs.db")) {
     
 DRAW()
 
+latest.positions[1, c("position_longitude", "position_latitude")]
+
+cc <- convertGPS(lat = latest.positions$position_latitude, lon = latest.positions$position_longitude)
+
+par(mfrow = c(2, 1))
+plot(latest.positions$position_latitude, latest.positions$position_longitude, asp = 1)
+plot(cc, asp = 1)
+par(mfrow = c(1, 1))
+
+
+plot(t(apply(latest.positions, 1, function(r) convertGPS(lat = r["position_latitude"], lon = r["position_longitude"]))))
