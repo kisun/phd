@@ -76,6 +76,7 @@ _*
 *.log
 *.sql
 *.sqlite
+*.db
 
 # OS generated files #
 ######################
