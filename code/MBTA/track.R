@@ -160,7 +160,7 @@ whereIsTheBus <- function(x, bus = TRUE) {
 
 
 list.vehicles()
-cur <- track("v1450")
+cur <- track("v2194")
 plot(cur)
 
 schedule(cur)
