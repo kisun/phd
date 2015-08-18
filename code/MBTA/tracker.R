@@ -120,10 +120,11 @@ propose <- function(track, AVL) {
     } else {
         k0 <- track$TPI - (track$distance.into.TPI < sigma)
     }
+
     
 }
 
-track <- function(vehicle.id, timestamp = NULL, ) {
+track <- function(vehicle.id, timestamp = NULL) {
     ## vehicle.id: unique vehicle identifier
     ## timestamp: if not NULL, will be used to obtain historical data; otherwise, will use the latest GTFS report
 
