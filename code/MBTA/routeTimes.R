@@ -1,19 +1,6 @@
 ## setup -
 library(RSQLite)
 con <- dbConnect(SQLite(), "gtfs-historical.db")
-
-query <- function(sql, ...) {
-    dots <- list(...)
-    dots <- lapply(dots, function(x) {
-        if (length(x) > 1)
-            paste0("('", paste(x, collapse = "', '"), "')")
-        else
-            x
-    })
-    dbGetQuery(con, XX <- do.call(sprintf, c(sql, dots)))
-    print(XX)
-}
-
 polylines <- function(x, y, id, ...) 
     invisible(tapply(1:length(x), id, function(i) lines(x[i], y[i], ...)))
 
@@ -22,8 +9,12 @@ polylines <- function(x, y, id, ...)
 
 ### 1. find all trips that go from STOP A -> STOP B
 
+## first, get a list of potential STOP A's
+pot <- query("SELECT stop_id, COUNT(stop_id) AS n FROM stop_times WHERE trip_id IN (SELECT DISTINCT trip_id FROM vehicle_positions) GROUP BY stop_id ORDER BY n DESC")
+
+
 ## pick a stop to use:
-STOP.A <- "5606"
+STOP.A <- "64"
 
 ## Look at it ...
 all.stops <- query("SELECT stop_id, stop_lat, stop_lon FROM stops")
@@ -31,7 +22,7 @@ with(all.stops, plot(stop_lon, stop_lat, pch = 19, cex = 0.3))
 with(all.stops[all.stops$stop_id == STOP.A, ], points(stop_lon, stop_lat, pch = 19, col = "red"))
 
 ## all trips that use this stop:
-all.trips.A <- query("SELECT trip_id, stop_id, stop_sequence FROM stop_times WHERE trip_id IN (SELECT trip_id FROM stop_times WHERE stop_id='%s') ORDER BY trip_id, stop_sequence", STOP.A)
+all.trips.A <- query("SELECT trip_id, stop_id, stop_sequence FROM stop_times WHERE trip_id IN (SELECT trip_id FROM stop_times WHERE stop_id='%s' AND trip_id IN (SELECT DISTINCT trip_id FROM vehicle_positions)) ORDER BY trip_id, stop_sequence", STOP.A)
 stop.A.rows <- which(all.trips.A$stop_id == STOP.A)
 next.stop <- all.trips.A$stop_id[stop.A.rows + 1]
 next.stop.tab <- table(next.stop)
@@ -54,7 +45,6 @@ with(all.stops[all.stops$stop_id %in% c(STOP.A, STOP.B), ], points(stop_lon, sto
 ### 2. for these trips, estimate (interpolate) the departure time from STOP A and arrival time at STOP B
 
 trips.history <- query("SELECT trip_id, route_id, vehicle_id, position_latitude AS lat, position_longitude AS lon, timestamp FROM vehicle_positions WHERE trip_id IN %s", trips.to.B)
-nrow(trips.history)
 
 ### 3. compute duration of trip STOP A -> STOP B as a function of TIME and DAY
 

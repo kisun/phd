@@ -12,21 +12,6 @@ convertGPS <- function(lat, lon) {
     data.frame(lon = Utm$X, lat = Utm$Y)
 }
 
-
-
-pathDistance <- function(lat, lon) {
-    ## Return the distance of a path defined by lat and lon.
-    
-    require(geosphere)
-
-    coords <- cbind(lon, lat)
-    from <- coords[-nrow(coords), ]
-    to <- coords[-1, ]
-    
-    sum(distGeo(from, to))
-}
-
-
 distanceIntoTPI <- function(x, shape) {
     if (is.data.frame(x))
         rll <- x[, c("lat", "lon")]
