@@ -15,11 +15,4 @@ CREATE TABLE tracks(
        CHECK (validity IN (0, 1))
 );
 
-CREATE TABLE shapes(
-       shape_id VARCHAR(255) NOT NULL, 
-       lat NUMERIC(12, 9), 
-       lon NUMERIC(12, 9), 
-       seq INTEGER NOT NULL, 
-       dist FLOAT, 
-       PRIMARY KEY (shape_id, seq)
-);
+
