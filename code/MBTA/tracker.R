@@ -12,7 +12,18 @@ query <- function(sql, ..., alt.con = NULL) {
         else
             x
     })
-    dbGetQuery(if (is.null(alt.con)) con else alt.con, XX <- do.call(sprintf, c(sql, dots)))
+
+    XX <- do.call(sprintf, c(sql, dots))
+    
+    q <- try(dbGetQuery(if (is.null(alt.con)) con else alt.con, XX),
+             silent = TRUE)
+    
+    if (inherits(q, "try-error")) {
+        print(XX)
+        stop("The above query failed.")
+    }
+    
+    q
 }
 
 convertGPS <- function(lat, lon) {
@@ -72,7 +83,7 @@ print.gtfs.avl <- function(x, ...) {
 
 
 ## Closest point on track
-closestPoint <- function(pos, shape) {
+closestPoint <- function(pos, shape, ...) {
     ## Position should be a vector c(LAT, LON)
     ## shape should be a data.frame containing at least `shape_pt_sequence`, `shape_pt_lat`, `shape_pt_lon`, `shape_dist_traveled`
 
@@ -126,7 +137,7 @@ closestPoint <- function(pos, shape) {
 ## TRACK OBJECT + METHODS
 create <- function(x, ...) UseMethod("create")
 
-create.gtfs.avl<- function(x) {
+create.gtfs.avl<- function(x, ...) {
     AVL <- x
     shape_id <- query("SELECT shape_id FROM trips WHERE trip_id='%s'", AVL$trip.id)
 
@@ -135,6 +146,9 @@ create.gtfs.avl<- function(x) {
         shape_id)
     
     if (all(is.na(shape$shape_dist_traveled))) {
+
+        message("Calculating `shape_distance_traveled` for shape with `shape_id = ", shape_id, "`")
+        
         shape$shape_dist_traveled <- cumsum(c(0, pathDistance(shape$shape_pt_lat, shape$shape_pt_lon)))
 
         insert.query <- 
@@ -146,6 +160,9 @@ create.gtfs.avl<- function(x) {
     ## Does this shape/route have distances applied to stops?
     stops <- query("SELECT trip_id, stop_sequence, stop_times.stop_id, stops.stop_lat, stops.stop_lon, shape_dist_traveled FROM stop_times, stops WHERE stop_times.stop_id=stops.stop_id AND trip_id='%s' ORDER BY stop_sequence", AVL$trip.id)
     if (all(is.na(stops$shape_dist_traveled))) {
+
+        message("Calculating `shape_distance_traveled` for trip with `trip_id = ", AVL$trip.id, "`")
+        
         ## Yes? Alright, lets add distances!
         ## Remember, each stop will be further along the route than the previous (for efficiency)
         
@@ -196,6 +213,8 @@ create.gtfs.avl<- function(x) {
     ## Update all trips with the same SHAPE_ID:
     ##all.trips <- query("SELECT trip_id, route_id, direction_id, shape_id FROM trips WHERE shape_id='%s'", shape_id)
 
+    message("Inserting new track record into database.")
+
     dbSendQuery(
         con,
         sprintf("INSERT INTO tracks (vehicle_id, timestamp, pos_lat, pos_lon, trip_id, shape_id) VALUES ('%s', '%s', '%s', '%s', '%s', '%s')",
@@ -204,7 +223,7 @@ create.gtfs.avl<- function(x) {
     
     invisible(NULL)
 }
-getTrack <- function(vehicle_id) {
+getTrack <- function(vehicle.id) {
     track <- query("SELECT * FROM tracks WHERE vehicle_id='%s'", vehicle.id)
 
     out <- list(vehicle.id = track$vehicle_id,
@@ -237,7 +256,7 @@ propose <- function(track, AVL) {
     ## propose DISTANCE INTO TRIP, TPI, DISTANCE INTO TPI (TRIP is known)
 
     ## 1. max distance bus could have moved since previous report?
-    if (is.na(track$distance.into.trip)) {
+    if (length(track$distance.into.trip) == 0) {
         delta.time <- NA
         max.dist <- 1e10
     } else {
@@ -247,7 +266,7 @@ propose <- function(track, AVL) {
 
 
     ## 2. starting location for checking:
-    if (is.na(track$TPI)) {
+    if (length(track$TPI) == 0) {
         k0 <- 0
     } else {
         k0 <- track$TPI - (track$distance.into.TPI < sigma)
@@ -290,7 +309,7 @@ propose <- function(track, AVL) {
     
     plot(SHAPE$shape_dist_traveled, rep(1, nrow(SHAPE)), type = "l")
     points(STOPS$shape_dist_traveled, rep(1, nrow(STOPS)), pch = 19, cex = 0.5)
-    lines(rep(track$distance.into.trip, 2), 1:2, col = "red", pch = 19, cex = 0.5)
+    points(closest$dist, 1, col = "red", pch = 19, cex = 0.5)
 
     list(distance.into.trip = closest$dist,
          TPI = TPI,
@@ -298,39 +317,111 @@ propose <- function(track, AVL) {
     
 }
 
-trackMyBus <- function(vehicle.id, timestamp = NULL) {
+kalmanFilter <- function(new, old) {
+    ## Matrices
+    H <- t(c(1, 0, 0))
+    R <- 500^2
+
+    F <- rbind(c(0, 1, 0),
+               c(0, 0, 1),
+               c(0, 0, 0))
+    G <- cbind(c(0, 0, 1))
+
+    q2 <- 264
+
+    Phi <- function(dt) rbind(c(1, dt, dt^2 / 2),
+                                 c(0, 1, dt),
+                                 c(0, 0, 1))
+    Q <- function(dt, q2) rbind(c(dt^5 / 20, dt^4 / 8, dt^3 / 6),
+                                   c(dt^4 / 8, dt^3 / 3, dt^2 / 2),
+                                   c(dt^3 / 6, dt^2 / 2, dt)) * q2
+
+    if (is.null(attributes(old)$P))
+        P <- rbind(c(R, 0, 0),
+                   c(0, 30^2, 0),
+                   c(0, 0, 16^2))
+    else
+        P <- attr(old, "P")
+    
+    X. <- matrix(old, ncol = 1)
+
+    dt <- (new$AVL$time - attr(old, "time")) / 60
+    if (dt == 0) {
+        attr(X., "time") <- new$AVL$time
+        attr(X., "history") <- attr(old, "history")
+        attr(X., "P") <- P
+        return(X.)
+    }
+
+    Phi.k <- Phi(dt)
+    Xk.hat. <- Phi.k %*% X.
+    Pk. <- Phi.k %*% P %*% t(Phi.k) + Q(dt, q2)
+
+
+    K.k <- Pk. %*% t(H) %*% solve(H %*% Pk. %*% t(H) + R)
+
+    z <- new$distance.into.trip * 3.28084
+    Xk <- Xk.hat. + K.k %*% (z - H %*% Xk.hat.)
+    Pk <- (diag(3) - K.k %*% H) %*% Pk.
+    
+
+    X <- Xk
+    attr(X, "time") <- new$AVL$time
+    attr(X, "P") <- Pk
+    attr(X, "history") <- rbind(attr(old, "history"), drop(X))
+
+    print(X)
+    X
+}
+
+trackMyBus <- function(vehicle.id, timestamp = NULL, prev = NULL) {
     ## vehicle.id: unique vehicle identifier
     ## timestamp: if not NULL, will be used to obtain historical data; otherwise, will use the latest GTFS report
 
     ## ERRORS
-    sigma <- 100  # meters
+    assign("sigma", 100, envir = .GlobalEnv)  # meters
     
     require(RSQLite)
     if (!"trackers.db" %in% list.files())
         setupDatabase()
-    con <- dbConnect(SQLite(), "trackers.db")
+    
+    assign("con", dbConnect(SQLite(), "trackers.db"), envir = .GlobalEnv)
 
     ## obtain the latest report:
     AVL <- getAVL(vehicle.id, timestamp)
     
     ## Does the vehicle exist in the trackers.db database?
     check <- query("SELECT vehicle_id FROM tracks WHERE vehicle_id='%s'", vehicle.id)
-    if (nrow(check) == 0) create(AVL)    
+    if (nrow(check) == 0) create(AVL)
 
     track <- getTrack(vehicle.id)
-    
+
     candidates <- propose(track, AVL)
 
-    track <- updateTrack(track, candidates$distance.into.trip, candidates$TPI, candidates$distance.into.TPI)
-    track
+    newtrack <- updateTrack(track, candidates$distance.into.trip, candidates$TPI, candidates$distance.into.TPI)
+    newtrack$AVL <- AVL
+    
+    if (is.null(prev)) {
+        KF <- cbind(c(x = newtrack$distance.into.trip * 3.28084, v = 30, a = 0))
+        attr(KF, "time") <- AVL$time
+    } else { 
+        KF <- kalmanFilter(newtrack, prev)
+    }
+    
+    list(track = newtrack,
+         kalman.filter = KF)
 }
 
 
-vehicle.id <- "v0877"
+vehicle.id <- "v1205"
 timestamp <- NULL
 
-query("SELECT vehicle_id FROM vehicle_positions", alt.con = dbConnect(SQLite(), "gtfs.db"))
+library(RSQLite)
 
+query("SELECT vehicle_id FROM vehicle_positions", alt.con = dbConnect(SQLite(), "gtfs.db"))$vehicle_id
 
+vid <- "v2244"
+trOld <- trackMyBus(vid)
 
-trackMyBus("v1402")
+tr <- trackMyBus(vid, prev = trOld$kalman.filter)
+tr <- trackMyBus(vid, prev = tr$kalman.filter)
