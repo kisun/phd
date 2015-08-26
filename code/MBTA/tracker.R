@@ -446,10 +446,11 @@ trackMyBus <- function(vehicle.id, timestamp = NULL, prev = NULL) {
         qry <- query("SELECT stop_id, arrival_time, departure_time, shape_dist_traveled FROM stop_times WHERE trip_id='%s' ORDER BY stop_sequence", track$trip)
         qry$timepoint <- ifelse(is.na(qry$arrival_time), qry$departure_time, qry$arrival_time)
         qry$time <- as.numeric(as.POSIXct(qry$timepoint, format="%H:%M:%S", tz="EST5EDT"))        
-        
+
+        #print(as.POSIXct(HH$time, origin="1960-01-01"))
         plot(HH$time, HH$dit,
-             xlim = range(HH$time, qry$time),
-             ylim = range(HH$x, HH$dit, qry$shape_dist_traveled),
+             xlim = range(HH$time, qry$time, na.rm = TRUE),
+             ylim = range(HH$x, HH$dit, qry$shape_dist_traveled, na.rm = TRUE),
              pch = 19, cex = 0.5)
         lines(HH$time, HH$x)
         points(qry$time, qry$shape_dist_traveled, col = "#00000040", pch = 19, cex = 0.5)
