@@ -1,0 +1,67 @@
+# Cathey \& Dailey (2003)
+
+## Step 1: Working with GPS Coordinates
+
+GPS location data must be converted into a Cartesian 2-dimensional form so it an be used in tracking. The `R` package `rgdal` can be used for this:
+```{r, message=FALSE}
+convertGPS <- function(lat, lon, center = c(0, 0)) {
+    require("rgdal")
+
+    LatLong <- data.frame(X = c(center[1], lat), Y = c(center[2], lon))
+    names(LatLong) <- c("X", "Y")
+
+    coordinates(LatLong) <- ~ Y + X
+    proj4string(LatLong) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")
+
+    Utm <- spTransform(LatLong, CRS("+proj=utm +zone=11 ellps=WGS84"))
+
+    data.frame(lon = Utm$X[-1] - Utm$X[1], lat = Utm$Y[-1] - Utm$Y[1])
+}
+convertGPS(42.38524, -71.10288, center = c(42.37608, -71.14977))
+```
+This only works for a known Zone (here, UTM Zone 11), which would ned to be modified for other regions or countries.
+
+The distances between points is also critical to the later computations, and rather than relying on the above transformed data, we can use the `geosphere` package to calculate the distance between GPS coordinates:
+```{r, message=FALSE}
+pathDistance <- function(lat, lon) {
+    ## Return the distance of a path defined by lat and lon
+    require(geosphere)
+
+    coords <- cbind(lon, lat)
+    from <- coords[-nrow(coords), , drop = FALSE]
+    to <- coords[-1, , drop = FALSE]
+
+    distGeo(from, to)
+}
+pathDistance(c(42.40584, 42.40585, 42.40593),
+             c(-71.13226, -71.13219, -71.13211))
+```
+
+This should be enough for our basic, demonstrative purposes.
+
+
+## Step 2: AVL Reports
+
+Transit AVL reports are rather varied, although thanks to Google's `GTFS`, it is fairly standardised. The AVL report data used by Cathey \& Dailey was:
+
+- vehicle-identifier: $N$
+- block-identifier: $B$
+- time: $t$
+- latitude and longitude: $\vec r$
+
+Realtime GTFS reports can be used to obtain this information:
+
+- vehicle-identifier: `entity.vehicle.vehicle.id`
+- block-identifier:
+  in some cases, the `entity.vehicle.trid_id` will be specified, however this cannot be trusted---instead, use the static GTFS data to obtain the `block_id` containing the given `trip_id`.
+- time: `entity.vehicle.timestamp`
+- latitude and longitude: `entity.vehicle.position.{longitude,latitude}`
+
+To access the GTFS data, we used the python packages `gtfsdb` and `gtfsrdb` for the static and real-time data, respectively. This outputs the data into a (SQLite) database which we could access however we please (for starters, using R). In the case where the individual vehicle timestamps were not included, we would have to use the request time, `header.timestamp`.
+
+The next part is where things get complicated \ldots
+
+
+## Step 3: Tracking and Trip Assignment
+
+Given a GPS location, time, and block, we must figure out the valid `trip_id` and distance-into-trip.
