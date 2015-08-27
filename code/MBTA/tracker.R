@@ -17,10 +17,17 @@ query <- function(sql, ..., alt.con = NULL) {
     
     q <- try(dbGetQuery(if (is.null(alt.con)) con else alt.con, XX),
              silent = TRUE)
-    
+
+    false <- FALSE
     if (inherits(q, "try-error")) {
-        print(XX)
-        stop("The above query failed:\n", q)
+        ## Just incase the database is being written to (SQLite problem):
+        Sys.sleep(2)
+        q <- try(dbGetQuery(if (is.null(alt.con)) con else alt.con, XX),
+                 silent = TRUE)
+        if (inhreirts(q, "try-error")) {
+            print(XX)
+            stop("The above query failed:\n", q)
+        }
     }
     
     q
@@ -394,7 +401,7 @@ trackMyBus <- function(vehicle.id, timestamp = NULL, prev = NULL) {
     ## timestamp: if not NULL, will be used to obtain historical data; otherwise, will use the latest GTFS report
 
     ## ERRORS
-    assign("sigma", 100, envir = .GlobalEnv)  # meters
+    assign("sigma", 100 * 3.28084, envir = .GlobalEnv)  # meters -> feet
 
     dev.hold()
     
@@ -459,7 +466,7 @@ trackMyBus <- function(vehicle.id, timestamp = NULL, prev = NULL) {
         
         print(tail(HH, 5))
     }
-    dev.flush()
+    dev.flush(dev.flush())
     
     list(track = newtrack,
          kalman.filter = KF)
@@ -474,7 +481,7 @@ HISTDB <- "gtfs.db"
 
 table(query("SELECT vehicle_id FROM vehicle_positions", alt.con = dbConnect(SQLite(), HISTDB))$vehicle_id)
 
-vid <- "v0730"
+vid <- "v0884"
 
 tt <- trackMyBus(vid)
 

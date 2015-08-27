@@ -65,3 +65,74 @@ The next part is where things get complicated \ldots
 ## Step 3: Tracking and Trip Assignment
 
 Given a GPS location, time, and block, we must figure out the valid `trip_id` and distance-into-trip.
+
+If we are fortunate, the GTFS Realtime data will include `trip_id` (accurately), which means we only need to worry about distance-into-trip, TPI, and distance-into-TPI, which greatly simplifies things.
+
+{{ details }}
+
+
+
+## Step 4: Kalman Filter
+
+This step implements the algorithms described in the paper to obtain smoothed estimates of vehicle dynamic state (distance-into-trip, speed, acceleration). This can then be used in the prediction step.
+
+
+## Step 5: Prediction
+
+The simplest form of prediction takes the current schedule deviation $\delta t$ and adds it to subsequent time points. For this, we also need to know the block, $B$, to enable predictions to be made for subsequent trips (not just the current one).
+
+We need a speed function $s_b(x,t)$ that estimates the schedule time for any point (i.e., it uses the schedule information to estimate "speed" between two TPIs). Essentially,
+$$
+\hat s_b(x,t) = \frac{x_{k+1} - x_k}{t_{k+1} - t_k} \quad
+\text{if } x_k \leq x < x_{k+1}.
+$$
+Note that this is only valid when the point $x$ is between two non-overlapping (non-layover) TPs. Cathey \& Dailey then construct the rule to allow for layovers (i.e., $x_k = x_{k+1}$):
+$$
+s_b(x,t) =
+\begin{cases}
+0 & \text{if } \left\{
+  \begin{array}{l}
+    x_l \leq x \leq x_k + \delta x, \\
+    t \leq t_{k+1},
+  \end{array}
+  \right. \\
+\hat s_b(x,t) & \text{otherwise.}
+\end{cases}
+$$
+
+Problem: What happens when two TP's have the same arrival/departure time? The above would result in division by 0. It means that the time taken to travel between the two points is less than one minute \ldots perhaps it is possible to "interpolate" between the points, so that the actual curve passes through the RANGE of times (i.e., it has a 60 second window).
+
+```{r}
+data <-
+  data.frame(timestamp = c(0, 60, 60, 180, 300, 360, 360, 600, 600),
+             distance.into.trip = c(11311, 11624, 11749, 12650, 13533,
+                                    13851, 14107, 15432, 15930))
+plot(data$timestamp, data$distance.into.trip, xlab = "Time (seconds)", ylab = "Distance Into Trip (feet)")
+```
+
+So, if instead we "spread" each stop over the minute:
+```{r}
+plot(c(data$timestamp, data$timestamp + 60), rep(data$distance.into.trip, 2),
+     pch = 21, bg = rep(c("black", "white"), each = nrow(data)), cex = 0.5)
+apply(data, 1, function(d) lines(c(d[1], d[1] + 60), rep(d[2], 2)))
+```
+
+Now we can see that the arrival time at each TP is not exact. So, why not try to maintain the same speed as the previous interval, i.e.,
+$$
+\hat s_b(x,t) = \frac{x_{k-2}-x_{k-1}}{t_{k-2}-t_{k-1}} \quad
+\text{if } t_k = t_{k-1}
+$$
+
+But then we have the problem of the next TPI, $x_k \to x_{k+1}$, as the time at which the bus departs stop $x_k$ is no longer the "scheduled" time---instead, it is the scheduled time $t_k + \epsilon_k = t_k'$, where $\epsilon_k$ can be computed by:
+\begin{align}
+\frac{x_k - x_{k-1}}{\epsilon_k} &= \hat s_b(x,t) \\
+\epsilon_k &= \frac{x_k - x_{k-1}}{\hat s_b(x,t)}.
+\end{align}
+
+If $\epsilon_k$ exceeds one minute (i.e., $>60$), then we should probably just connect the start/end points of the two intervals.
+
+
+### Issues coming up:
+
+- When the vehicle arrives early to the next trip, the dynamic state takes time to adjust to the vehicle being stationary;
+- Then, when the vehicle takes off again, it takes time for the dynamic state to catch up. Again.
