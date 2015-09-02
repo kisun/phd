@@ -24,7 +24,7 @@ query <- function(sql, ..., alt.con = NULL) {
         Sys.sleep(2)
         q <- try(dbGetQuery(if (is.null(alt.con)) con else alt.con, XX),
                  silent = TRUE)
-        if (inhreirts(q, "try-error")) {
+        if (inherits(q, "try-error")) {
             print(XX)
             stop("The above query failed:\n", q)
         }
@@ -396,7 +396,8 @@ kalmanFilter <- function(new, old) {
     X
 }
 
-trackMyBus <- function(vehicle.id, timestamp = NULL, prev = NULL) {
+trackMyBus <- function(vehicle.id, timestamp = NULL, prev = NULL,
+                       origin = format(Sys.time(), "%Y-%m-%d")) {
     ## vehicle.id: unique vehicle identifier
     ## timestamp: if not NULL, will be used to obtain historical data; otherwise, will use the latest GTFS report
 
@@ -452,9 +453,10 @@ trackMyBus <- function(vehicle.id, timestamp = NULL, prev = NULL) {
 
         qry <- query("SELECT stop_id, arrival_time, departure_time, shape_dist_traveled FROM stop_times WHERE trip_id='%s' ORDER BY stop_sequence", track$trip)
         qry$timepoint <- ifelse(is.na(qry$arrival_time), qry$departure_time, qry$arrival_time)
-        qry$time <- as.numeric(as.POSIXct(qry$timepoint, format="%H:%M:%S", tz="EST5EDT"))        
+        qry$time <- as.numeric(as.POSIXct(paste(origin, qry$timepoint), format="%Y-%m-%d %H:%M:%S", tz="EST5EDT"))
 
-        #print(as.POSIXct(HH$time, origin="1960-01-01"))
+        print(HH$time)
+        
         plot(HH$time, HH$dit,
              xlim = range(HH$time, qry$time, na.rm = TRUE),
              ylim = range(HH$x, HH$dit, qry$shape_dist_traveled, na.rm = TRUE),
@@ -481,7 +483,7 @@ HISTDB <- "gtfs.db"
 
 table(query("SELECT vehicle_id FROM vehicle_positions", alt.con = dbConnect(SQLite(), HISTDB))$vehicle_id)
 
-vid <- "v0884"
+vid <- "v2014"
 
 tt <- trackMyBus(vid)
 
@@ -542,3 +544,251 @@ shapes <- query("SELECT shape_id, shape_pt_lat, shape_pt_lon FROM shapes WHERE s
 
 plot(shapes$shape_pt_lon, shapes$shape_pt_lat, cex = 0.5, pch = 19)
 points(b1$position_longitude, b1$position_latitude, cex = 0.5, pch = 19, col = "red")
+
+
+
+
+## Find all busses on the same route:
+liveDB <- dbConnect(SQLite(), "gtfs.db")
+route <- query("SELECT route_id FROM vehicle_positions WHERE vehicle_id='%s' LIMIT 1", vid,
+               alt.con = liveDB)$route_id
+allvehicles <- query("SELECT trip_id, route_id, vehicle_id, position_latitude, position_longitude, timestamp FROM vehicle_positions WHERE route_id='%s'", route, alt.con = liveDB)
+
+allvehicles
+
+
+trackMyBus(allvehicles$vehicle_id[1])
+trackMyBus(allvehicles$vehicle_id[2])
+
+
+
+
+stopDistances <- function(stops, shape,
+                          stop_sequence = "stop_sequence",
+                          stop_lat = "stop_lat",
+                          stop_lon = "stop_lon",
+                          shape_pt_lat = "shape_pt_lat",
+                          shape_pt_lon = "shape_pt_lon",
+                          shape_pt_sequence = "shape_pt_sequence",
+                          shape_dist_traveled = "shape_dist_traveled",
+                          sigma = 200) {
+
+    dist <- inorder <- numeric(nrow(stops))
+    for (s in stops[, stop_sequence]) {
+        ## Find shape points that are within a reasonable range of the stop
+        ## within 100m?
+        w <- which(stops[, stop_sequence] == s)
+        stop.pos <- stops[w, c(stop_lat, stop_lon)]
+        ## distances uses GPS coordinates:
+        distToStop <- apply(shape, 1, function(sh) {
+            pathDistance(c(stop.pos[1, 1], as.numeric(sh[shape_pt_lat])),
+                         c(stop.pos[1, 2], as.numeric(sh[shape_pt_lon])))
+        })
+        
+        goForward <- (1:nrow(shape)) >= ifelse(w == 1, 1, inorder[w - 1])
+        if (all(distToStop > sigma)) {
+            valid <- which(goForward)
+            warning("All stops are a fair way off ...")
+        } else
+            valid <- which(distToStop < sigma & goForward)
+        
+        i <- 1
+        while (length(valid) == 1 |
+                   (length(unique(shape[valid, shape_pt_lat])) == 1 &
+                        length(unique(shape[valid, shape_pt_lon])) == 1)) {
+            valid <- which(distToStop < i * sigma & goForward)
+            i <- i + 1
+        }
+
+        shape.v <- data.frame(shape_pt_sequence = shape[valid, shape_pt_sequence],
+                              shape_pt_lat = shape[valid, shape_pt_lat],
+                              shape_pt_lon = shape[valid, shape_pt_lon],
+                              shape_dist_traveled = shape[valid, shape_dist_traveled])
+        closest <- closestPoint(stop.pos, shape.v)
+        
+        if (length(closest$dist) == 0) {
+            cat("stop.pos:\n")
+            print(stop.pos)
+            
+            cat("\nvalid:\n")
+            print(valid)
+            
+            cat("\nshape[valid, ]:\n")
+            print(shape[valid, ])
+            
+            cat("\nclosest:\n")
+            print(closest)
+        }
+        
+        dist[w] <- closest$dist
+        
+        if (w == 1)
+            inorder[w] <- valid[closest$k]
+        else if (inorder[w - 1] <= valid[closest$k])
+            inorder[w] <- valid[closest$k]
+        else
+            stop("Invalid at stop ", s)
+    }
+
+    dist
+}
+
+
+
+## Ok, ok... find a bus, and get it's entire block (we will just focus on busses):
+library(RSQLite)
+con <- dbConnect(SQLite(), "gtfs-historical.db")
+blocks <- query("SELECT block_id, count(block_id) FROM trips WHERE route_id IN (SELECT route_id FROM routes WHERE route_type='3') GROUP BY block_id ")
+
+bid <- "A170-37"
+service <- "BUS22015-hba25011-Weekday-02"
+trips <- query("SELECT block_id, trip_id, route_id, shape_id, direction_id FROM trips WHERE block_id='%s' AND service_id='%s'", bid, service)
+
+shapes <- query("SELECT shape_id, shape_pt_lat AS lat, shape_pt_lon AS lon, shape_pt_sequence AS seq, shape_dist_traveled AS dist FROM shapes WHERE shape_id IN %s ORDER BY shape_id, shape_pt_sequence", unique(trips$shape_id))
+
+stops <- query("SELECT st.trip_id, st.arrival_time, st.departure_time, st.stop_id, st.stop_sequence, s.stop_lat, s.stop_lon, s.direction, st.shape_dist_traveled AS dist FROM stop_times AS st, stops AS s WHERE st.trip_id IN %s AND st.stop_id=s.stop_id ORDER BY st.trip_id, st.stop_sequence", unique(trips$trip_id))
+
+## distances into shapes ("distance-into-trip"):
+## cumsum(c(0, pathDistance(shape$shape_pt_lat, shape$shape_pt_lon)))
+
+tapply(1:nrow(shapes), shapes$shape_id, function(i) {
+    shapes$dist[i] <<- cumsum(c(0, pathDistance(shapes$lat[i], shapes$lon[i])))
+    length(i)
+})
+
+lapply(trips$trip_id, function(tid) {
+    shapeID <- unique(trips$shape_id[trips$trip_id == tid])
+    i <- which(stops$trip_id == tid)
+    stops$dist[i] <<- stopDistances(stops[i, ],
+                                    shapes[shapes$shape_id == shapeID, ],
+                                     "stop_sequence", "stop_lat", "stop_lon", "lat", "lon", "seq", "dist")
+    length(i)
+})
+
+
+alltrips <- function() {
+    plot(shapes$lon, shapes$lat, type = "n")
+    tapply(1:nrow(shapes), shapes$shape_id, function(i) {
+        lines(shapes$lon[i], shapes$lat[i], col = "#cccccc60")
+    })
+    return(invisible(NULL))
+}
+
+## Order trips by start time:
+stops[stops$stop_sequence == 1, ][oo <- order(stops[stops$stop_sequence == 1, "departure_time"]), ]
+
+for (tid in unique(stops$trip_id)[oo]) {
+    stops.test <- stops[stops$trip_id == tid, ]
+    shapes.test <- shapes[shapes$shape_id == trips$shape_id[trips$trip_id == tid], ]
+
+    print(head(stops.test))
+    
+    layout(rbind(1, 1, 1, 2))
+    alltrips()
+    lines(shapes.test$lon, shapes.test$lat)
+    points(stops.test$stop_lon, stops.test$stop_lat, pch = 19, cex = 0.5)
+
+    ii <- 1##ifelse(trips$direction[trips$trip_id == tid] == 0, 1, nrow(stops.test))
+    points(stops.test$stop_lon[ii], stops.test$stop_lat[ii], pch = 19, col = "red")
+    
+    plot(shapes.test$dist, rep(1, nrow(shapes.test)), type = "l")
+    points(stops.test$dist, rep(1, nrow(stops.test)), pch = 19, cex = 0.5)
+
+    Sys.sleep(5)
+}
+
+
+stops$time <- ifelse(is.na(stops$departure_time), stops$arrival_time, stops$departure_time)
+stops$time2 <- as.numeric(as.POSIXct(stops$time, format="%H:%M:%S", tz="EST5EDT"))
+stops$time <- stops$time2 - min(stops$time2)
+
+plot(stops$time, stops$dist, type = "n")
+tapply(1:nrow(stops), stops$trip_id, function(i) {
+    points(stops$time[i], stops$dist[i], pch = 19, cex = 0.3)
+    lines(stops$time[i], stops$dist[i])
+})
+
+
+
+##### Now obtain a bus history for the route:
+## We think in terms of the PATTERN (not the block......)
+
+v1 <- query("SELECT * FROM vehicle_positions WHERE vehicle_id='v1001' AND trip_start_date = 20150824")
+patterns <- query("SELECT route_id, service_id, trip_id, block_id, shape_id FROM  trips  WHERE route_id IN (SELECT route_id FROM routes WHERE route_type='3') AND trip_id IN %s ORDER BY service_id, trip_id", unique(v1$trip_id))
+
+trips <- query("SELECT block_id, trip_id, route_id, shape_id, direction_id FROM trips WHERE trip_id IN %s", unique(patterns$trip_id))
+
+shapes <- query("SELECT shape_id, shape_pt_lat AS lat, shape_pt_lon AS lon, shape_pt_sequence AS seq, shape_dist_traveled AS dist FROM shapes WHERE shape_id IN %s ORDER BY shape_id, shape_pt_sequence", unique(trips$shape_id))
+
+stops <- query("SELECT st.trip_id, st.arrival_time, st.departure_time, st.stop_id, st.stop_sequence, s.stop_lat, s.stop_lon, s.direction, st.shape_dist_traveled AS dist FROM stop_times AS st, stops AS s WHERE st.trip_id IN %s AND st.stop_id=s.stop_id ORDER BY st.trip_id, st.stop_sequence", unique(trips$trip_id))
+
+
+tapply(1:nrow(shapes), shapes$shape_id, function(i) {
+    shapes$dist[i] <<- cumsum(c(0, pathDistance(shapes$lat[i], shapes$lon[i])))
+    length(i)
+})
+
+lapply(trips$trip_id, function(tid) {
+    shapeID <- unique(trips$shape_id[trips$trip_id == tid])
+    i <- which(stops$trip_id == tid)
+    stops$dist[i] <<- stopDistances(stops[i, ],
+                                    shapes[shapes$shape_id == shapeID, ],
+                                     "stop_sequence", "stop_lat", "stop_lon", "lat", "lon", "seq", "dist")
+    length(i)
+})
+
+
+alltrips <- function() {
+    plot(shapes$lon, shapes$lat, type = "n")
+    tapply(1:nrow(shapes), shapes$shape_id, function(i) {
+        lines(shapes$lon[i], shapes$lat[i], col = "#cccccc60")
+    })
+    return(invisible(NULL))
+}
+
+## Order trips by start time:
+stops[stops$stop_sequence == 1, ][oo <- order(stops[stops$stop_sequence == 1, "departure_time"]), ]
+
+for (tid in unique(stops$trip_id)[oo]) {
+    stops.test <- stops[stops$trip_id == tid, ]
+    shapes.test <- shapes[shapes$shape_id == trips$shape_id[trips$trip_id == tid], ]
+
+    print(head(stops.test))
+    
+    layout(rbind(1, 1, 1, 2))
+    alltrips()
+    lines(shapes.test$lon, shapes.test$lat)
+    points(stops.test$stop_lon, stops.test$stop_lat, pch = 19, cex = 0.5)
+
+    ii <- 1##ifelse(trips$direction[trips$trip_id == tid] == 0, 1, nrow(stops.test))
+    points(stops.test$stop_lon[ii], stops.test$stop_lat[ii], pch = 19, col = "red")
+    
+    plot(shapes.test$dist, rep(1, nrow(shapes.test)), type = "l")
+    points(stops.test$dist, rep(1, nrow(stops.test)), pch = 19, cex = 0.5)
+
+    Sys.sleep(2)
+}
+
+
+stops$time <- ifelse(is.na(stops$departure_time), stops$arrival_time, stops$departure_time)
+stops$time2 <- as.numeric(as.POSIXct(stops$time, format="%H:%M:%S", tz="EST5EDT"))
+stops$time <- stops$time2 - min(stops$time2)
+
+layout(matrix(1))
+plot(stops$time / 60 / 60, stops$dist, type = "n")
+tapply(1:nrow(stops), stops$trip_id, function(i) {
+    points(stops$time[i] / 60 / 60, stops$dist[i], pch = 19, cex = 0.3)
+    lines(stops$time[i] / 60 / 60, stops$dist[i])
+})
+
+HISTDB <- "backups/gtfs-historical.backup-latest.db"
+
+tracks <- vector("list", nrow(v1))
+tracks[[1]] <- trackMyBus(v1$vehicle_id[1], v1$timestamp[1], origin = "2015-08-24")
+for (i in 2:nrow(v1)) {
+    tracks[[i]] <- trackMyBus(v1$vehicle_id[i], v1$timestamp[i], tracks[[i-1]]$kalman.filter, origin = "2015-08-24")
+}
+
+
+hist <- do.call(rbind, lapply(tracks, function(t) c(t$track$distance.into.trip, t$track$AVL$time)))
+plot(hist[, 2], hist[, 1], pch = 19, cex = 0.4)
