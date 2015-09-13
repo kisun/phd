@@ -1,7 +1,7 @@
 ### Functions for interacting the an SQLite database
 require(RSQLite)
 
-query <- function(con, sql, ...) {
+query <- function(con, sql, ..., debug = FALSE) {
     dots <- list(...)
     dots <- lapply(dots, function(x) {
         if (length(x) > 1)
@@ -11,6 +11,8 @@ query <- function(con, sql, ...) {
     })
 
     XX <- do.call(sprintf, c(sql, dots))
+
+    if (debug) print(XX)
 
     q <- try(dbGetQuery(con, XX),
              silent = TRUE)
