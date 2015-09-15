@@ -1,6 +1,6 @@
 ### HISTORICAL PRIOR DISTRIBUTION FOR ARRIVAL TIME AT A STOP
 setwd("~/Documents/uni/phd/code/MBTA")
-set.seed(2)
+set.seed(1)
 
 ## requires functions/database.R
 source("functions/database.R")
@@ -75,10 +75,13 @@ points(stops$stop_lon, stops$stop_lat, col = "red", pch = 19, cex = 0.5)
 HISTDB <- "gtfs-historical.db"
 v1 <- data
 tracks <- vector("list", nrow(v1))
+pb <- txtProgressBar(0, nrow(v1), style = 3)
 tracks[[1]] <- trackMyBus(v1$vehicle_id[1], v1$timestamp[1], origin = as.character(v1$date[1]))
 for (i in 2:nrow(v1)) {
+    setTxtProgressBar(pb, i)
     tracks[[i]] <- trackMyBus(v1$vehicle_id[i], v1$timestamp[i], tracks[[i-1]]$kalman.filter, origin = "2015-08-24")
 }
+close(pb)
 
 data$DIT <- sapply(tracks, function(x) x$track$distance.into.trip)
 data$timeIntoTrip <- time2seconds(data$time) - time2seconds(trip.start[data$trip_id])
@@ -100,3 +103,52 @@ for (tid in unique(data$trip_id)) {
 devAskNewPage(FALSE)
 
 head(stopInfo)
+
+
+plot(data$timeIntoTrip, data$DIT, type = "n")
+abline(h = unique(stopInfo$shape_dist_traveled), lty = 3)
+trip.start.sec <- time2seconds(trip.start)
+cont.cols <- rainbow(200, end = 5/6, alpha = 0.4)
+colID <- as.integer(199 * ((trip.start.sec - min(trip.start.sec)) / diff(range(trip.start.sec))) + 1)
+names(colID) <- names(trip.start)
+data$colour <- cont.cols[colID[data$trip_id]]
+tapply(1:nrow(data), paste(data$date, data$trip_id, sep = "_"),
+       function(i) lines(data$timeIntoTrip[i], data$DIT[i], col = data$colour[i]))
+
+iNZightPlots::iNZightPlot(timeIntoTrip, DIT, data = data, plottype = "scatter", colby = timestamp, alpha = 0.4, cex.pt= 0.5,
+                          g1 = trip_id)
+
+
+
+di$ID <- factor(paste(di$date, di$trip_id, sep = "_"))
+arrivalTimes <- vector("list", length(unique(data$trip_id)))
+
+devAskNewPage(TRUE)
+for (tid in unique(data$trip_id)) {
+    try({
+    di <- data[data$trip_id == tid, ]
+    si <- stopInfo[stopInfo$trip_id == tid, ]
+    
+    mat <- matrix(NA, ncol = length(unique(di$date)), nrow = nrow(si))
+    dits <- tapply(1:nrow(di), di$date, function(j) di$DIT[j])
+    
+    dits <- lapply(dits, function(dit) {
+                       if (length(dit) <= 1) return(NA)
+                       for (k in (length(dit):2) - 1)
+                           if (dit[k] > dit[k + 1]) dit[k] <- dit[k + 1]
+                       dit
+                   })
+    Ts <- tapply(1:nrow(di), di$date, function(j) di$timeIntoTrip[j])
+    plot(1,1, xlim = range(c(di$timeIntoTrip), na.rm = TRUE),
+         ylim = range(c(dits, si$shape_dist_traveled), na.rm = TRUE), type = "n",
+         xlab = "Time (s)", ylab = "Distance (feet)")
+    abline(h = si$shape_dist_traveled, lty = 3, col = "#333333")
+    colnames(mat) <- names(dits)
+    for (d in names(dits)) {
+        if (length(Ts[[d]]) <= 1) next
+        lines(Ts[[d]], dits[[d]], col = "#666666")        
+        mat[, d] <- approx(y = Ts[[d]], x = dits[[d]], xout = si$shape_dist_traveled)$y        
+    }
+    }, silent = TRUE)
+}
+devAskNewPage(FALSE)
