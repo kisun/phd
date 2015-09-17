@@ -83,10 +83,14 @@ for (i in 2:nrow(v1)) {
 }
 close(pb)
 
+tratrackscks <- dget("scripts/outputSEED1.dat")
+
 data$DIT <- sapply(tracks, function(x) x$track$distance.into.trip)
 data$timeIntoTrip <- time2seconds(data$time) - time2seconds(trip.start[data$trip_id])
 
-stopInfo <- query(con, "SELECT trip_id, arrival_time, departure_time, shape_dist_traveled FROM stop_times WHERE trip_id IN %s", trip.ids)
+
+stopInfo <- query(dbConnect(SQLite(), "trackers.db"),
+                  "SELECT trip_id, arrival_time, departure_time, shape_dist_traveled FROM stop_times WHERE trip_id IN %s", trip.ids)
 stopInfo$time <- ifelse(is.na(stopInfo$arrival_time), stopInfo$departure_time, stopInfo$arrival_time)
 
 devAskNewPage(TRUE)
@@ -122,6 +126,7 @@ iNZightPlots::iNZightPlot(timeIntoTrip, DIT, data = data, plottype = "scatter", 
 
 di$ID <- factor(paste(di$date, di$trip_id, sep = "_"))
 arrivalTimes <- vector("list", length(unique(data$trip_id)))
+names(arrivalTimes) <- unique(data$trip_id)
 
 devAskNewPage(TRUE)
 for (tid in unique(data$trip_id)) {
@@ -139,16 +144,48 @@ for (tid in unique(data$trip_id)) {
                        dit
                    })
     Ts <- tapply(1:nrow(di), di$date, function(j) di$timeIntoTrip[j])
-    plot(1,1, xlim = range(c(di$timeIntoTrip), na.rm = TRUE),
-         ylim = range(c(dits, si$shape_dist_traveled), na.rm = TRUE), type = "n",
-         xlab = "Time (s)", ylab = "Distance (feet)")
-    abline(h = si$shape_dist_traveled, lty = 3, col = "#333333")
+    #plot(1,1, xlim = range(c(di$timeIntoTrip), na.rm = TRUE),
+    #     ylim = range(c(dits, si$shape_dist_traveled), na.rm = TRUE), type = "n",
+    #     xlab = "Time (s)", ylab = "Distance (feet)")
+    #abline(h = si$shape_dist_traveled, lty = 3, col = "#333333")
     colnames(mat) <- names(dits)
     for (d in names(dits)) {
         if (length(Ts[[d]]) <= 1) next
-        lines(Ts[[d]], dits[[d]], col = "#666666")        
+     #   lines(Ts[[d]], dits[[d]], col = "#666666")        
         mat[, d] <- approx(y = Ts[[d]], x = dits[[d]], xout = si$shape_dist_traveled)$y        
     }
     }, silent = TRUE)
+    arrivalTimes[[tid]] <- mat
+
+    
 }
 devAskNewPage(FALSE)
+
+
+Dat <- vector("list", length(arrivalTimes))
+names(Dat) <- names(arrivalTimes)
+for (id in names(arrivalTimes)) {
+    if (all(is.na(arrivalTimes[[id]])))
+        next
+    mat <- as.data.frame(arrivalTimes[[id]])
+    new <- reshape(mat, varying = colnames(mat), v.names = "arrival_time", times = colnames(mat),
+                   direction = "long", idvar = "stop_number")
+    rownames(new) <- NULL
+    new <- new[!is.na(new$arrival_time), ]
+    new$stop_number <- paste0("s", sprintf("%02d", new$stop_number))
+    Dat[[id]] <- cbind(new, trip_id = id)
+}
+
+fulldata <- do.call(rbind, Dat)
+fulldata$stop_number <- as.factor(fulldata$stop_number)
+fulldata$start_timeF <- as.character(trip.start[fulldata$trip_id])
+fulldata$start_time <- time2seconds(fulldata$start_timeF)
+iNZightPlots::iNZightPlot(arrival_time, stop_number, data = fulldata, plottype="dot", pch = "")
+
+ests <- lm(arrival_time ~ stop_number + start_timeF, data = fulldata)
+summary(ests)
+
+
+
+library(lme4)
+mdl <- lmer(arrival_times~ stop_number + (stop_number | trip_id), data = fulldata)
