@@ -1,6 +1,6 @@
 ### HISTORICAL PRIOR DISTRIBUTION FOR ARRIVAL TIME AT A STOP
 setwd("~/Documents/uni/phd/code/MBTA")
-set.seed(1)
+set.seed(4)
 
 ## requires functions/database.R
 source("functions/database.R")
@@ -50,6 +50,8 @@ data$time <- convertTimestamp(data$timestamp, "time")
 
 points(data$position_longitude, data$position_latitude, col = "green4", pch = 19, cex = 0.2)
 
+nrow(data)
+
 ## Get trip schedules
 stops <- gtfsQuery("stop_times AS st, stops AS s",
                    "st.trip_id, st.arrival_time, st.departure_time, st.stop_id, s.stop_lat, s.stop_lon, st.stop_sequence",
@@ -82,8 +84,8 @@ for (i in 2:nrow(v1)) {
     tracks[[i]] <- trackMyBus(v1$vehicle_id[i], v1$timestamp[i], tracks[[i-1]]$kalman.filter, origin = "2015-08-24")
 }
 close(pb)
-
-tratrackscks <- dget("scripts/outputSEED1.dat")
+dput(tracks, "scripts/outputSEED4.dat")
+#tracks <- dget("scripts/outputSEED1.dat")
 
 data$DIT <- sapply(tracks, function(x) x$track$distance.into.trip)
 data$timeIntoTrip <- time2seconds(data$time) - time2seconds(trip.start[data$trip_id])
@@ -182,10 +184,92 @@ fulldata$start_timeF <- as.character(trip.start[fulldata$trip_id])
 fulldata$start_time <- time2seconds(fulldata$start_timeF)
 iNZightPlots::iNZightPlot(arrival_time, stop_number, data = fulldata, plottype="dot", pch = "")
 
-ests <- lm(arrival_time ~ stop_number + start_timeF, data = fulldata)
+ests <- lm(arrival_time ~ stop_number + start_timeF - 1, data = fulldata)
 summary(ests)
 
 
 
 library(lme4)
-mdl <- lmer(arrival_times~ stop_number + (stop_number | trip_id), data = fulldata)
+mdl <- lmer(arrival_time ~ stop_number + (stop_number | trip_id), data = fulldata)
+
+
+
+s10 <- fulldata[fulldata$stop_number == "s10", ]
+iNZightPlots::iNZightPlot(y=arrival_time, x=start_time, data = s10)
+
+s15 <- fulldata[fulldata$stop_number == "s15", ]
+iNZightPlots::iNZightPlot(y=arrival_time, x=start_time, data = s15)
+
+
+s10.15 <- merge(s10[, c("time", "arrival_time")], s15[, c("time", "arrival_time")], by = "time")
+iNZightPlots::iNZightPlot(arrival_time.x, arrival_time.y, data = s10.15)
+
+
+
+wide <- reshape(fulldata[, c("time", "arrival_time", "stop_number", "trip_id")],
+                v.names = "arrival_time", timevar = "stop_number",
+                direction = "wide", idvar = c("trip_id", "time"),
+                times = unique(fulldata$stop_number))
+
+
+HISTDB <- "gtfs-historical.db"
+v1 <- data
+pred <- tracks2 <- vector("list", nrow(v1))
+tracks2[[1]] <- trackMyBus(v1$vehicle_id[1], v1$timestamp[1], origin = as.character(v1$date[1]))
+devAskNewPage(TRUE)
+for (i in 2:10) {
+    kf <- tracks2[[i-1]]$kalman.filter
+    if (!is.null(attr(kf, "P")))
+        pred[[i]] <- predict(old = kf, (v1$timestamp[i]  - v1$timestamp[i-1]) / 60)
+    tracks2[[i]] <- trackMyBus(v1$vehicle_id[i], v1$timestamp[i], tracks2[[i-1]]$kalman.filter, origin = "2015-08-24")
+    if (!is.null(attr(kf, "P"))) {
+        ci <-  qnorm(c(0.025, 0.975), pred[[i]][1], pred[[i]][2]) * 0.3048
+        plot(attr(tracks2[[i]]$kalman.filter, "history")[, 4],
+             attr(tracks2[[i]]$kalman.filter, "history")[, 1] * 0.3048,
+             type = "l",
+             ylim = range(attr(tracks2[[i]]$kalman.filter, "history")[, 1] * 0.3048,
+                 attr(tracks2[[i]]$kalman.filter, "history")[, 5], ci, na.rm = TRUE))
+        points(v1$timestamp[[i]], pred[[i]][1] * 0.3048, pch = 19, col = "red")
+        lines(rep(v1$timestamp[[i]], 2), ci, col = "red")
+        points(attr(tracks2[[i]]$kalman.filter, "history")[, c(4, 5)], pch = 19, cex = 0.5) 
+    }
+}
+devAskNewPage(FALSE)
+
+
+plot(attr(kf, "history")[, c(4, 1)])
+
+i <- 10
+kf <- tracks2[[i]]$kalman.filter
+t.ahead <- 1:(5*6) / 6
+t(sapply(t.ahead, function(t) {
+    p <- predict(kf, t)
+    ci <-  qnorm(c(0.025, 0.975), p[1], p[2])
+    c(p, ci)
+})) -> future
+
+plot(attr(tracks2[[i]]$kalman.filter, "history")[, 4],
+     attr(tracks2[[i]]$kalman.filter, "history")[, 1] * 0.3048,
+     type = "l",
+     ylim =
+         range(attr(tracks2[[i]]$kalman.filter, "history")[, 1] * 0.3048,
+               attr(tracks2[[i]]$kalman.filter, "history")[, 5],
+               future[, c(3, 4)] * 0.3048,
+               na.rm = TRUE),
+     xlim = c(min(attr(tracks2[[i]]$kalman.filter, "history")[, 4]),
+              max(attr(tracks2[[i]]$kalman.filter, "history")[, 4] + t.ahead * 60)))
+points(attr(tracks2[[i]]$kalman.filter, "history")[, c(4, 5)], pch = 19, cex = 0.5) 
+newX <- v1$timestamp[[i]] + t.ahead * 60
+xx <- c(newX, rev(newX))
+yy <- c(future[, 3], rev(future[, 4])) * 0.3048
+polygon(xx, yy, col = "pink", border = "red")
+
+
+for (i in 11:15) {
+    kf <- tracks2[[i-1]]$kalman.filter
+    if (!is.null(attr(kf, "P")))
+        pred[[i]] <- predict(old = kf, (v1$timestamp[i]  - v1$timestamp[i-1]) / 60)
+    tracks2[[i]] <- trackMyBus(v1$vehicle_id[i], v1$timestamp[i], tracks2[[i-1]]$kalman.filter, origin = "2015-08-24")
+    lines(v1$timestamp[i:(i-1)], sapply(tracks2[i:(i-1)], function(ti) ti$kalman.filter[1] * 0.3048), pch = 19, cex = 0.5)
+    points(v1$timestamp[i], tracks2[[i]]$track$distance.into.trip, pch = 19, cex = 0.5)
+}

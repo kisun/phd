@@ -372,6 +372,42 @@ kalmanFilter <- function(new, old) {
     X
 }
 
+predict <- function(old, minutes.ahead = 1) {
+    H <- t(c(1, 0, 0))
+    R <- 500^2
+    
+    F <- rbind(c(0, 1, 0),
+               c(0, 0, 1),
+               c(0, 0, 0))
+    G <- cbind(c(0, 0, 1))
+    
+    q2 <- 264
+    
+    Phi <- function(dt) rbind(c(1, dt, dt^2 / 2),
+                              c(0, 1, dt),
+                              c(0, 0, 1))
+    Q <- function(dt, q2) rbind(c(dt^5 / 20, dt^4 / 8, dt^3 / 6),
+                                c(dt^4 / 8, dt^3 / 3, dt^2 / 2),
+                                c(dt^3 / 6, dt^2 / 2, dt)) * q2
+    
+    P <- attr(old, "P")
+    
+    X. <- matrix(old, ncol = 1)
+    
+    ## time in minutes
+    dt <- minutes.ahead
+    
+    Phi.k <- Phi(dt)
+    Xk.hat. <- Phi.k %*% X.
+    Pk. <- Phi.k %*% P %*% t(Phi.k) + Q(dt, q2)
+    
+    
+    est <- Xk.hat.[1]
+    est.sd <- sqrt(Pk.[1,1])
+
+    structure(c(est, est.sd), .Names = c("mean", "sd"))
+}
+
 trackMyBus <- function(vehicle.id, timestamp = NULL, prev = NULL,
                        origin = format(Sys.time(), "%Y-%m-%d")) {
     ## vehicle.id: unique vehicle identifier
