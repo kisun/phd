@@ -451,7 +451,7 @@ trackMyBus <- function(vehicle.id, timestamp = NULL, prev = NULL,
         KF <- prev
         KF[1, ] <- 0
         attr(KF, "time") <- AVL$time
-        attr(KF, "history") <- rbind(attr(KF, "history"), NA)
+        attr(KF, "history") <- if (is.null(attr(KF, "history"))) NULL else matrix(NA, ncol = ncol(attr(KF, "history")))#rbind(attr(KF, "history"), NA)
     } else {
         KF <- kalmanFilter(newtrack, prev)
     }
