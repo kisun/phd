@@ -1,0 +1,116 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{xfrac}
+
+\usepackage{fullpage}
+\usepackage{parskip}
+
+
+\title{Kalman Filter}
+\author{Overview of models}
+\date{}
+
+\begin{document}
+\maketitle
+
+
+
+\section{Simple discrete-time model}
+
+For simplicity, we assume everything is discrete: positions are reported every $\delta_t$
+seconds, and the input-control is specified using the stop time schedule, and assuming a
+constant speed between stops. At a later date, we can fit more complex models that are
+smooth up to the second derivative (i.e., acceleration).
+
+The state vector is
+\begin{equation}
+  \label{eq:state-vector}
+  \mathbf{x}_k = 
+  \begin{bmatrix}
+    x_k \\ v_k
+  \end{bmatrix}
+\end{equation}
+where $x_k$ is the distance-into-trip (m) at time $k$, and $v_k$ is the velocity (m/s) at
+time $k$.
+
+The state-space equations are based on Newtonian physics, and use the schedule speed
+information as input-control to adjust predictions accordingly.  The acceleration (i.e.,
+change in speed) at time $k$ is defined as $a_k$, the change in velocity between the stops at
+time $k$ and $k-\delta_t$.
+
+Now, the state-space equations are:
+\begin{align}
+  \label{eq:state_space_eqns}
+  x_k &= x_{k-1} + \left[v_{k-1} + a_k\right] \delta_t + \frac{\delta_t^2}{2} \varepsilon_k \\
+  &= x_{k-1} + v_{k-1} \delta_t + a_k \delta_t + \frac{\delta_t^2}{2} \varepsilon_k \\
+  \intertext{and}
+  v_k &= v_{k-1} + a_k + \delta_t \varepsilon_a.
+\end{align}
+In the above, $\varepsilon_k \sim \mathcal{N}\left(0,\sigma_a^2\right)$ is random
+variation in acceleration.
+
+These equations can be expressed in vector notation as:
+\begin{align}
+  \label{eq:state_matrix_eqns}
+  \mathbf{x}_k &= \mathbf{F} \mathbf{x}_{k-1} + \mathbf{B} a_k + \mathbf{G} a_k
+\end{align}
+where
+\begin{align}
+  \mathbf{F} = 
+  \begin{bmatrix}
+    1 & \delta_t \\
+    0 & 1
+  \end{bmatrix},
+  \quad
+  \mathbf{B} =
+  \begin{bmatrix}
+    \delta_t \\ 1
+  \end{bmatrix}
+  \quad\text{and}\quad
+  \mathbf{G} = 
+  \begin{bmatrix}
+    \frac{\delta_t^2}{2} \\ \delta_t
+  \end{bmatrix}.
+\end{align}
+
+
+We can re-express the state equations as
+\begin{align}
+  \label{eq:state_matrix_eqns2}
+  \mathbf{x}_k &= \mathbf{F} \mathbf{x}_{k-1} + \mathbf{B} a_k + \mathbf{w}_k,
+\end{align}
+where $\mathbf{w}_k \sim \mathcal{N}\left(0,\mathbf{Q}\right)$, and 
+\begin{equation}
+  \label{eq:systm_variance}
+  \mathbf{Q} = \mathbf{G} \mathbf{G}^T \sigma_a^2
+  =
+  \begin{bmatrix}
+    \frac{\delta_t^2}{4} & \frac{\delta_t^3}{2} \\
+    \frac{\delta_t^3}{2} & \delta_t^4
+  \end{bmatrix} \sigma_a^2.
+\end{equation}
+
+
+
+The next step involves the noisy measurements of the location (distance-into-trip);
+\begin{equation}
+  \label{eq:measurements}
+  \mathbf{z}_k = \mathbf{H}\mathbf{x}_k + \mathbf{v}_k,
+\end{equation}
+where the random measurment error is $\mathbf{v}_k \sim \mathcal{N}\left(0, \mathbf{R}\right)$,
+\begin{equation}
+  \label{eq:moremats}
+  H = 
+  \begin{bmatrix}
+    0 & 1
+  \end{bmatrix}
+  \quad \text{and} \quad \mathbf{R} = \mathbb{E}\left[\mathbf{v}_k \mathbf{v}_k^T\right] = \sigma_z^2.
+\end{equation}
+
+
+We can now apply the Kalman Filter prediction and update equations to estimate the future.
+
+
+\end{document}

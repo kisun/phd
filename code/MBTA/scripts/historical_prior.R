@@ -349,16 +349,17 @@ stopInfo$time <- ifelse(is.na(stopInfo$arrival_time), stopInfo$departure_time, s
 
 for (i in 2:nrow(v1)) tracks[[i]] <- theFuture(i, tracks)
 
+Ii <- 101
 par(mfrow = c(3, 2))
-theFuture(40, tracks)
-theFuture(42, tracks)
-theFuture(44, tracks)
-theFuture(46, tracks)
-theFuture(48, tracks)
-theFuture(50, tracks)
+theFuture(Ii, tracks)
+theFuture(Ii + 1, tracks)
+theFuture(Ii + 2, tracks)
+theFuture(Ii + 3, tracks)
+theFuture(Ii + 4, tracks)
+theFuture(Ii + 5, tracks)
 par(mfrow = c(1, 1))
 
-ii <- 51
+ii <- Ii
 theFuture(ii, tracks); ii <- ii + 1
 
 for (i in 51:nrow(v1))
