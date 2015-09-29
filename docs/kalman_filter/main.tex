@@ -27,7 +27,7 @@ smooth up to the second derivative (i.e., acceleration).
 The state vector is
 \begin{equation}
   \label{eq:state-vector}
-  \mathbf{x}_k = 
+  \mathbf{x}_k =
   \begin{bmatrix}
     x_k \\ v_k
   \end{bmatrix}
@@ -58,7 +58,7 @@ These equations can be expressed in vector notation as:
 \end{align}
 where
 \begin{align}
-  \mathbf{F} = 
+  \mathbf{F} =
   \begin{bmatrix}
     1 & \delta_t \\
     0 & 1
@@ -69,7 +69,7 @@ where
     \delta_t \\ 1
   \end{bmatrix}
   \quad\text{and}\quad
-  \mathbf{G} = 
+  \mathbf{G} =
   \begin{bmatrix}
     \frac{\delta_t^2}{2} \\ \delta_t
   \end{bmatrix}.
@@ -81,7 +81,7 @@ We can re-express the state equations as
   \label{eq:state_matrix_eqns2}
   \mathbf{x}_k &= \mathbf{F} \mathbf{x}_{k-1} + \mathbf{B} a_k + \mathbf{w}_k,
 \end{align}
-where $\mathbf{w}_k \sim \mathcal{N}\left(0,\mathbf{Q}\right)$, and 
+where $\mathbf{w}_k \sim \mathcal{N}\left(0,\mathbf{Q}\right)$, and
 \begin{equation}
   \label{eq:systm_variance}
   \mathbf{Q} = \mathbf{G} \mathbf{G}^T \sigma_a^2
@@ -102,7 +102,7 @@ The next step involves the noisy measurements of the location (distance-into-tri
 where the random measurment error is $\mathbf{v}_k \sim \mathcal{N}\left(0, \mathbf{R}\right)$,
 \begin{equation}
   \label{eq:moremats}
-  H = 
+  \mathbf{H} =
   \begin{bmatrix}
     0 & 1
   \end{bmatrix}
