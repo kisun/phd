@@ -1,6 +1,6 @@
 ### HISTORICAL PRIOR DISTRIBUTION FOR ARRIVAL TIME AT A STOP
 setwd("~/Documents/uni/phd/code/MBTA")
-set.seed(1)
+set.seed(5)
 
 ## requires functions/database.R
 source("functions/database.R")
@@ -340,6 +340,7 @@ theFuture <- function(i, track) {
 
 HISTDB <- "gtfs-historical.db"
 v1 <- data
+v1 <- v1[v1$trip_id == "27279972", ]
 pred <- tracks <- vector("list", nrow(v1))
 tracks[[1]] <- trackMyBus(v1$vehicle_id[1], v1$timestamp[1], origin = as.character(v1$date[1]))
 
@@ -349,7 +350,7 @@ stopInfo$time <- ifelse(is.na(stopInfo$arrival_time), stopInfo$departure_time, s
 
 for (i in 2:nrow(v1)) tracks[[i]] <- theFuture(i, tracks)
 
-Ii <- 101
+Ii <- 2
 par(mfrow = c(3, 2))
 theFuture(Ii, tracks)
 theFuture(Ii + 1, tracks)
@@ -359,8 +360,34 @@ theFuture(Ii + 4, tracks)
 theFuture(Ii + 5, tracks)
 par(mfrow = c(1, 1))
 
-ii <- Ii
+ii <- 12
 theFuture(ii, tracks); ii <- ii + 1
 
 for (i in 51:nrow(v1))
     theFuture(i, tracks)
+
+
+
+
+
+## EXTRA
+stopInfo <- query(dbConnect(SQLite(), "trackers.db"),
+                  "SELECT trip_id, arrival_time, departure_time, shape_dist_traveled FROM stop_times WHERE trip_id = %s ORDER BY stop_sequence", 27279972)
+timeSec <- time2seconds(ifelse(is.na(stopInfo$arrival_time), stopInfo$departure_time, stopInfo$arrival_time))
+stopInfo$time <- timeSec - min(timeSec)
+
+
+dput(stopInfo, "../../docs/kalman_filter/stopinfo.dat")
+
+
+use <- attr(tracks[[22]]$kalman.filter, "history")[-1, ]
+colnames(use) <- c("x", "v", "a", "t", "dist")
+use <- as.data.frame(use)
+
+
+thisTrip <- tracks[[22]]$track$trip
+offset <- as.numeric(ymd(as.Date(as.POSIXct(tracks[[22]]$track$AVL$time, tz = "EST5EDT", origin = "1970-01-01")),
+                         tz = "EST5EDT"))
+use$time <- use$t - offset - time2seconds(trip.start[thisTrip])
+
+dput(use, "../../docs/kalman_filter/triphistory.dat")
