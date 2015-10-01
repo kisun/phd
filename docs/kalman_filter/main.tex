@@ -87,11 +87,12 @@ An example of the schedule times is here:
 \end{knitrout}
 
 Obviously, we can't fit a line through points with the same $x$ coordinates, so instead we will only fit the curve
-through those with the smallest $y$ values:
+through those with the smallest $y$ values.
+We can then use polynomial interpolation to interpolate the bus path, speed, and acceleration over time.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
 
-{\centering \includegraphics[width=1\textwidth]{figure/stop_times_curve-1} 
+{\centering \includegraphics[width=0.5\textwidth]{figure/stop_times_curve-1} 
 
 }
 
@@ -99,8 +100,21 @@ through those with the smallest $y$ values:
 
 \end{knitrout}
 
-Every 30~seconds, we get the busses updated location. We can therefore estimate the change
-in speed in the interval, $a_k$.
+Next, we need to get speed (and acceleration) as a function of distance---not time!
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
+
+{\centering \includegraphics[width=1\textwidth]{figure/DIT-speed-1} 
+
+}
+
+
+
+\end{knitrout}
+
+
+
 
 \section{Simple discrete-time model}
 
@@ -121,19 +135,25 @@ where $x_k$ is the distance-into-trip (m) at time $k$, and $v_k$ is the velocity
 time $k$.
 
 The state-space equations are based on Newtonian physics, and use the schedule speed
-information as input-control to adjust predictions accordingly.  The acceleration (i.e.,
-change in speed) at time $k$ is defined as $a_k$, the change in velocity between the stops
-at time $k$ and $k-\delta_t$.  This could also be a proportional change in speed:
-$s_k / s_{k-1}$, which could prevent negative speed (we assume busses continue fowards
-along their route), in which case we would replace $a_k$ with $v_{k-1}a_k$ in the following equations.
+information as input-control to adjust predictions accordingly.
+The acceleration (i.e., change in speed) at distance $x_k$ is defined as $a_k = a(x_k)$, the change in velocity
+at the given point along the trip.
+However, this could result in negative speeds, and wont be too transferrable between traffic situations.
+Instead, we will use the proportional change in speed: $a_k = \frac{s_k}{s_{k-1}}$, where $s_k$ is the scheduled speed.
+
+%% The acceleration (i.e.,
+%% change in speed) at time $k$ is defined as $a_k$, the change in velocity between the stops
+%% at time $k$ and $k-\delta_t$.  This could also be a proportional change in speed:
+%% $s_k / s_{k-1}$, which could prevent negative speed (we assume busses continue fowards
+%% along their route), in which case we would replace $a_k$ with $v_{k-1}a_k$ in the following equations.
 
 Now, the state-space equations are:
 \begin{align}
   \label{eq:state_space_eqns}
-  x_k &= x_{k-1} + \left[v_{k-1} + a_k\right] \delta_t + \frac{\delta_t^2}{2} \varepsilon_k \\
-  &= x_{k-1} + v_{k-1} \delta_t + a_k \delta_t + \frac{\delta_t^2}{2} \varepsilon_k \\
+  x_k &= x_{k-1} + v_{k-1} \delta_t + a_k v_{k-1} + \frac{\delta_t^2}{2} \varepsilon_k \\
+%  x_k &= x_{k-1} + v_{k-1} \delta_t + \frac{a_k \delta_t^2}{2} + \frac{\delta_t^2}{2} \varepsilon_k \\
   \intertext{and}
-  v_k &= v_{k-1} + a_k + \delta_t \varepsilon_a.
+  v_k &= v_{k-1} + a_k\delta_t + \delta_t \varepsilon_a.
 \end{align}
 In the above, $\varepsilon_k \sim \mathcal{N}\left(0,\sigma_a^2\right)$ is random
 variation in acceleration.
@@ -153,7 +173,7 @@ where
   \quad
   \mathbf{B} =
   \begin{bmatrix}
-    \delta_t \\ 1
+    \frac{\delta_t^2}{2} \\ \delta_t
   \end{bmatrix}
   \quad\text{and}\quad
   \mathbf{G} =
@@ -191,13 +211,33 @@ where the random measurment error is $\mathbf{v}_k \sim \mathcal{N}\left(0, \mat
   \label{eq:moremats}
   \mathbf{H} =
   \begin{bmatrix}
-    0 & 1
+    1 & 0
   \end{bmatrix}
   \quad \text{and} \quad \mathbf{R} = \mathbb{E}\left[\mathbf{v}_k \mathbf{v}_k^T\right] = \sigma_z^2.
 \end{equation}
 
 
 We can now apply the Kalman Filter prediction and update equations to estimate the future.
+
+The prior prediction of the new state $k$ estimate and covariance are:
+
+\begin{align}
+  \mathbf{\hat x}_{k|k-1} &= \mathbf{F} \mathbf{\hat x}_{k-1|k-1} + \mathbf{B} a_k \\
+  \mathbf{P}_{k|k-1} &= \mathbf{F}\mathbf{P}_{k-1|k-1}\mathbf{F}^T + \mathbf{Q}
+\end{align}
+
+
+We then update the model with the update equations:
+\begin{align}
+  \mathbf{\tilde y}_k &= \mathbf{z}_k - \mathbf{H} \mathbf{\hat x}_{k|k-1} \\
+  \mathbf{S_k} &= \mathbf{H} \mathbf{P}_{k|k-1} \mathbf{H}^T + \mathbf{R} \\
+  \mathbf{K}_k &= \mathbf{P}_{k|k-1} \mathbf{H}^T \mathbf{S}_k^{-1} \\
+  \mathbf{\hat x}_{k|k} &= \mathbf{\hat x}_{k|k-1} + \mathbf{K}_k \mathbf{\tilde y}_k \\
+  \mathbf{P}_{k|k} &= \left(\mathbf{I} - \mathbf{K}_k \mathbf{H}\right) \mathbf{P}_{k|k-1}
+\end{align}
+
+
+
 
 
 
@@ -224,6 +264,95 @@ and made the first distance 0 to simplify things (for now) and shift the series 
 We now implement the Kalman Filter as described above.
 The time interval is $\delta_t = 60$~seconds, and the times are $K \in \{0,1,\ldots,9\}$ minutes.
 
+
+
+
+We assume that the initial time and location are 0, although the velocity is unknown, so the initilisation matrices are:
+\begin{equation*}
+  \mathbf{\hat x}_0 = 
+  \begin{bmatrix}
+    0 \\ s(0)
+  \end{bmatrix}
+  \quad \text{and} \quad
+  \mathbf{P}_0 =
+  \begin{bmatrix}
+    0 & 0 \\ 0 & L
+  \end{bmatrix}
+\end{equation*}
+where $L = 100$ is the variation of speed.
+
+
+
+Here's the implementation in R:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## Initialisation values:}
+\hlstd{X.} \hlkwb{<-} \hlstd{X} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{ncol} \hlstd{=} \hlkwd{length}\hlstd{(x),} \hlkwc{nrow} \hlstd{=} \hlnum{2}\hlstd{)}
+\hlstd{X[,} \hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{s}\hlstd{(}\hlnum{0}\hlstd{))}
+\hlstd{P.} \hlkwb{<-} \hlstd{P} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{dim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlnum{2}\hlstd{,} \hlkwd{length}\hlstd{(x)))}
+\hlstd{P[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{10}\hlstd{)}
+
+\hlstd{dt} \hlkwb{<-} \hlnum{60} \hlcom{## fixed for now}
+\hlstd{sig.a} \hlkwb{<-} \hlnum{1.5} \hlopt{/} \hlstd{dt}
+\hlstd{sig.z} \hlkwb{<-} \hlnum{50}
+
+\hlcom{## Matrices:}
+\hlstd{F} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{, dt,} \hlnum{1}\hlstd{),} \hlkwc{nrow} \hlstd{=} \hlnum{2}\hlstd{)}
+\hlstd{B} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwd{c}\hlstd{(dt}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, dt),} \hlkwc{nrow} \hlstd{=} \hlnum{2}\hlstd{)}
+\hlstd{G} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwd{c}\hlstd{(dt}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, dt),} \hlkwc{nrow} \hlstd{=} \hlnum{2}\hlstd{)}
+\hlstd{Q} \hlkwb{<-} \hlstd{(G} \hlopt{%*%} \hlkwd{t}\hlstd{(G))} \hlopt{*} \hlstd{sig.a}\hlopt{^}\hlnum{2}
+\hlstd{H} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwc{nrow} \hlstd{=} \hlnum{1}\hlstd{)}
+\hlstd{R} \hlkwb{<-} \hlstd{sig.z}\hlopt{^}\hlnum{2}
+
+\hlcom{## GO!}
+\hlstd{k} \hlkwb{<-} \hlnum{2}
+\hlkwa{for} \hlstd{(k} \hlkwa{in} \hlnum{2}\hlopt{:}\hlkwd{length}\hlstd{(x)) \{}
+    \hlstd{ak} \hlkwb{<-}
+        \hlkwd{accF}\hlstd{(x[k} \hlopt{-} \hlnum{1}\hlstd{])}
+    \hlcom{## Predict}
+    \hlkwa{if} \hlstd{(k} \hlopt{<} \hlnum{11}\hlstd{) \{}
+        \hlstd{X.[, k]} \hlkwb{<-}
+            \hlstd{F} \hlopt{%*%} \hlstd{X[, k} \hlopt{-} \hlnum{1}\hlstd{]} \hlopt{+} \hlstd{B} \hlopt{%*%} \hlstd{ak}
+        \hlstd{P.[,, k]} \hlkwb{<-}
+            \hlstd{F} \hlopt{%*%} \hlstd{P[,, k} \hlopt{-} \hlnum{1}\hlstd{]} \hlopt{%*%} \hlkwd{t}\hlstd{(F)} \hlopt{+} \hlstd{Q}
+        \hlcom{## Update    }
+        \hlstd{yr} \hlkwb{<-}
+            \hlstd{x[k]} \hlopt{-} \hlstd{H} \hlopt{%*%} \hlstd{X.[, k,} \hlkwc{drop} \hlstd{=} \hlnum{FALSE}\hlstd{]}
+        \hlstd{K} \hlkwb{<-}
+            \hlstd{P.[,, k]} \hlopt{%*%} \hlkwd{t}\hlstd{(H)} \hlopt{%*%} \hlkwd{solve}\hlstd{( H} \hlopt{%*%} \hlstd{P.[,, k]} \hlopt{%*%} \hlkwd{t}\hlstd{(H)} \hlopt{+} \hlstd{R )}
+        \hlstd{X[, k]} \hlkwb{<-}
+            \hlstd{X.[, k]} \hlopt{+} \hlstd{K} \hlopt{%*%} \hlstd{yr}
+        \hlstd{P[,, k]} \hlkwb{<-}
+            \hlstd{(}\hlkwd{diag}\hlstd{(}\hlnum{2}\hlstd{)} \hlopt{-} \hlstd{K} \hlopt{%*%} \hlstd{H)} \hlopt{%*%} \hlstd{P.[,, k]}
+    \hlstd{\}} \hlkwa{else} \hlstd{\{}
+        \hlstd{X.[, k]} \hlkwb{<-}
+            \hlstd{F} \hlopt{%*%} \hlstd{X.[, k} \hlopt{-} \hlnum{1}\hlstd{]} \hlopt{+} \hlstd{B} \hlopt{%*%} \hlstd{ak}
+        \hlstd{P.[,, k]} \hlkwb{<-}
+            \hlstd{F} \hlopt{%*%} \hlstd{P.[,, k} \hlopt{-} \hlnum{1}\hlstd{]} \hlopt{%*%} \hlkwd{t}\hlstd{(F)} \hlopt{+} \hlstd{Q}
+    \hlstd{\}}
+\hlstd{\}}
+
+\hlkwd{plot}\hlstd{(t, x,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(sched}\hlopt{$}\hlstd{time),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{schedF}\hlstd{(}\hlkwd{max}\hlstd{(sched}\hlopt{$}\hlstd{time))))}
+\hlkwd{curve}\hlstd{(}\hlkwd{schedF}\hlstd{(x),} \hlkwd{min}\hlstd{(x),} \hlkwd{max}\hlstd{(x),} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{add} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+
+\hlstd{xp.hat} \hlkwb{<-} \hlstd{X.[}\hlnum{1}\hlstd{, ]}
+\hlstd{xp.sd} \hlkwb{<-} \hlkwd{sqrt}\hlstd{(P.[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{, ])}
+\hlstd{xp.ci} \hlkwb{<-} \hlkwd{sapply}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0.025}\hlstd{,} \hlnum{0.975}\hlstd{), qnorm,} \hlkwc{mean} \hlstd{= xp.hat,} \hlkwc{sd} \hlstd{= xp.sd)}
+\hlkwd{polygon}\hlstd{(}\hlkwd{c}\hlstd{(t,} \hlkwd{rev}\hlstd{(t)),} \hlkwd{c}\hlstd{(xp.ci[,} \hlnum{1}\hlstd{],} \hlkwd{rev}\hlstd{(xp.ci[,} \hlnum{2}\hlstd{])),} \hlkwc{col} \hlstd{=} \hlstr{"#99ffff50"}\hlstd{)}
+
+\hlstd{x.hat} \hlkwb{<-} \hlstd{X[}\hlnum{1}\hlstd{,} \hlopt{-}\hlnum{1}\hlstd{]}
+\hlstd{x.sd} \hlkwb{<-} \hlkwd{sqrt}\hlstd{(P[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{,} \hlopt{-}\hlnum{1}\hlstd{])}
+\hlstd{x.ci} \hlkwb{<-} \hlkwd{sapply}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0.025}\hlstd{,} \hlnum{0.975}\hlstd{), qnorm,} \hlkwc{mean} \hlstd{= x.hat,} \hlkwc{sd} \hlstd{= x.sd)}
+\hlkwd{polygon}\hlstd{(}\hlkwd{c}\hlstd{(t[}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwd{rev}\hlstd{(t[}\hlopt{-}\hlnum{1}\hlstd{])),} \hlkwd{c}\hlstd{(x.ci[,} \hlnum{1}\hlstd{],} \hlkwd{rev}\hlstd{(x.ci[,} \hlnum{2}\hlstd{])),} \hlkwc{col} \hlstd{=} \hlstr{"#00003320"}\hlstd{)}
+
+\hlkwd{lines}\hlstd{(t, X[}\hlnum{1}\hlstd{, ],} \hlkwc{lty} \hlstd{=} \hlnum{2}\hlstd{)}
+\hlkwd{points}\hlstd{(t, x,} \hlkwc{cex} \hlstd{=} \hlnum{0.6}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/kalman_filter-1} 
+
+\end{knitrout}
 
 
 

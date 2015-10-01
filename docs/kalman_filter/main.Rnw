@@ -33,27 +33,53 @@ with(sched, plot(time, shape_dist_traveled, pch = 19, xlab = "Time (s)", ylab = 
 @ 
 
 Obviously, we can't fit a line through points with the same $x$ coordinates, so instead we will only fit the curve
-through those with the smallest $y$ values:
-<<stop_times_curve,echo=FALSE,results="hide",fig.width=16,fig.height=5,out.width="1\\textwidth",fig.align="center">>=
-par(mfrow = c(1, 2))
+through those with the smallest $y$ values.
+We can then use polynomial interpolation to interpolate the bus path, speed, and acceleration over time.
+<<stop_times_curve,echo=FALSE,results="hide",fig.width=8,fig.height=15,out.width="0.5\\textwidth",fig.align="center">>=
+par(mfrow = c(3, 1))
 
 sched <- dget("stopinfo.dat")
 with(sched, plot(time, shape_dist_traveled, pch = 19, xlab = "Time (s)", ylab = "Distance (m)", cex = 0.6,
                  col = "#00000040", main = "Scheduled arrival times"))
 x <- unique(sched$time)
 y <- tapply(sched$shape_dist_traveled, sched$time, min)
-lines(x, y)
+schedF <- splinefun(x, y, method = "fmm")
+curve(schedF(x), min(x), max(x), 1001, add = TRUE)
 points(x, y, cex = 0.6, pch = 21, bg = "white")
 
-dt <- diff(x)
-dx <- diff(y)
-sx <- dx / dt
-plot(x[-1], sx, xlab = "Time (s)", ylab = "Speed (m/s)", main = "Scheduled speed", xlim = c(0, max(x)))
-#points(x[-1], sx, cex = 0.6, pch = 21, bg = "white")
+s <- function(x) schedF(x, 1)
+curve(s(x), min(x), max(x), 1001, xlab = "Time (s)", ylab = "Speed (m/s", ylim = c(0, 12))
+
+
+
+curve(schedF(x, 2), min(x), max(x), 1001, xlab = "Time (s)", ylab = "Acceleration (m/s)/s")
+abline(h = 0)
 @ 
 
-Every 30~seconds, we get the busses updated location. We can therefore estimate the change
-in speed in the interval, $a_k$.
+Next, we need to get speed (and acceleration) as a function of distance---not time!
+
+<<DIT-speed,echo=FALSE,results="hide",fig.width=16,fig.height=5,out.width="1\\textwidth",fig.align="center">>=
+
+schedF <- splinefun(x, y)
+schedFI <- splinefun(y, x)
+speedF <- function(x) {
+    ## x: distance-into-trip
+    ## distance -> scheduled time -> scheduled speed
+    schedF(schedFI(x), 1)
+}
+accF <- function(x) {
+    schedF(schedFI(x), 2)
+}
+
+par(mfrow = c(1, 2))
+curve(speedF(x), min(y), max(y), 1001, xlab = "Distance into Trip (m)", ylab = "Speed (m/s)",
+      main = "s(x)")
+curve(accF(x), min(y), max(y), 1001, xlab = "Distance into Trip (m)", ylab = "Acceleration (m/s/s)",
+      main = "a(x)")
+@ 
+
+
+
 
 \section{Simple discrete-time model}
 
@@ -74,19 +100,25 @@ where $x_k$ is the distance-into-trip (m) at time $k$, and $v_k$ is the velocity
 time $k$.
 
 The state-space equations are based on Newtonian physics, and use the schedule speed
-information as input-control to adjust predictions accordingly.  The acceleration (i.e.,
-change in speed) at time $k$ is defined as $a_k$, the change in velocity between the stops
-at time $k$ and $k-\delta_t$.  This could also be a proportional change in speed:
-$s_k / s_{k-1}$, which could prevent negative speed (we assume busses continue fowards
-along their route), in which case we would replace $a_k$ with $v_{k-1}a_k$ in the following equations.
+information as input-control to adjust predictions accordingly.
+The acceleration (i.e., change in speed) at distance $x_k$ is defined as $a_k = a(x_k)$, the change in velocity
+at the given point along the trip.
+However, this could result in negative speeds, and wont be too transferrable between traffic situations.
+Instead, we will use the proportional change in speed: $a_k = \frac{s_k}{s_{k-1}}$, where $s_k$ is the scheduled speed.
+
+%% The acceleration (i.e.,
+%% change in speed) at time $k$ is defined as $a_k$, the change in velocity between the stops
+%% at time $k$ and $k-\delta_t$.  This could also be a proportional change in speed:
+%% $s_k / s_{k-1}$, which could prevent negative speed (we assume busses continue fowards
+%% along their route), in which case we would replace $a_k$ with $v_{k-1}a_k$ in the following equations.
 
 Now, the state-space equations are:
 \begin{align}
   \label{eq:state_space_eqns}
-  x_k &= x_{k-1} + \left[v_{k-1} + a_k\right] \delta_t + \frac{\delta_t^2}{2} \varepsilon_k \\
-  &= x_{k-1} + v_{k-1} \delta_t + a_k \delta_t + \frac{\delta_t^2}{2} \varepsilon_k \\
+  x_k &= x_{k-1} + v_{k-1} \delta_t + a_k v_{k-1} + \frac{\delta_t^2}{2} \varepsilon_k \\
+%  x_k &= x_{k-1} + v_{k-1} \delta_t + \frac{a_k \delta_t^2}{2} + \frac{\delta_t^2}{2} \varepsilon_k \\
   \intertext{and}
-  v_k &= v_{k-1} + a_k + \delta_t \varepsilon_a.
+  v_k &= v_{k-1} + a_k\delta_t + \delta_t \varepsilon_a.
 \end{align}
 In the above, $\varepsilon_k \sim \mathcal{N}\left(0,\sigma_a^2\right)$ is random
 variation in acceleration.
@@ -106,7 +138,7 @@ where
   \quad
   \mathbf{B} =
   \begin{bmatrix}
-    \delta_t \\ 1
+    \frac{\delta_t^2}{2} \\ \delta_t
   \end{bmatrix}
   \quad\text{and}\quad
   \mathbf{G} =
@@ -144,13 +176,33 @@ where the random measurment error is $\mathbf{v}_k \sim \mathcal{N}\left(0, \mat
   \label{eq:moremats}
   \mathbf{H} =
   \begin{bmatrix}
-    0 & 1
+    1 & 0
   \end{bmatrix}
   \quad \text{and} \quad \mathbf{R} = \mathbb{E}\left[\mathbf{v}_k \mathbf{v}_k^T\right] = \sigma_z^2.
 \end{equation}
 
 
 We can now apply the Kalman Filter prediction and update equations to estimate the future.
+
+The prior prediction of the new state $k$ estimate and covariance are:
+
+\begin{align}
+  \mathbf{\hat x}_{k|k-1} &= \mathbf{F} \mathbf{\hat x}_{k-1|k-1} + \mathbf{B} a_k \\
+  \mathbf{P}_{k|k-1} &= \mathbf{F}\mathbf{P}_{k-1|k-1}\mathbf{F}^T + \mathbf{Q}
+\end{align}
+
+
+We then update the model with the update equations:
+\begin{align}
+  \mathbf{\tilde y}_k &= \mathbf{z}_k - \mathbf{H} \mathbf{\hat x}_{k|k-1} \\
+  \mathbf{S_k} &= \mathbf{H} \mathbf{P}_{k|k-1} \mathbf{H}^T + \mathbf{R} \\
+  \mathbf{K}_k &= \mathbf{P}_{k|k-1} \mathbf{H}^T \mathbf{S}_k^{-1} \\
+  \mathbf{\hat x}_{k|k} &= \mathbf{\hat x}_{k|k-1} + \mathbf{K}_k \mathbf{\tilde y}_k \\
+  \mathbf{P}_{k|k} &= \left(\mathbf{I} - \mathbf{K}_k \mathbf{H}\right) \mathbf{P}_{k|k-1}
+\end{align}
+
+
+
 
 
 
@@ -172,13 +224,99 @@ dat$T <- dat$T - min(dat$T)
 dat$dist[1] <- 0
 plot(dat$T, dat$dist, xlab = "Time (s)", ylab = "Distance into trip (m)",
      xlim = range(dat$tT, sched$time), ylim = range(dat$dist, sched$shape_dist_traveled))
-lines(x, y, col = "red", lty = 2)
+curve(schedF(x), min(x), max(x), col = "red", lty = 2, add = TRUE)
+
+x <- dat$dist
+t <- dat$T
 @ 
 
 
 We now implement the Kalman Filter as described above.
 The time interval is $\delta_t = 60$~seconds, and the times are $K \in \{0,1,\ldots,9\}$ minutes.
 
+
+
+
+We assume that the initial time and location are 0, although the velocity is unknown, so the initilisation matrices are:
+\begin{equation*}
+  \mathbf{\hat x}_0 = 
+  \begin{bmatrix}
+    0 \\ s(0)
+  \end{bmatrix}
+  \quad \text{and} \quad
+  \mathbf{P}_0 =
+  \begin{bmatrix}
+    0 & 0 \\ 0 & L
+  \end{bmatrix}
+\end{equation*}
+where $L = 100$ is the variation of speed.
+
+
+
+Here's the implementation in R:
+<<kalman_filter>>=
+## Initialisation values:
+X. <- X <- matrix(NA, ncol = length(x), nrow = 2)
+X[, 1] <- c(0, s(0))
+P. <- P <- array(NA, dim = c(2, 2, length(x)))
+P[,,1] <- c(0, 0, 0, 10)
+
+dt <- 60 ## fixed for now
+sig.a <- 1.5 / dt
+sig.z <- 50
+
+## Matrices:
+F <- matrix(c(1, 0, dt, 1), nrow = 2)
+B <- matrix(c(dt^2/2, dt), nrow = 2)
+G <- matrix(c(dt^2/2, dt), nrow = 2)
+Q <- (G %*% t(G)) * sig.a^2
+H <- matrix(c(1, 0), nrow = 1)
+R <- sig.z^2
+
+## GO!
+k <- 2
+for (k in 2:length(x)) {
+    ak <- 
+        accF(x[k - 1])
+    ## Predict
+    if (k < 11) {
+        X.[, k] <- 
+            F %*% X[, k - 1] + B %*% ak
+        P.[,, k] <- 
+            F %*% P[,, k - 1] %*% t(F) + Q
+        ## Update    
+        yr <- 
+            x[k] - H %*% X.[, k, drop = FALSE]
+        K <- 
+            P.[,, k] %*% t(H) %*% solve( H %*% P.[,, k] %*% t(H) + R )
+        X[, k] <- 
+            X.[, k] + K %*% yr
+        P[,, k] <- 
+            (diag(2) - K %*% H) %*% P.[,, k]
+    } else {
+        X.[, k] <- 
+            F %*% X.[, k - 1] + B %*% ak
+        P.[,, k] <- 
+            F %*% P.[,, k - 1] %*% t(F) + Q
+    }
+}
+
+plot(t, x, type = "n", xlim = range(sched$time), ylim = c(0, schedF(max(sched$time))))
+curve(schedF(x), min(x), max(x), col = "red", lty = 2, add = TRUE)
+
+xp.hat <- X.[1, ]
+xp.sd <- sqrt(P.[1, 1, ])
+xp.ci <- sapply(c(0.025, 0.975), qnorm, mean = xp.hat, sd = xp.sd)
+polygon(c(t, rev(t)), c(xp.ci[, 1], rev(xp.ci[, 2])), col = "#99ffff50")
+
+x.hat <- X[1, -1]
+x.sd <- sqrt(P[1, 1, -1])
+x.ci <- sapply(c(0.025, 0.975), qnorm, mean = x.hat, sd = x.sd)
+polygon(c(t[-1], rev(t[-1])), c(x.ci[, 1], rev(x.ci[, 2])), col = "#00003320")
+
+lines(t, X[1, ], lty = 2)
+points(t, x, cex = 0.6, pch = 19)
+@ 
 
 
 
