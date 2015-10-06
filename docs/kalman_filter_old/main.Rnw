@@ -34,8 +34,10 @@ with(sched, plot(time, shape_dist_traveled, pch = 19, xlab = "Time (s)", ylab = 
 
 Obviously, we can't fit a line through points with the same $x$ coordinates, so instead we will only fit the curve
 through those with the smallest $y$ values.
-We can then use polynomial interpolation to interpolate the scheduled bus path over time:
-<<stop_times_curve,echo=FALSE,results="hide",fig.width=8,fig.height=5,out.width="0.5\\textwidth",fig.align="center">>=
+We can then use polynomial interpolation to interpolate the bus path, speed, and acceleration over time.
+<<stop_times_curve,echo=FALSE,results="hide",fig.width=8,fig.height=15,out.width="0.5\\textwidth",fig.align="center">>=
+par(mfrow = c(3, 1))
+
 sched <- dget("stopinfo.dat")
 with(sched, plot(time, shape_dist_traveled, pch = 19, xlab = "Time (s)", ylab = "Distance (m)", cex = 0.6,
                  col = "#00000040", main = "Scheduled arrival times"))
@@ -44,6 +46,36 @@ y <- tapply(sched$shape_dist_traveled, sched$time, min)
 schedF <- splinefun(x, y, method = "fmm")
 curve(schedF(x), min(x), max(x), 1001, add = TRUE)
 points(x, y, cex = 0.6, pch = 21, bg = "white")
+
+s <- function(x) schedF(x, 1)
+curve(s(x), min(x), max(x), 1001, xlab = "Time (s)", ylab = "Speed (m/s", ylim = c(0, 12))
+
+
+
+curve(schedF(x, 2), min(x), max(x), 1001, xlab = "Time (s)", ylab = "Acceleration (m/s)/s")
+abline(h = 0)
+@ 
+
+Next, we need to get speed (and acceleration) as a function of distance---not time!
+
+<<DIT-speed,echo=FALSE,results="hide",fig.width=16,fig.height=5,out.width="1\\textwidth",fig.align="center">>=
+
+schedF <- splinefun(x, y)
+schedFI <- splinefun(y, x)
+speedF <- function(x) {
+    ## x: distance-into-trip
+    ## distance -> scheduled time -> scheduled speed
+    schedF(schedFI(x), 1)
+}
+accF <- function(x) {
+    schedF(schedFI(x), 2)
+}
+
+par(mfrow = c(1, 2))
+curve(speedF(x), min(y), max(y), 1001, xlab = "Distance into Trip (m)", ylab = "Speed (m/s)",
+      main = "s(x)")
+curve(accF(x), min(y), max(y), 1001, xlab = "Distance into Trip (m)", ylab = "Acceleration (m/s/s)",
+      main = "a(x)")
 @ 
 
 
@@ -95,97 +127,85 @@ time $k$.
 %% In the above, $\varepsilon_k \sim \mathcal{N}\left(0,\sigma_a^2\right)$ is random
 %% variation in acceleration.
 
-%% These equations can be expressed in vector notation as:
-%% \begin{align}
-%%   \label{eq:state_matrix_eqns}
-%%   \mathbf{x}_k &= \mathbf{F} \mathbf{x}_{k-1} + \mathbf{B} a_k + \mathbf{G} a_k
-%% \end{align}
-%% where
-%% \begin{align}
-%%   \mathbf{F} =
-%%   \begin{bmatrix}
-%%     1 & \delta_t \\
-%%     0 & 1
-%%   \end{bmatrix},
-%%   \quad
-%%   \mathbf{B} =
-%%   \begin{bmatrix}
-%%     \frac{\delta_t^2}{2} \\ \delta_t
-%%   \end{bmatrix}
-%%   \quad\text{and}\quad
-%%   \mathbf{G} =
-%%   \begin{bmatrix}
-%%     \frac{\delta_t^2}{2} \\ \delta_t
-%%   \end{bmatrix}.
-%% \end{align}
+These equations can be expressed in vector notation as:
+\begin{align}
+  \label{eq:state_matrix_eqns}
+  \mathbf{x}_k &= \mathbf{F} \mathbf{x}_{k-1} + \mathbf{B} a_k + \mathbf{G} a_k
+\end{align}
+where
+\begin{align}
+  \mathbf{F} =
+  \begin{bmatrix}
+    1 & \delta_t \\
+    0 & 1
+  \end{bmatrix},
+  \quad
+  \mathbf{B} =
+  \begin{bmatrix}
+    \frac{\delta_t^2}{2} \\ \delta_t
+  \end{bmatrix}
+  \quad\text{and}\quad
+  \mathbf{G} =
+  \begin{bmatrix}
+    \frac{\delta_t^2}{2} \\ \delta_t
+  \end{bmatrix}.
+\end{align}
 
 
-%% We can re-express the state equations as
-%% \begin{align}
-%%   \label{eq:state_matrix_eqns2}
-%%   \mathbf{x}_k &= \mathbf{F} \mathbf{x}_{k-1} + \mathbf{B} a_k + \mathbf{w}_k,
-%% \end{align}
-%% where $\mathbf{w}_k \sim \mathcal{N}\left(0,\mathbf{Q}\right)$, and
-%% \begin{equation}
-%%   \label{eq:systm_variance}
-%%   \mathbf{Q} = \mathbf{G} \mathbf{G}^T \sigma_a^2
-%%   =
-%%   \begin{bmatrix}
-%%     \frac{\delta_t^2}{4} & \frac{\delta_t^3}{2} \\
-%%     \frac{\delta_t^3}{2} & \delta_t^4
-%%   \end{bmatrix} \sigma_a^2.
-%% \end{equation}
-
-
-
-%% The next step involves the noisy measurements of the location (distance-into-trip);
-%% \begin{equation}
-%%   \label{eq:measurements}
-%%   \mathbf{z}_k = \mathbf{H}\mathbf{x}_k + \mathbf{v}_k,
-%% \end{equation}
-%% where the random measurment error is $\mathbf{v}_k \sim \mathcal{N}\left(0, \mathbf{R}\right)$,
-%% \begin{equation}
-%%   \label{eq:moremats}
-%%   \mathbf{H} =
-%%   \begin{bmatrix}
-%%     1 & 0
-%%   \end{bmatrix}
-%%   \quad \text{and} \quad \mathbf{R} = \mathbb{E}\left[\mathbf{v}_k \mathbf{v}_k^T\right] = \sigma_z^2.
-%% \end{equation}
-
-
-%% We can now apply the Kalman Filter prediction and update equations to estimate the future.
-
-%% The prior prediction of the new state $k$ estimate and covariance are:
-
-%% \begin{align}
-%%   \mathbf{\hat x}_{k|k-1} &= \mathbf{F} \mathbf{\hat x}_{k-1|k-1} + \mathbf{B} a_k \\
-%%   \mathbf{P}_{k|k-1} &= \mathbf{F}\mathbf{P}_{k-1|k-1}\mathbf{F}^T + \mathbf{Q}
-%% \end{align}
-
-
-%% We then update the model with the update equations:
-%% \begin{align}
-%%   \mathbf{\tilde y}_k &= \mathbf{z}_k - \mathbf{H} \mathbf{\hat x}_{k|k-1} \\
-%%   \mathbf{S_k} &= \mathbf{H} \mathbf{P}_{k|k-1} \mathbf{H}^T + \mathbf{R} \\
-%%   \mathbf{K}_k &= \mathbf{P}_{k|k-1} \mathbf{H}^T \mathbf{S}_k^{-1} \\
-%%   \mathbf{\hat x}_{k|k} &= \mathbf{\hat x}_{k|k-1} + \mathbf{K}_k \mathbf{\tilde y}_k \\
-%%   \mathbf{P}_{k|k} &= \left(\mathbf{I} - \mathbf{K}_k \mathbf{H}\right) \mathbf{P}_{k|k-1}
-%% \end{align}
-
-
-
-We use the previous location and the schedule function, $f(x)$, to predict where the bus will be in the future.
-As the schedule is monotone, it has an inverse, so
+We can re-express the state equations as
+\begin{align}
+  \label{eq:state_matrix_eqns2}
+  \mathbf{x}_k &= \mathbf{F} \mathbf{x}_{k-1} + \mathbf{B} a_k + \mathbf{w}_k,
+\end{align}
+where $\mathbf{w}_k \sim \mathcal{N}\left(0,\mathbf{Q}\right)$, and
 \begin{equation}
-  \label{eq:pred_x}
-  x_k = f\left(f'(x_{k-1}) + \delta_t\right) + \varepsilon_x,
+  \label{eq:systm_variance}
+  \mathbf{Q} = \mathbf{G} \mathbf{G}^T \sigma_a^2
+  =
+  \begin{bmatrix}
+    \frac{\delta_t^2}{4} & \frac{\delta_t^3}{2} \\
+    \frac{\delta_t^3}{2} & \delta_t^4
+  \end{bmatrix} \sigma_a^2.
 \end{equation}
-and the velocity is simply the difference,
+
+
+
+The next step involves the noisy measurements of the location (distance-into-trip);
 \begin{equation}
-  \label{eq:new_v}
-  v_k = \frac{x_k - x_{k-1}}{\delta_t}
+  \label{eq:measurements}
+  \mathbf{z}_k = \mathbf{H}\mathbf{x}_k + \mathbf{v}_k,
 \end{equation}
+where the random measurment error is $\mathbf{v}_k \sim \mathcal{N}\left(0, \mathbf{R}\right)$,
+\begin{equation}
+  \label{eq:moremats}
+  \mathbf{H} =
+  \begin{bmatrix}
+    1 & 0
+  \end{bmatrix}
+  \quad \text{and} \quad \mathbf{R} = \mathbb{E}\left[\mathbf{v}_k \mathbf{v}_k^T\right] = \sigma_z^2.
+\end{equation}
+
+
+We can now apply the Kalman Filter prediction and update equations to estimate the future.
+
+The prior prediction of the new state $k$ estimate and covariance are:
+
+\begin{align}
+  \mathbf{\hat x}_{k|k-1} &= \mathbf{F} \mathbf{\hat x}_{k-1|k-1} + \mathbf{B} a_k \\
+  \mathbf{P}_{k|k-1} &= \mathbf{F}\mathbf{P}_{k-1|k-1}\mathbf{F}^T + \mathbf{Q}
+\end{align}
+
+
+We then update the model with the update equations:
+\begin{align}
+  \mathbf{\tilde y}_k &= \mathbf{z}_k - \mathbf{H} \mathbf{\hat x}_{k|k-1} \\
+  \mathbf{S_k} &= \mathbf{H} \mathbf{P}_{k|k-1} \mathbf{H}^T + \mathbf{R} \\
+  \mathbf{K}_k &= \mathbf{P}_{k|k-1} \mathbf{H}^T \mathbf{S}_k^{-1} \\
+  \mathbf{\hat x}_{k|k} &= \mathbf{\hat x}_{k|k-1} + \mathbf{K}_k \mathbf{\tilde y}_k \\
+  \mathbf{P}_{k|k} &= \left(\mathbf{I} - \mathbf{K}_k \mathbf{H}\right) \mathbf{P}_{k|k-1}
+\end{align}
+
+
 
 
 

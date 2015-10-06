@@ -88,11 +88,24 @@ An example of the schedule times is here:
 
 Obviously, we can't fit a line through points with the same $x$ coordinates, so instead we will only fit the curve
 through those with the smallest $y$ values.
-We can then use polynomial interpolation to interpolate the scheduled bus path over time:
+We can then use polynomial interpolation to interpolate the bus path, speed, and acceleration over time.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
 
 {\centering \includegraphics[width=0.5\textwidth]{figure/stop_times_curve-1} 
+
+}
+
+
+
+\end{knitrout}
+
+Next, we need to get speed (and acceleration) as a function of distance---not time!
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
+
+{\centering \includegraphics[width=1\textwidth]{figure/DIT-speed-1} 
 
 }
 
@@ -121,125 +134,109 @@ The state vector is
 where $x_k$ is the distance-into-trip (m) at time $k$, and $v_k$ is the velocity (m/s) at
 time $k$.
 
+The state-space equations are based on Newtonian physics, and use the schedule speed
+information as input-control to adjust predictions accordingly.
+The acceleration (i.e., change in speed) at distance $x_k$ is defined as $a_k = a(x_k)$, the change in velocity
+at the given point along the trip.
+However, this could result in negative speeds, and wont be too transferrable between traffic situations.
+Instead, we will use the proportional change in speed: $a_k = \frac{s_k}{s_{k-1}}$, where $s_k$ is the scheduled speed.
+
+%% The acceleration (i.e.,
+%% change in speed) at time $k$ is defined as $a_k$, the change in velocity between the stops
+%% at time $k$ and $k-\delta_t$.  This could also be a proportional change in speed:
+%% $s_k / s_{k-1}$, which could prevent negative speed (we assume busses continue fowards
+%% along their route), in which case we would replace $a_k$ with $v_{k-1}a_k$ in the following equations.
+
+Now, the state-space equations are:
+\begin{align}
+  \label{eq:state_space_eqns}
+  x_k &= x_{k-1} + v_{k-1} \delta_t + a_k v_{k-1} + \frac{\delta_t^2}{2} \varepsilon_k \\
+%  x_k &= x_{k-1} + v_{k-1} \delta_t + \frac{a_k \delta_t^2}{2} + \frac{\delta_t^2}{2} \varepsilon_k \\
+  \intertext{and}
+  v_k &= v_{k-1} + a_k\delta_t + \delta_t \varepsilon_a.
+\end{align}
+In the above, $\varepsilon_k \sim \mathcal{N}\left(0,\sigma_a^2\right)$ is random
+variation in acceleration.
+
+These equations can be expressed in vector notation as:
+\begin{align}
+  \label{eq:state_matrix_eqns}
+  \mathbf{x}_k &= \mathbf{F} \mathbf{x}_{k-1} + \mathbf{B} a_k + \mathbf{G} a_k
+\end{align}
+where
+\begin{align}
+  \mathbf{F} =
+  \begin{bmatrix}
+    1 & \delta_t \\
+    0 & 1
+  \end{bmatrix},
+  \quad
+  \mathbf{B} =
+  \begin{bmatrix}
+    \frac{\delta_t^2}{2} \\ \delta_t
+  \end{bmatrix}
+  \quad\text{and}\quad
+  \mathbf{G} =
+  \begin{bmatrix}
+    \frac{\delta_t^2}{2} \\ \delta_t
+  \end{bmatrix}.
+\end{align}
 
 
-
-
-%% The state-space equations are based on Newtonian physics, and use the schedule speed
-%% information as input-control to adjust predictions accordingly.
-%% The acceleration (i.e., change in speed) at distance $x_k$ is defined as $a_k = a(x_k)$, the change in velocity
-%% at the given point along the trip.
-%% However, this could result in negative speeds, and wont be too transferrable between traffic situations.
-%% Instead, we will use the proportional change in speed: $a_k = \frac{s_k}{s_{k-1}}$, where $s_k$ is the scheduled speed.
-
-%% %% The acceleration (i.e.,
-%% %% change in speed) at time $k$ is defined as $a_k$, the change in velocity between the stops
-%% %% at time $k$ and $k-\delta_t$.  This could also be a proportional change in speed:
-%% %% $s_k / s_{k-1}$, which could prevent negative speed (we assume busses continue fowards
-%% %% along their route), in which case we would replace $a_k$ with $v_{k-1}a_k$ in the following equations.
-
-%% Now, the state-space equations are:
-%% \begin{align}
-%%   \label{eq:state_space_eqns}
-%%   x_k &= x_{k-1} + v_{k-1} \delta_t + a_k v_{k-1} + \frac{\delta_t^2}{2} \varepsilon_k \\
-%% %  x_k &= x_{k-1} + v_{k-1} \delta_t + \frac{a_k \delta_t^2}{2} + \frac{\delta_t^2}{2} \varepsilon_k \\
-%%   \intertext{and}
-%%   v_k &= v_{k-1} + a_k\delta_t + \delta_t \varepsilon_a.
-%% \end{align}
-%% In the above, $\varepsilon_k \sim \mathcal{N}\left(0,\sigma_a^2\right)$ is random
-%% variation in acceleration.
-
-%% These equations can be expressed in vector notation as:
-%% \begin{align}
-%%   \label{eq:state_matrix_eqns}
-%%   \mathbf{x}_k &= \mathbf{F} \mathbf{x}_{k-1} + \mathbf{B} a_k + \mathbf{G} a_k
-%% \end{align}
-%% where
-%% \begin{align}
-%%   \mathbf{F} =
-%%   \begin{bmatrix}
-%%     1 & \delta_t \\
-%%     0 & 1
-%%   \end{bmatrix},
-%%   \quad
-%%   \mathbf{B} =
-%%   \begin{bmatrix}
-%%     \frac{\delta_t^2}{2} \\ \delta_t
-%%   \end{bmatrix}
-%%   \quad\text{and}\quad
-%%   \mathbf{G} =
-%%   \begin{bmatrix}
-%%     \frac{\delta_t^2}{2} \\ \delta_t
-%%   \end{bmatrix}.
-%% \end{align}
-
-
-%% We can re-express the state equations as
-%% \begin{align}
-%%   \label{eq:state_matrix_eqns2}
-%%   \mathbf{x}_k &= \mathbf{F} \mathbf{x}_{k-1} + \mathbf{B} a_k + \mathbf{w}_k,
-%% \end{align}
-%% where $\mathbf{w}_k \sim \mathcal{N}\left(0,\mathbf{Q}\right)$, and
-%% \begin{equation}
-%%   \label{eq:systm_variance}
-%%   \mathbf{Q} = \mathbf{G} \mathbf{G}^T \sigma_a^2
-%%   =
-%%   \begin{bmatrix}
-%%     \frac{\delta_t^2}{4} & \frac{\delta_t^3}{2} \\
-%%     \frac{\delta_t^3}{2} & \delta_t^4
-%%   \end{bmatrix} \sigma_a^2.
-%% \end{equation}
-
-
-
-%% The next step involves the noisy measurements of the location (distance-into-trip);
-%% \begin{equation}
-%%   \label{eq:measurements}
-%%   \mathbf{z}_k = \mathbf{H}\mathbf{x}_k + \mathbf{v}_k,
-%% \end{equation}
-%% where the random measurment error is $\mathbf{v}_k \sim \mathcal{N}\left(0, \mathbf{R}\right)$,
-%% \begin{equation}
-%%   \label{eq:moremats}
-%%   \mathbf{H} =
-%%   \begin{bmatrix}
-%%     1 & 0
-%%   \end{bmatrix}
-%%   \quad \text{and} \quad \mathbf{R} = \mathbb{E}\left[\mathbf{v}_k \mathbf{v}_k^T\right] = \sigma_z^2.
-%% \end{equation}
-
-
-%% We can now apply the Kalman Filter prediction and update equations to estimate the future.
-
-%% The prior prediction of the new state $k$ estimate and covariance are:
-
-%% \begin{align}
-%%   \mathbf{\hat x}_{k|k-1} &= \mathbf{F} \mathbf{\hat x}_{k-1|k-1} + \mathbf{B} a_k \\
-%%   \mathbf{P}_{k|k-1} &= \mathbf{F}\mathbf{P}_{k-1|k-1}\mathbf{F}^T + \mathbf{Q}
-%% \end{align}
-
-
-%% We then update the model with the update equations:
-%% \begin{align}
-%%   \mathbf{\tilde y}_k &= \mathbf{z}_k - \mathbf{H} \mathbf{\hat x}_{k|k-1} \\
-%%   \mathbf{S_k} &= \mathbf{H} \mathbf{P}_{k|k-1} \mathbf{H}^T + \mathbf{R} \\
-%%   \mathbf{K}_k &= \mathbf{P}_{k|k-1} \mathbf{H}^T \mathbf{S}_k^{-1} \\
-%%   \mathbf{\hat x}_{k|k} &= \mathbf{\hat x}_{k|k-1} + \mathbf{K}_k \mathbf{\tilde y}_k \\
-%%   \mathbf{P}_{k|k} &= \left(\mathbf{I} - \mathbf{K}_k \mathbf{H}\right) \mathbf{P}_{k|k-1}
-%% \end{align}
-
-
-
-We use the previous location and the schedule function, $f(x)$, to predict where the bus will be in the future.
-As the schedule is monotone, it has an inverse, so
+We can re-express the state equations as
+\begin{align}
+  \label{eq:state_matrix_eqns2}
+  \mathbf{x}_k &= \mathbf{F} \mathbf{x}_{k-1} + \mathbf{B} a_k + \mathbf{w}_k,
+\end{align}
+where $\mathbf{w}_k \sim \mathcal{N}\left(0,\mathbf{Q}\right)$, and
 \begin{equation}
-  \label{eq:pred_x}
-  x_k = f\left(f'(x_{k-1}) + \delta_t\right) + \varepsilon_x,
+  \label{eq:systm_variance}
+  \mathbf{Q} = \mathbf{G} \mathbf{G}^T \sigma_a^2
+  =
+  \begin{bmatrix}
+    \frac{\delta_t^2}{4} & \frac{\delta_t^3}{2} \\
+    \frac{\delta_t^3}{2} & \delta_t^4
+  \end{bmatrix} \sigma_a^2.
 \end{equation}
-and the velocity is simply the difference,
+
+
+
+The next step involves the noisy measurements of the location (distance-into-trip);
 \begin{equation}
-  \label{eq:new_v}
-  v_k = \frac{x_k - x_{k-1}}{\delta_t}
+  \label{eq:measurements}
+  \mathbf{z}_k = \mathbf{H}\mathbf{x}_k + \mathbf{v}_k,
 \end{equation}
+where the random measurment error is $\mathbf{v}_k \sim \mathcal{N}\left(0, \mathbf{R}\right)$,
+\begin{equation}
+  \label{eq:moremats}
+  \mathbf{H} =
+  \begin{bmatrix}
+    1 & 0
+  \end{bmatrix}
+  \quad \text{and} \quad \mathbf{R} = \mathbb{E}\left[\mathbf{v}_k \mathbf{v}_k^T\right] = \sigma_z^2.
+\end{equation}
+
+
+We can now apply the Kalman Filter prediction and update equations to estimate the future.
+
+The prior prediction of the new state $k$ estimate and covariance are:
+
+\begin{align}
+  \mathbf{\hat x}_{k|k-1} &= \mathbf{F} \mathbf{\hat x}_{k-1|k-1} + \mathbf{B} a_k \\
+  \mathbf{P}_{k|k-1} &= \mathbf{F}\mathbf{P}_{k-1|k-1}\mathbf{F}^T + \mathbf{Q}
+\end{align}
+
+
+We then update the model with the update equations:
+\begin{align}
+  \mathbf{\tilde y}_k &= \mathbf{z}_k - \mathbf{H} \mathbf{\hat x}_{k|k-1} \\
+  \mathbf{S_k} &= \mathbf{H} \mathbf{P}_{k|k-1} \mathbf{H}^T + \mathbf{R} \\
+  \mathbf{K}_k &= \mathbf{P}_{k|k-1} \mathbf{H}^T \mathbf{S}_k^{-1} \\
+  \mathbf{\hat x}_{k|k} &= \mathbf{\hat x}_{k|k-1} + \mathbf{K}_k \mathbf{\tilde y}_k \\
+  \mathbf{P}_{k|k} &= \left(\mathbf{I} - \mathbf{K}_k \mathbf{H}\right) \mathbf{P}_{k|k-1}
+\end{align}
+
+
 
 
 
