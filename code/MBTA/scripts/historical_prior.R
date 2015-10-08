@@ -1,6 +1,6 @@
 ### HISTORICAL PRIOR DISTRIBUTION FOR ARRIVAL TIME AT A STOP
 setwd("~/Documents/uni/phd/code/MBTA")
-set.seed(5)
+set.seed(4)
 
 ## requires functions/database.R
 source("functions/database.R")
@@ -85,15 +85,15 @@ points(stops$stop_lon, stops$stop_lat, col = "red", pch = 19, cex = 0.5)
 ## }
 ## close(pb)
 ## dput(tracks, "scripts/outputSEED4.dat")
-## #tracks <- dget("scripts/outputSEED1.dat")
+## #tracks <- dget("scripts/outputSEED4.dat")
 
 ## data$DIT <- sapply(tracks, function(x) x$track$distance.into.trip)
 ## data$timeIntoTrip <- time2seconds(data$time) - time2seconds(trip.start[data$trip_id])
 
 
-## stopInfo <- query(dbConnect(SQLite(), "trackers.db"),
-##                   "SELECT trip_id, arrival_time, departure_time, shape_dist_traveled FROM stop_times WHERE trip_id IN %s", trip.ids)
-## stopInfo$time <- ifelse(is.na(stopInfo$arrival_time), stopInfo$departure_time, stopInfo$arrival_time)
+stopInfo <- query(dbConnect(SQLite(), "trackers.db"),
+                  "SELECT trip_id, arrival_time, departure_time, shape_dist_traveled FROM stop_times WHERE trip_id IN %s ORDER BY trip_id, stop_sequence", trip.ids)
+stopInfo$time <- ifelse(is.na(stopInfo$arrival_time), stopInfo$departure_time, stopInfo$arrival_time)
 
 ## devAskNewPage(TRUE)
 ## for (tid in unique(data$trip_id)) {
@@ -111,19 +111,22 @@ points(stops$stop_lon, stops$stop_lat, col = "red", pch = 19, cex = 0.5)
 ## head(stopInfo)
 
 
-## plot(data$timeIntoTrip, data$DIT, type = "n")
-## abline(h = unique(stopInfo$shape_dist_traveled), lty = 3)
-## trip.start.sec <- time2seconds(trip.start)
-## cont.cols <- rainbow(200, end = 5/6, alpha = 0.4)
-## colID <- as.integer(199 * ((trip.start.sec - min(trip.start.sec)) / diff(range(trip.start.sec))) + 1)
-## names(colID) <- names(trip.start)
-## data$colour <- cont.cols[colID[data$trip_id]]
-## tapply(1:nrow(data), paste(data$date, data$trip_id, sep = "_"),
-##        function(i) lines(data$timeIntoTrip[i], data$DIT[i], col = data$colour[i]))
+plot(data$timeIntoTrip, data$DIT, type = "n")
+abline(h = unique(stopInfo$shape_dist_traveled), lty = 3)
+trip.start.sec <- time2seconds(trip.start)
+cont.cols <- rainbow(200, end = 5/6, alpha = 0.4)
+colID <- as.integer(199 * ((trip.start.sec - min(trip.start.sec)) / diff(range(trip.start.sec))) + 1)
+names(colID) <- names(trip.start)
+data$colour <- cont.cols[colID[data$trip_id]]
+tapply(1:nrow(data), paste(data$date, data$trip_id, sep = "_"),
+       function(i) lines(data$timeIntoTrip[i], data$DIT[i], col = data$colour[i]))
 
-## iNZightPlots::iNZightPlot(timeIntoTrip, DIT, data = data, plottype = "scatter", colby = timestamp, alpha = 0.4, cex.pt= 0.5,
-##                           g1 = trip_id)
+iNZightPlots::iNZightPlot(timeIntoTrip, DIT, data = data, plottype = "scatter", colby = timestamp, alpha = 0.4, cex.pt= 0.5,
+                          g1 = trip_id)
 
+
+
+## write it out:
 
 
 ## di$ID <- factor(paste(di$date, di$trip_id, sep = "_"))
@@ -304,7 +307,7 @@ theFuture <- function(i, track) {
             fut <- tail(attr(kf, "history"), 1)
 
     STOP <- apply(fut, 1, function(r) any(is.na(r)))
-    print(STOP)
+
     if (any(STOP))
         if (which(STOP)[1] > 1)
             fut <- fut[1:(which(STOP)[1] - 1), , drop = FALSE]
@@ -391,3 +394,8 @@ offset <- as.numeric(ymd(as.Date(as.POSIXct(tracks[[22]]$track$AVL$time, tz = "E
 use$time <- use$t - offset - time2seconds(trip.start[thisTrip])
 
 dput(use, "../../docs/kalman_filter/triphistory.dat")
+
+
+
+
+

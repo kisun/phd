@@ -57,6 +57,31 @@
 \usepackage{parskip}
 
 
+\newcommand{\bx}{\boldsymbol{x}}
+\newcommand{\bu}{\boldsymbol{u}}
+\newcommand{\bw}{\boldsymbol{w}}
+\newcommand{\bz}{\boldsymbol{z}}
+\newcommand{\by}{\boldsymbol{y}}
+\newcommand{\bh}{\boldsymbol{h}}
+\newcommand{\bv}{\boldsymbol{v}}
+\newcommand{\bfn}{\boldsymbol{f}}
+\newcommand{\bF}{\boldsymbol{F}}
+\newcommand{\bH}{\boldsymbol{H}}
+\newcommand{\bK}{\boldsymbol{K}}
+\newcommand{\bQ}{\boldsymbol{Q}}
+\newcommand{\bR}{\boldsymbol{R}}
+\newcommand{\bP}{\boldsymbol{P}}
+\newcommand{\bS}{\boldsymbol{S}}
+\newcommand{\bZero}{\boldsymbol{0}}
+\newcommand{\dd}[2]{\frac{\partial {#1}}{\partial {#2}}}
+
+
+\newcommand{\km}{_{k-1}}
+\newcommand{\kk}{_{k|k}}
+\newcommand{\kkm}{_{k|k-1}}
+\newcommand{\kmkm}{_{k-1|k-1}}
+
+
 \title{Kalman Filter}
 \author{Overview of models}
 \date{}
@@ -103,144 +128,142 @@ We can then use polynomial interpolation to interpolate the scheduled bus path o
 
 
 
-\section{Simple discrete-time model}
-
-For simplicity, we assume everything is discrete: positions are reported every $\delta_t$
-seconds, and the input-control is specified using the stop time schedule, and assuming a
-constant speed between stops. At a later date, we can fit more complex models that are
-smooth up to the second derivative (i.e., acceleration).
+\section{Extended Kalman Filter (EKF) Model}
 
 The state vector is
 \begin{equation}
   \label{eq:state-vector}
-  \mathbf{x}_k =
+  \bx_k =
   \begin{bmatrix}
-    x_k \\ v_k
+    d_k \\ v_k
   \end{bmatrix}
 \end{equation}
-where $x_k$ is the distance-into-trip (m) at time $k$, and $v_k$ is the velocity (m/s) at
-time $k$.
+where $d_k$ is the distance-into-trip (m) of observation $k$, and $v_k$ is the velocity (m/s) at
+observation $k$.
 
 
-
-
-
-%% The state-space equations are based on Newtonian physics, and use the schedule speed
-%% information as input-control to adjust predictions accordingly.
-%% The acceleration (i.e., change in speed) at distance $x_k$ is defined as $a_k = a(x_k)$, the change in velocity
-%% at the given point along the trip.
-%% However, this could result in negative speeds, and wont be too transferrable between traffic situations.
-%% Instead, we will use the proportional change in speed: $a_k = \frac{s_k}{s_{k-1}}$, where $s_k$ is the scheduled speed.
-
-%% %% The acceleration (i.e.,
-%% %% change in speed) at time $k$ is defined as $a_k$, the change in velocity between the stops
-%% %% at time $k$ and $k-\delta_t$.  This could also be a proportional change in speed:
-%% %% $s_k / s_{k-1}$, which could prevent negative speed (we assume busses continue fowards
-%% %% along their route), in which case we would replace $a_k$ with $v_{k-1}a_k$ in the following equations.
-
-%% Now, the state-space equations are:
-%% \begin{align}
-%%   \label{eq:state_space_eqns}
-%%   x_k &= x_{k-1} + v_{k-1} \delta_t + a_k v_{k-1} + \frac{\delta_t^2}{2} \varepsilon_k \\
-%% %  x_k &= x_{k-1} + v_{k-1} \delta_t + \frac{a_k \delta_t^2}{2} + \frac{\delta_t^2}{2} \varepsilon_k \\
-%%   \intertext{and}
-%%   v_k &= v_{k-1} + a_k\delta_t + \delta_t \varepsilon_a.
-%% \end{align}
-%% In the above, $\varepsilon_k \sim \mathcal{N}\left(0,\sigma_a^2\right)$ is random
-%% variation in acceleration.
-
-%% These equations can be expressed in vector notation as:
-%% \begin{align}
-%%   \label{eq:state_matrix_eqns}
-%%   \mathbf{x}_k &= \mathbf{F} \mathbf{x}_{k-1} + \mathbf{B} a_k + \mathbf{G} a_k
-%% \end{align}
-%% where
-%% \begin{align}
-%%   \mathbf{F} =
-%%   \begin{bmatrix}
-%%     1 & \delta_t \\
-%%     0 & 1
-%%   \end{bmatrix},
-%%   \quad
-%%   \mathbf{B} =
-%%   \begin{bmatrix}
-%%     \frac{\delta_t^2}{2} \\ \delta_t
-%%   \end{bmatrix}
-%%   \quad\text{and}\quad
-%%   \mathbf{G} =
-%%   \begin{bmatrix}
-%%     \frac{\delta_t^2}{2} \\ \delta_t
-%%   \end{bmatrix}.
-%% \end{align}
-
-
-%% We can re-express the state equations as
-%% \begin{align}
-%%   \label{eq:state_matrix_eqns2}
-%%   \mathbf{x}_k &= \mathbf{F} \mathbf{x}_{k-1} + \mathbf{B} a_k + \mathbf{w}_k,
-%% \end{align}
-%% where $\mathbf{w}_k \sim \mathcal{N}\left(0,\mathbf{Q}\right)$, and
-%% \begin{equation}
-%%   \label{eq:systm_variance}
-%%   \mathbf{Q} = \mathbf{G} \mathbf{G}^T \sigma_a^2
-%%   =
-%%   \begin{bmatrix}
-%%     \frac{\delta_t^2}{4} & \frac{\delta_t^3}{2} \\
-%%     \frac{\delta_t^3}{2} & \delta_t^4
-%%   \end{bmatrix} \sigma_a^2.
-%% \end{equation}
-
-
-
-%% The next step involves the noisy measurements of the location (distance-into-trip);
-%% \begin{equation}
-%%   \label{eq:measurements}
-%%   \mathbf{z}_k = \mathbf{H}\mathbf{x}_k + \mathbf{v}_k,
-%% \end{equation}
-%% where the random measurment error is $\mathbf{v}_k \sim \mathcal{N}\left(0, \mathbf{R}\right)$,
-%% \begin{equation}
-%%   \label{eq:moremats}
-%%   \mathbf{H} =
-%%   \begin{bmatrix}
-%%     1 & 0
-%%   \end{bmatrix}
-%%   \quad \text{and} \quad \mathbf{R} = \mathbb{E}\left[\mathbf{v}_k \mathbf{v}_k^T\right] = \sigma_z^2.
-%% \end{equation}
-
-
-%% We can now apply the Kalman Filter prediction and update equations to estimate the future.
-
-%% The prior prediction of the new state $k$ estimate and covariance are:
-
-%% \begin{align}
-%%   \mathbf{\hat x}_{k|k-1} &= \mathbf{F} \mathbf{\hat x}_{k-1|k-1} + \mathbf{B} a_k \\
-%%   \mathbf{P}_{k|k-1} &= \mathbf{F}\mathbf{P}_{k-1|k-1}\mathbf{F}^T + \mathbf{Q}
-%% \end{align}
-
-
-%% We then update the model with the update equations:
-%% \begin{align}
-%%   \mathbf{\tilde y}_k &= \mathbf{z}_k - \mathbf{H} \mathbf{\hat x}_{k|k-1} \\
-%%   \mathbf{S_k} &= \mathbf{H} \mathbf{P}_{k|k-1} \mathbf{H}^T + \mathbf{R} \\
-%%   \mathbf{K}_k &= \mathbf{P}_{k|k-1} \mathbf{H}^T \mathbf{S}_k^{-1} \\
-%%   \mathbf{\hat x}_{k|k} &= \mathbf{\hat x}_{k|k-1} + \mathbf{K}_k \mathbf{\tilde y}_k \\
-%%   \mathbf{P}_{k|k} &= \left(\mathbf{I} - \mathbf{K}_k \mathbf{H}\right) \mathbf{P}_{k|k-1}
-%% \end{align}
-
-
-
-We use the previous location and the schedule function, $f(x)$, to predict where the bus will be in the future.
-As the schedule is monotone, it has an inverse, so
+We will be using a nonlinear Kalman Filter to account for scheduled distance traveled in time $\Delta t_k$,
+historical information, and a velocity ``penalty'' term:
 \begin{equation}
-  \label{eq:pred_x}
-  x_k = f\left(f'(x_{k-1}) + \delta_t\right) + \varepsilon_x,
-\end{equation}
-and the velocity is simply the difference,
-\begin{equation}
-  \label{eq:new_v}
-  v_k = \frac{x_k - x_{k-1}}{\delta_t}
+  \label{eq:nonlinKF}
+  \bx_k = f\left(\bx_{k-1}, \bu_{k-1}\right) + \bw_{k-1}.
 \end{equation}
 
+The control vector, $\bu_k$, will contain additional information used to predict and adjust the estimates of $\bx_k$,
+\begin{equation}
+  \label{eq:control_vector}
+  \bu_k = 
+  \begin{bmatrix}
+    t_k \\ \Delta t_k
+  \end{bmatrix},
+\end{equation}
+where $t_k$ is the time (in seconds since the trip/block began) of observation $k$, 
+and $\Delta t_k$ is the time between observations $k$ and $k+1$.
+
+The difficulty now lies in defining $f$; at first, we can define it as ``the scheduled distance traveled in $\Delta t_k$~s, starting from $d_k$~m into the trip, with a penalty based on the velocity''. For further readability, we define $g = s^{-1}$, which gives us the ``scheduled time'' of a given distance-into-trip:
+\begin{align}
+  \label{eq:function1}
+  \hat d_{k} &= f_d\left(\bx_{k-1},\bu_{k-1}\right) 
+  = d_{k-1} + \left[s\left(g\left(d_{k-1}\right) + \Delta t_{k-1}\right) - d_{k-1}\right] \lambda\left(v_{k-1}\right) \\
+  \Rightarrow \hat x_{k,1} &= x_{k-1,1} + \left[s\left(g\left(x_{k-1,1}\right) + u_{k-1,2}\right) - x_{k-1,1}\right] \lambda\left(x_{k-1,2}\right) \\
+  \intertext{and (for now, assuming a simple velocity function)}
+  \hat v_k &= f_v\left(\bx_{k-1},\bu_{k-1}\right) 
+  = \frac{s'\left(g\left(d_{k-1}\right) + \Delta t_{k-1}\right)}{s'\left(g\left(d_{k-1}\right)\right)} v_{k-1} \\
+  \Rightarrow \hat x_{k,2} &= \frac{s'\left(g\left(x_{k-1,1}\right) + u_{k-1,2}\right)}{s'\left(g\left(x_{k-1,1}\right)\right)} x_{k-1,2}, \\
+  \intertext{which gives}
+  \hat\bx_k &= \bfn\left(\bx_{k-1},\bu_{k-1}\right) 
+  = \begin{bmatrix}
+      f_d\left(\bx_{k-1},\bu_{k-1}\right) \\ f_v\left(\bx_{k-1},\bu_{k-1}\right) 
+    \end{bmatrix}
+\end{align}
+However, this needs to be differentiable \ldots we can obtain derivatives of $s$ from the polynomial splines used to create it,
+but will this be adequate?
+
+For the Jacobian,
+\begin{equation}
+  \label{eq:jacobian}
+  \bF_k = 
+  \begin{bmatrix}
+    \frac{\partial\bfn}{\partial x_{k,1}} & \frac{\partial\bfn}{\partial x_{k,2}}_{\hat\bx_{k|k},\bu_k}
+  \end{bmatrix},
+\end{equation}
+which is made up of four partial derivatives (two for each $f$, and dropping the $k$ subscripts for readability):
+\begin{align*}
+  \dd{f_d}{x_1} &= 1 + \left[s'\left(g\left(x_1\right) + u_2\right)g'\left(x_1\right) - 1\right] \lambda\left(x_2\right) \\
+  \dd{f_d}{x_2} &= \left[s\left(g\left(x_1\right) + u_2\right) - x_2\right] \lambda'\left(x_2\right) \\
+  \dd{f_v}{x_1} &= \left\{\frac{g'\left(x_1\right) \left[s''\left(g\left(x_1\right) + u_2\right) s'\left(g\left(x_1\right)\right) - s'\left(g\left(x_1\right) + u_2\right) s''\left(g\left(x_1\right)\right)\right]}{\left[s'\left(g\left(x_1\right)\right)\right]^2}\right\} x_2 \\
+  \dd{f_v}{x_2} &= \frac{s'\left(g\left(x_1\right) + u_2\right)}{s'\left(g\left(x_1\right)\right)}.
+\end{align*}
+Fortunately, we only need to be able to evaluate $F$, and the polynomial spline function gives us $s$, $s'$ and $s''$!
+
+
+For the measurement matrix $\bH$, we use the Jacobian of the function $h$ which maps the predicted state to the observations:
+\begin{equation}
+  \label{eq:measurements}
+  \bz_k = \bh\left(\bx_k\right) + \bv_k,
+\end{equation}
+where
+\begin{align*}
+  \bh\left(\bx_k\right) 
+  &= 
+    \begin{bmatrix}
+      x_{k,1} \\ 0
+    \end{bmatrix}
+\end{align*}
+and therefore
+\begin{equation*}
+  \bH = 
+  \begin{bmatrix}
+    \dd{h}{x_{k,1}} & \dd{h}{x_{k,2}}
+  \end{bmatrix}
+  = 
+  \begin{bmatrix}
+    1 & 0
+  \end{bmatrix}
+\end{equation*}
+
+
+We will still need the covariance matrices $\bQ$ and $\bR$, such that:
+\begin{align*}
+  \bw_{k-1} &\sim \mathcal{N}\left(\bZero, \bQ\right) \\
+  \bv_k &\sim \mathcal{N}\left(\bZero, \bR\right).
+\end{align*}
+This, however, presents an opportunity to use historical data to estimate both $\bQ$ and $\bR$;
+this does require historical data, which we don't (yet) have. Based on a set of data we have used (so far),
+we will use an estimate of
+\begin{equation*}
+  \bQ =
+  \begin{bmatrix}
+    580^2 & -100 \\ -100 & 2.5^2
+  \end{bmatrix},
+\end{equation*}
+and $\bR$, which is essentially the measurement error, we base off of previous studies, $R = \left(500\text{~ft}\right)^2$ 
+(this is a scalar because the observations are only a single variable: distance-into-trip).
+
+
+This should be everything we need to implement the following algorithm:
+
+\textbf{Predict}
+\begin{align*}
+  \intertext{Predicted state estimate}
+  \hat\bx\kkm &= \bfn\left(\hat\bx\kmkm, \bu\km\right) \\
+  \intertext{Predicted covariance estimate}
+  \bP\kkm &= \bF\km \bP\kmkm \bF^T\km + \bQ\km
+\end{align*}
+
+\textbf{Update}
+\begin{align*}
+  \intertext{Innovation or measurement residual}
+  \tilde\by_k &= \bz_k - \bh\left(\hat\bx\kkm\right) \\
+  \intertext{Innovation (or residual) covariance}
+  \bS_k &= \bH_k \bP\kkm \bH^T_k + \bR_k \\
+  \intertext{Near-optimal Kalman Gain}
+  \bK_k &= \bP\kkm \bH^T_k \bS^{-1}_k \\
+  \intertext{Updated covariance estimate}
+  \bP\kk &= \left(\boldsymbol{I} - \bK_k \bH_k\right) \bP\kkm \\
+  \intertext{Updated state estimate}
+  \hat\bx\kk &= \hat\bx\kkm + \bK_k \tilde\by_k
+\end{align*}
 
 
 
@@ -249,9 +272,6 @@ and the velocity is simply the difference,
 We obtained a series of GPS observations for a trip.
 For the most part, the observations occur every 60~seconds, with some error, and one
 occasion where there is a delay of only 10~seconds.
-To simplify, we rounded everything off to the nearest 10~seconds.
-We also shift the first 3~data points up 10~seconds and remove the 4th to make the times discrete (minute),
-and made the first distance 0 to simplify things (for now) and shift the series to start at time 0.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
 
@@ -264,10 +284,7 @@ and made the first distance 0 to simplify things (for now) and shift the series 
 \end{knitrout}
 
 
-We now implement the Kalman Filter as described above.
-The time interval is $\delta_t = 60$~seconds, and the times are $K \in \{0,1,\ldots,9\}$ minutes.
-
-
+We now implement the Extended Kalman Filter as described above.
 
 
 We assume that the initial time and location are 0, although the velocity is unknown, so the initilisation matrices are:
@@ -290,71 +307,77 @@ Here's the implementation in R:
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlcom{## Initialisation values:}
-\hlstd{X.} \hlkwb{<-} \hlstd{X} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{ncol} \hlstd{=} \hlkwd{length}\hlstd{(x),} \hlkwc{nrow} \hlstd{=} \hlnum{2}\hlstd{)}
-\hlstd{X[,} \hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{s}\hlstd{(}\hlnum{0}\hlstd{))}
-\hlstd{P.} \hlkwb{<-} \hlstd{P} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{dim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlnum{2}\hlstd{,} \hlkwd{length}\hlstd{(x)))}
-\hlstd{P[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{10}\hlstd{)}
+\hlcom{## observed times}
+\hlstd{t} \hlkwb{<-} \hlstd{dat}\hlopt{$}\hlstd{T}
+\hlcom{## observed distances}
+\hlstd{d} \hlkwb{<-} \hlstd{dat}\hlopt{$}\hlstd{dist}
 
-\hlstd{dt} \hlkwb{<-} \hlnum{60} \hlcom{## fixed for now}
-\hlstd{sig.a} \hlkwb{<-} \hlnum{1.5} \hlopt{/} \hlstd{dt}
-\hlstd{sig.z} \hlkwb{<-} \hlnum{50}
+\hlcom{## the schedule and inverse-schedule functions}
+\hlstd{st} \hlkwb{<-} \hlkwd{unique}\hlstd{(sched}\hlopt{$}\hlstd{time)}
+\hlstd{sd} \hlkwb{<-} \hlkwd{tapply}\hlstd{(sched}\hlopt{$}\hlstd{shape_dist_traveled, sched}\hlopt{$}\hlstd{time, min)}
 
-\hlcom{## Matrices:}
-\hlstd{F} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{, dt,} \hlnum{1}\hlstd{),} \hlkwc{nrow} \hlstd{=} \hlnum{2}\hlstd{)}
-\hlstd{B} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwd{c}\hlstd{(dt}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, dt),} \hlkwc{nrow} \hlstd{=} \hlnum{2}\hlstd{)}
-\hlstd{G} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwd{c}\hlstd{(dt}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, dt),} \hlkwc{nrow} \hlstd{=} \hlnum{2}\hlstd{)}
-\hlstd{Q} \hlkwb{<-} \hlstd{(G} \hlopt{%*%} \hlkwd{t}\hlstd{(G))} \hlopt{*} \hlstd{sig.a}\hlopt{^}\hlnum{2}
-\hlstd{H} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwc{nrow} \hlstd{=} \hlnum{1}\hlstd{)}
-\hlstd{R} \hlkwb{<-} \hlstd{sig.z}\hlopt{^}\hlnum{2}
+\hlstd{s} \hlkwb{<-} \hlkwd{splinefun}\hlstd{(st, sd)}
+\hlstd{g} \hlkwb{<-} \hlkwd{splinefun}\hlstd{(sd, st)}
 
-\hlcom{## GO!}
-\hlstd{k} \hlkwb{<-} \hlnum{2}
-\hlkwa{for} \hlstd{(k} \hlkwa{in} \hlnum{2}\hlopt{:}\hlkwd{length}\hlstd{(x)) \{}
-    \hlstd{ak} \hlkwb{<-}
-        \hlkwd{accF}\hlstd{(x[k} \hlopt{-} \hlnum{1}\hlstd{])}
-    \hlcom{## Predict}
-    \hlkwa{if} \hlstd{(k} \hlopt{<} \hlnum{11}\hlstd{) \{}
-        \hlstd{X.[, k]} \hlkwb{<-}
-            \hlstd{F} \hlopt{%*%} \hlstd{X[, k} \hlopt{-} \hlnum{1}\hlstd{]} \hlopt{+} \hlstd{B} \hlopt{%*%} \hlstd{ak}
-        \hlstd{P.[,, k]} \hlkwb{<-}
-            \hlstd{F} \hlopt{%*%} \hlstd{P[,, k} \hlopt{-} \hlnum{1}\hlstd{]} \hlopt{%*%} \hlkwd{t}\hlstd{(F)} \hlopt{+} \hlstd{Q}
-        \hlcom{## Update    }
-        \hlstd{yr} \hlkwb{<-}
-            \hlstd{x[k]} \hlopt{-} \hlstd{H} \hlopt{%*%} \hlstd{X.[, k,} \hlkwc{drop} \hlstd{=} \hlnum{FALSE}\hlstd{]}
-        \hlstd{K} \hlkwb{<-}
-            \hlstd{P.[,, k]} \hlopt{%*%} \hlkwd{t}\hlstd{(H)} \hlopt{%*%} \hlkwd{solve}\hlstd{( H} \hlopt{%*%} \hlstd{P.[,, k]} \hlopt{%*%} \hlkwd{t}\hlstd{(H)} \hlopt{+} \hlstd{R )}
-        \hlstd{X[, k]} \hlkwb{<-}
-            \hlstd{X.[, k]} \hlopt{+} \hlstd{K} \hlopt{%*%} \hlstd{yr}
-        \hlstd{P[,, k]} \hlkwb{<-}
-            \hlstd{(}\hlkwd{diag}\hlstd{(}\hlnum{2}\hlstd{)} \hlopt{-} \hlstd{K} \hlopt{%*%} \hlstd{H)} \hlopt{%*%} \hlstd{P.[,, k]}
-    \hlstd{\}} \hlkwa{else} \hlstd{\{}
-        \hlstd{X.[, k]} \hlkwb{<-}
-            \hlstd{F} \hlopt{%*%} \hlstd{X.[, k} \hlopt{-} \hlnum{1}\hlstd{]} \hlopt{+} \hlstd{B} \hlopt{%*%} \hlstd{ak}
-        \hlstd{P.[,, k]} \hlkwb{<-}
-            \hlstd{F} \hlopt{%*%} \hlstd{P.[,, k} \hlopt{-} \hlnum{1}\hlstd{]} \hlopt{%*%} \hlkwd{t}\hlstd{(F)} \hlopt{+} \hlstd{Q}
-    \hlstd{\}}
+\hlcom{## prediction function}
+\hlstd{lambda} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{...}\hlstd{)} \hlnum{1} \hlcom{## for now, do nothing ...}
+\hlstd{lambda.} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{...}\hlstd{)} \hlnum{0}
+
+\hlstd{f} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{u}\hlstd{)}
+    \hlkwd{c}\hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{+} \hlstd{(}\hlkwd{s}\hlstd{(}\hlkwd{g}\hlstd{(x[}\hlnum{1}\hlstd{])} \hlopt{+} \hlstd{u[}\hlnum{2}\hlstd{])} \hlopt{-} \hlstd{x[}\hlnum{1}\hlstd{])} \hlopt{*} \hlkwd{lambda}\hlstd{(x[}\hlnum{2}\hlstd{]),}
+      \hlkwd{s}\hlstd{(}\hlkwd{g}\hlstd{(x[}\hlnum{1}\hlstd{])} \hlopt{+} \hlstd{u[}\hlnum{2}\hlstd{],} \hlnum{1}\hlstd{)} \hlopt{/} \hlkwd{s}\hlstd{(}\hlkwd{g}\hlstd{(x[}\hlnum{1}\hlstd{]),} \hlnum{1}\hlstd{)} \hlopt{*} \hlstd{x[}\hlnum{2}\hlstd{])}
+
+\hlcom{## and it's jacobian:}
+\hlstd{F} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{u}\hlstd{) \{}
+    \hlstd{f1x1} \hlkwb{<-} \hlnum{1} \hlopt{+} \hlstd{(}\hlkwd{s}\hlstd{(}\hlkwd{g}\hlstd{(x[}\hlnum{1}\hlstd{])} \hlopt{+} \hlstd{u[}\hlnum{2}\hlstd{],} \hlnum{1}\hlstd{)} \hlopt{*} \hlkwd{g}\hlstd{(x[}\hlnum{1}\hlstd{],} \hlnum{1}\hlstd{)} \hlopt{-} \hlnum{1}\hlstd{)} \hlopt{*} \hlkwd{lambda}\hlstd{(x[}\hlnum{2}\hlstd{])}
+    \hlstd{f1x2} \hlkwb{<-} \hlstd{(}\hlkwd{s}\hlstd{(}\hlkwd{g}\hlstd{(x[}\hlnum{1}\hlstd{])} \hlopt{+} \hlstd{u[}\hlnum{2}\hlstd{])} \hlopt{-} \hlstd{x[}\hlnum{2}\hlstd{])} \hlopt{*} \hlkwd{lambda.}\hlstd{(x[}\hlnum{2}\hlstd{])}
+
+    \hlstd{f2x1} \hlkwb{<-} \hlstd{((}\hlkwd{g}\hlstd{(x[}\hlnum{1}\hlstd{],} \hlnum{1}\hlstd{)} \hlopt{*} \hlstd{(}\hlkwd{s}\hlstd{(}\hlkwd{g}\hlstd{(x[}\hlnum{1}\hlstd{])} \hlopt{+} \hlstd{u[}\hlnum{2}\hlstd{],} \hlnum{2}\hlstd{)} \hlopt{*} \hlkwd{s}\hlstd{(}\hlkwd{g}\hlstd{(x[}\hlnum{1}\hlstd{]),} \hlnum{1}\hlstd{)} \hlopt{-} \hlkwd{s}\hlstd{(}\hlkwd{g}\hlstd{(x[}\hlnum{1}\hlstd{])} \hlopt{+} \hlstd{u[}\hlnum{2}\hlstd{],} \hlnum{1}\hlstd{)} \hlopt{*} \hlkwd{s}\hlstd{(}\hlkwd{g}\hlstd{(x[}\hlnum{1}\hlstd{]),} \hlnum{2}\hlstd{)))} \hlopt{/} \hlstd{(}\hlkwd{s}\hlstd{(}\hlkwd{g}\hlstd{(x[}\hlnum{1}\hlstd{]),} \hlnum{1}\hlstd{)}\hlopt{^}\hlnum{2}\hlstd{))} \hlopt{*} \hlstd{x[}\hlnum{2}\hlstd{]}
+    \hlstd{f2x2} \hlkwb{<-} \hlkwd{s}\hlstd{(}\hlkwd{g}\hlstd{(x[}\hlnum{1}\hlstd{])} \hlopt{+} \hlstd{u[}\hlnum{2}\hlstd{],} \hlnum{1}\hlstd{)} \hlopt{/} \hlkwd{s}\hlstd{(}\hlkwd{g}\hlstd{(x[}\hlnum{1}\hlstd{]),} \hlnum{1}\hlstd{)}
+
+    \hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(f1x1, f1x2),} \hlkwd{c}\hlstd{(f2x1, f2x2))}
 \hlstd{\}}
 
-\hlkwd{plot}\hlstd{(t, x,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(sched}\hlopt{$}\hlstd{time),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{schedF}\hlstd{(}\hlkwd{max}\hlstd{(sched}\hlopt{$}\hlstd{time))))}
-\hlkwd{curve}\hlstd{(}\hlkwd{schedF}\hlstd{(x),} \hlkwd{min}\hlstd{(x),} \hlkwd{max}\hlstd{(x),} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{add} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\hlcom{## Measurement matrix:}
+\hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{)} \hlkwd{rbind}\hlstd{(x[}\hlnum{1}\hlstd{],} \hlnum{0}\hlstd{)}
+\hlstd{H} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{)} \hlkwd{cbind}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{)}
 
-\hlstd{xp.hat} \hlkwb{<-} \hlstd{X.[}\hlnum{1}\hlstd{, ]}
-\hlstd{xp.sd} \hlkwb{<-} \hlkwd{sqrt}\hlstd{(P.[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{, ])}
-\hlstd{xp.ci} \hlkwb{<-} \hlkwd{sapply}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0.025}\hlstd{,} \hlnum{0.975}\hlstd{), qnorm,} \hlkwc{mean} \hlstd{= xp.hat,} \hlkwc{sd} \hlstd{= xp.sd)}
-\hlkwd{polygon}\hlstd{(}\hlkwd{c}\hlstd{(t,} \hlkwd{rev}\hlstd{(t)),} \hlkwd{c}\hlstd{(xp.ci[,} \hlnum{1}\hlstd{],} \hlkwd{rev}\hlstd{(xp.ci[,} \hlnum{2}\hlstd{])),} \hlkwc{col} \hlstd{=} \hlstr{"#99ffff50"}\hlstd{)}
+\hlcom{## Variance matrices:}
+\hlstd{Q} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{580}\hlopt{^}\hlnum{2}\hlstd{,} \hlopt{-}\hlnum{100}\hlstd{),}
+           \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{100}\hlstd{,} \hlnum{2.5}\hlopt{^}\hlnum{2}\hlstd{))}
+\hlstd{R} \hlkwb{<-} \hlnum{500}\hlopt{^}\hlnum{2}
 
-\hlstd{x.hat} \hlkwb{<-} \hlstd{X[}\hlnum{1}\hlstd{,} \hlopt{-}\hlnum{1}\hlstd{]}
-\hlstd{x.sd} \hlkwb{<-} \hlkwd{sqrt}\hlstd{(P[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{,} \hlopt{-}\hlnum{1}\hlstd{])}
-\hlstd{x.ci} \hlkwb{<-} \hlkwd{sapply}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0.025}\hlstd{,} \hlnum{0.975}\hlstd{), qnorm,} \hlkwc{mean} \hlstd{= x.hat,} \hlkwc{sd} \hlstd{= x.sd)}
-\hlkwd{polygon}\hlstd{(}\hlkwd{c}\hlstd{(t[}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwd{rev}\hlstd{(t[}\hlopt{-}\hlnum{1}\hlstd{])),} \hlkwd{c}\hlstd{(x.ci[,} \hlnum{1}\hlstd{],} \hlkwd{rev}\hlstd{(x.ci[,} \hlnum{2}\hlstd{])),} \hlkwc{col} \hlstd{=} \hlstr{"#00003320"}\hlstd{)}
+\hlcom{## And the initialisation:}
+\hlstd{X} \hlkwb{<-} \hlkwd{numeric}\hlstd{(}\hlkwd{length}\hlstd{(x))}
+\hlstd{X} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{s}\hlstd{(}\hlnum{0}\hlstd{))}
+\hlstd{P0} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{100}\hlstd{))}
 
-\hlkwd{lines}\hlstd{(t, X[}\hlnum{1}\hlstd{, ],} \hlkwc{lty} \hlstd{=} \hlnum{2}\hlstd{)}
-\hlkwd{points}\hlstd{(t, x,} \hlkwc{cex} \hlstd{=} \hlnum{0.6}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+
+\hlcom{## and run it ...}
+
+\hlstd{EKF} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{xhat}\hlstd{,} \hlkwc{Phat}\hlstd{,} \hlkwc{x}\hlstd{,} \hlkwc{u}\hlstd{) \{}
+    \hlcom{## xhat  the estimate of \textbackslash{}hat x_\{k-1\}}
+    \hlcom{## Phat     the estimate of \textbackslash{}hat P_\{k-1\}}
+    \hlcom{## x     the data x_k}
+    \hlcom{## u     the control variables u_\{k-1\}}
+
+    \hlcom{## return:}
+    \hlcom{## x.  the a priori estimate of x_k}
+    \hlcom{## P.  the a priori estimate of covariance}
+    \hlcom{## x   the a posteriori estimate of x_k}
+    \hlcom{## P   the a posteriori estimate of covariance}
+
+    \hlcom{## predict}
+    \hlstd{xhat} \hlkwb{<-} \hlkwd{f}\hlstd{(xhat, u)}
+\hlstd{\}}
+
+\hlstd{xhat} \hlkwb{<-} \hlstd{x0}
+\hlstd{Phat} \hlkwb{<-} \hlstd{P0}
+\hlstd{x} \hlkwb{<-} \hlkwd{rbind}\hlstd{(x[}\hlnum{1}\hlstd{], )}
 \end{alltt}
-\end{kframe}
-\includegraphics[width=\maxwidth]{figure/kalman_filter-1} 
 
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in rbind(x[1], ): argument is missing, with no default}}\end{kframe}
 \end{knitrout}
 
 
