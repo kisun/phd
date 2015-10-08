@@ -127,7 +127,11 @@ iNZightPlots::iNZightPlot(timeIntoTrip, DIT, data = data, plottype = "scatter", 
 
 
 ## write it out:
+dput(stopInfo, "../../docs/kalman_filter/data/STOPS.dat")
+dput(data, "../../docs/kalman_filter/data/HISTORY.dat")
 
+
+x
 
 ## di$ID <- factor(paste(di$date, di$trip_id, sep = "_"))
 ## arrivalTimes <- vector("list", length(unique(data$trip_id)))
