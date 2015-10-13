@@ -1,6 +1,6 @@
 ### HISTORICAL PRIOR DISTRIBUTION FOR ARRIVAL TIME AT A STOP
 setwd("~/Documents/uni/phd/code/MBTA")
-set.seed(4)
+set.seed(45)
 
 ## requires functions/database.R
 source("functions/database.R")
@@ -73,22 +73,22 @@ points(data$position_longitude, data$position_latitude, col = "green4", pch = 19
 points(stops$stop_lon, stops$stop_lat, col = "red", pch = 19, cex = 0.5)
 
 
-## Now turn these into distance-into-trips:
-## HISTDB <- "gtfs-historical.db"
-## v1 <- data
-## tracks <- vector("list", nrow(v1))
-## pb <- txtProgressBar(0, nrow(v1), style = 3)
-## tracks[[1]] <- trackMyBus(v1$vehicle_id[1], v1$timestamp[1], origin = as.character(v1$date[1]))
-## for (i in 2:nrow(v1)) {
-##     setTxtProgressBar(pb, i)
-##     tracks[[i]] <- trackMyBus(v1$vehicle_id[i], v1$timestamp[i], tracks[[i-1]]$kalman.filter, origin = "2015-08-24")
-## }
-## close(pb)
-## dput(tracks, "scripts/outputSEED4.dat")
+##Now turn these into distance-into-trips:
+HISTDB <- "gtfs-historical.db"
+v1 <- data
+tracks <- vector("list", nrow(v1))
+pb <- txtProgressBar(0, nrow(v1), style = 3)
+tracks[[1]] <- trackMyBus(v1$vehicle_id[1], v1$timestamp[1], origin = as.character(v1$date[1]))
+for (i in 2:nrow(v1)) {
+    setTxtProgressBar(pb, i)
+    tracks[[i]] <- trackMyBus(v1$vehicle_id[i], v1$timestamp[i], tracks[[i-1]]$kalman.filter, origin = "2015-08-24")
+}
+close(pb)
+dput(tracks, "scripts/outputSEED45.dat")
 ## #tracks <- dget("scripts/outputSEED4.dat")
 
-## data$DIT <- sapply(tracks, function(x) x$track$distance.into.trip)
-## data$timeIntoTrip <- time2seconds(data$time) - time2seconds(trip.start[data$trip_id])
+data$DIT <- sapply(tracks, function(x) x$track$distance.into.trip)
+data$timeIntoTrip <- time2seconds(data$time) - time2seconds(trip.start[data$trip_id])
 
 
 stopInfo <- query(dbConnect(SQLite(), "trackers.db"),
@@ -384,20 +384,22 @@ timeSec <- time2seconds(ifelse(is.na(stopInfo$arrival_time), stopInfo$departure_
 stopInfo$time <- timeSec - min(timeSec)
 
 
-dput(stopInfo, "../../docs/kalman_filter/stopinfo.dat")
+dput(stopInfo, "../../docs/kalman_filter/stopinfo-.dat")
 
 
-use <- attr(tracks[[22]]$kalman.filter, "history")[-1, ]
-colnames(use) <- c("x", "v", "a", "t", "dist")
-use <- as.data.frame(use)
+NR <- do.call(c, sapply(tracks, function(t) nrow(attr(t$kalman.filter, "history"))))
+USEME <- tracks[which(NR == 1)[-1] - 1]
 
-
-thisTrip <- tracks[[22]]$track$trip
-offset <- as.numeric(ymd(as.Date(as.POSIXct(tracks[[22]]$track$AVL$time, tz = "EST5EDT", origin = "1970-01-01")),
-                         tz = "EST5EDT"))
-use$time <- use$t - offset - time2seconds(trip.start[thisTrip])
-
-dput(use, "../../docs/kalman_filter/triphistory.dat")
+for (i in 1:length(USEME)) {
+    use <- attr(USEME[[i]]$kalman.filter, "history")[-1, ]
+    colnames(use) <- c("x", "v", "a", "t", "dist")
+    use <- as.data.frame(use)
+    thisTrip <- USEME[[i]]$track$trip
+    offset <- as.numeric(ymd(as.Date(as.POSIXct(USEME[[i]]$track$AVL$time, tz = "EST5EDT", origin = "1970-01-01")),
+                             tz = "EST5EDT"))
+    use$time <- use$t - offset - time2seconds(trip.start[thisTrip])
+    dput(use, paste0("../../docs/kalman_filter/triphistory-", i, ".dat"))
+}
 
 
 

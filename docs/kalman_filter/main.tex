@@ -57,6 +57,8 @@
 \usepackage{parskip}
 
 
+
+
 \newcommand{\bx}{\boldsymbol{x}}
 \newcommand{\bu}{\boldsymbol{u}}
 \newcommand{\bw}{\boldsymbol{w}}
@@ -237,7 +239,7 @@ we will use an estimate of
     580^2 & -100 \\ -100 & 2.5^2
   \end{bmatrix},
 \end{equation*}
-and $\bR$, which is essentially the measurement error, we base off of previous studies, $R = \left(500\text{~ft}\right)^2$ 
+and $\bR$, which is essentially the measurement error, we base off of previous studies, $R = \left(150\text{~m}\right)^2$ 
 (this is a scalar because the observations are only a single variable: distance-into-trip).
 
 
@@ -345,39 +347,92 @@ Here's the implementation in R:
 \hlcom{## Variance matrices:}
 \hlstd{Q} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{580}\hlopt{^}\hlnum{2}\hlstd{,} \hlopt{-}\hlnum{100}\hlstd{),}
            \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{100}\hlstd{,} \hlnum{2.5}\hlopt{^}\hlnum{2}\hlstd{))}
-\hlstd{R} \hlkwb{<-} \hlnum{500}\hlopt{^}\hlnum{2}
+\hlstd{R} \hlkwb{<-} \hlnum{250}\hlopt{^}\hlnum{2}
 
 \hlcom{## And the initialisation:}
-\hlstd{X} \hlkwb{<-} \hlkwd{numeric}\hlstd{(}\hlkwd{length}\hlstd{(x))}
-\hlstd{X} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{s}\hlstd{(}\hlnum{0}\hlstd{))}
-\hlstd{P0} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{100}\hlstd{))}
+\hlstd{X.} \hlkwb{<-} \hlstd{X} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlkwd{length}\hlstd{(x)))}
+\hlstd{X[,} \hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{s}\hlstd{(}\hlnum{0}\hlstd{))}
+\hlstd{P.} \hlkwb{<-} \hlstd{P} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlnum{2}\hlstd{,} \hlkwd{length}\hlstd{(x)))}
+\hlstd{P[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{100}\hlstd{))}
 
 
 \hlcom{## and run it ...}
 
-\hlstd{EKF} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{xhat}\hlstd{,} \hlkwc{Phat}\hlstd{,} \hlkwc{x}\hlstd{,} \hlkwc{u}\hlstd{) \{}
+\hlstd{EKF} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{) \{}
+    \hlcom{## input d is a list of :}
     \hlcom{## xhat  the estimate of \textbackslash{}hat x_\{k-1\}}
-    \hlcom{## Phat     the estimate of \textbackslash{}hat P_\{k-1\}}
-    \hlcom{## x     the data x_k}
+    \hlcom{## Phat  the estimate of \textbackslash{}hat P_\{k-1\}}
+    \hlcom{## z     the data z_k}
     \hlcom{## u     the control variables u_\{k-1\}}
 
     \hlcom{## return:}
     \hlcom{## x.  the a priori estimate of x_k}
     \hlcom{## P.  the a priori estimate of covariance}
-    \hlcom{## x   the a posteriori estimate of x_k}
-    \hlcom{## P   the a posteriori estimate of covariance}
+    \hlcom{## xn  the a posteriori estimate of x_k}
+    \hlcom{## Pn  the a posteriori estimate of covariance}
 
     \hlcom{## predict}
-    \hlstd{xhat} \hlkwb{<-} \hlkwd{f}\hlstd{(xhat, u)}
+    \hlstd{x.} \hlkwb{<-} \hlkwd{f}\hlstd{(d}\hlopt{$}\hlstd{xhat, d}\hlopt{$}\hlstd{u)}
+    \hlstd{Fk} \hlkwb{<-} \hlkwd{F}\hlstd{(d}\hlopt{$}\hlstd{xhat, d}\hlopt{$}\hlstd{u)}
+    \hlstd{P.} \hlkwb{<-} \hlstd{Fk} \hlopt{%*%} \hlstd{d}\hlopt{$}\hlstd{Phat} \hlopt{%*%} \hlkwd{t}\hlstd{(Fk)} \hlopt{+} \hlstd{Q}
+
+    \hlcom{## update}
+    \hlkwa{if} \hlstd{(}\hlstr{"z"} \hlopt{%in%} \hlkwd{names}\hlstd{(d)) \{}
+        \hlstd{yk} \hlkwb{<-} \hlstd{d}\hlopt{$}\hlstd{z} \hlopt{-} \hlkwd{h}\hlstd{(x.)}
+
+        \hlstd{Hk} \hlkwb{<-} \hlkwd{H}\hlstd{(x.)}
+        \hlstd{Sk} \hlkwb{<-} \hlstd{Hk} \hlopt{%*%} \hlstd{P.} \hlopt{%*%} \hlkwd{t}\hlstd{(Hk)} \hlopt{+} \hlstd{R}
+
+        \hlstd{Kk} \hlkwb{<-} \hlstd{P.} \hlopt{%*%} \hlkwd{t}\hlstd{(Hk)} \hlopt{%*%} \hlkwd{solve}\hlstd{(Sk)}
+
+        \hlstd{Pn} \hlkwb{<-} \hlstd{(}\hlkwd{diag}\hlstd{(}\hlnum{2}\hlstd{)} \hlopt{-} \hlstd{Kk} \hlopt{%*%} \hlstd{Hk)} \hlopt{*} \hlstd{P.}
+
+        \hlstd{xn} \hlkwb{<-} \hlstd{x.} \hlopt{+} \hlstd{Kk} \hlopt{%*%} \hlstd{yk[}\hlnum{1}\hlstd{]}
+    \hlstd{\}} \hlkwa{else} \hlstd{\{}
+        \hlstd{Pn} \hlkwb{<-} \hlstd{xn} \hlkwb{<-} \hlkwa{NULL}
+    \hlstd{\}}
+
+    \hlkwd{list}\hlstd{(}\hlkwc{x.} \hlstd{= x.,} \hlkwc{P.} \hlstd{= P.,} \hlkwc{xn} \hlstd{= xn,} \hlkwc{Pn} \hlstd{= Pn)}
 \hlstd{\}}
 
-\hlstd{xhat} \hlkwb{<-} \hlstd{x0}
-\hlstd{Phat} \hlkwb{<-} \hlstd{P0}
-\hlstd{x} \hlkwb{<-} \hlkwd{rbind}\hlstd{(x[}\hlnum{1}\hlstd{], )}
+\hlkwa{for} \hlstd{(k} \hlkwa{in} \hlnum{2}\hlopt{:}\hlkwd{length}\hlstd{(x)) \{}
+    \hlstd{d} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{xhat} \hlstd{= X[, k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwc{Phat} \hlstd{= P[,,k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwc{z} \hlstd{=} \hlkwd{c}\hlstd{(x[k],} \hlnum{0}\hlstd{),} \hlkwc{u} \hlstd{=} \hlkwd{c}\hlstd{(t[k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwd{diff}\hlstd{(t)[k}\hlopt{-}\hlnum{1}\hlstd{]))}
+    \hlstd{KF} \hlkwb{<-} \hlkwd{EKF}\hlstd{(d)}
+    \hlstd{X.[, k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{x.}
+    \hlstd{P.[,,k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{P.}
+    \hlstd{X[, k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{xn}
+    \hlstd{P[,,k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{Pn}
+\hlstd{\}}
+
+\hlkwd{plot}\hlstd{(t, x,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{700}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{s}\hlstd{(}\hlnum{700}\hlstd{)))}
+\hlkwd{curve}\hlstd{(}\hlkwd{s}\hlstd{(x),} \hlnum{0}\hlstd{,} \hlnum{700}\hlstd{,} \hlkwc{add}\hlstd{=T,} \hlkwc{col}\hlstd{=}\hlstr{"red"}\hlstd{)}
+\hlkwd{lines}\hlstd{(t, X[}\hlnum{1}\hlstd{, ],} \hlkwc{col} \hlstd{=} \hlstr{"blue"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+\hlstd{xhat.} \hlkwb{<-} \hlstd{X.[}\hlnum{1}\hlstd{, ]}
+\hlstd{xhatSD.} \hlkwb{<-} \hlkwd{sqrt}\hlstd{(P[}\hlnum{1}\hlstd{,}\hlnum{1}\hlstd{,])}
+\hlstd{ci.l} \hlkwb{<-} \hlkwd{qnorm}\hlstd{(}\hlnum{0.025}\hlstd{, xhat., xhatSD.)}
+\hlstd{ci.u} \hlkwb{<-} \hlkwd{qnorm}\hlstd{(}\hlnum{0.975}\hlstd{, xhat., xhatSD.)}
+\hlkwd{arrows}\hlstd{(t, ci.l, t, ci.u,} \hlkwc{length} \hlstd{=} \hlnum{0.05}\hlstd{,} \hlkwc{angle} \hlstd{=} \hlnum{90}\hlstd{,} \hlkwc{code} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00880060"}\hlstd{)}
+\hlkwd{points}\hlstd{(t, xhat.,} \hlkwc{pch} \hlstd{=} \hlnum{21}\hlstd{,} \hlkwc{bg} \hlstd{=} \hlstr{"white"}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00880060"}\hlstd{)}
+\hlkwd{points}\hlstd{(t, x,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
 \end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/kalman_filter-1} 
+
+\end{knitrout}
 
 
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in rbind(x[1], ): argument is missing, with no default}}\end{kframe}
+It looks like the bus was delayed starting its route, but after that it has no delays. Lets look at predicting the arrival time at the second-to-last stop.
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
+
+{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-2-1} 
+
+}
+
+
+
 \end{knitrout}
 
 

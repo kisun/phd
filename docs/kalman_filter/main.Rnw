@@ -7,6 +7,10 @@
 \usepackage{fullpage}
 \usepackage{parskip}
 
+<<echo=FALSE,results="hide">>=
+which <- 25
+@ 
+
 
 \newcommand{\bx}{\boldsymbol{x}}
 \newcommand{\bu}{\boldsymbol{u}}
@@ -52,7 +56,7 @@ times (and their distances into trip) to get a base speed curve.
 
 An example of the schedule times is here:
 <<stop_times,echo=FALSE,results="hide",fig.width=8,fig.height=5,out.width="0.5\\textwidth",fig.align="center">>=
-sched <- dget("stopinfo.dat")
+sched <- dget("stopinfo-.dat")
 with(sched, plot(time, shape_dist_traveled, pch = 19, xlab = "Time (s)", ylab = "Distance (m)", cex = 0.6,
                  main = "Scheduled arrival times"))
 @ 
@@ -61,7 +65,6 @@ Obviously, we can't fit a line through points with the same $x$ coordinates, so 
 through those with the smallest $y$ values.
 We can then use polynomial interpolation to interpolate the scheduled bus path over time:
 <<stop_times_curve,echo=FALSE,results="hide",fig.width=8,fig.height=5,out.width="0.5\\textwidth",fig.align="center">>=
-sched <- dget("stopinfo.dat")
 with(sched, plot(time, shape_dist_traveled, pch = 19, xlab = "Time (s)", ylab = "Distance (m)", cex = 0.6,
                  col = "#00000040", main = "Scheduled arrival times"))
 x <- unique(sched$time)
@@ -183,7 +186,7 @@ we will use an estimate of
     580^2 & -100 \\ -100 & 2.5^2
   \end{bmatrix},
 \end{equation*}
-and $\bR$, which is essentially the measurement error, we base off of previous studies, $R = \left(500\text{~ft}\right)^2$ 
+and $\bR$, which is essentially the measurement error, we base off of previous studies, $R = \left(150\text{~m}\right)^2$ 
 (this is a scalar because the observations are only a single variable: distance-into-trip).
 
 
@@ -219,7 +222,7 @@ We obtained a series of GPS observations for a trip.
 For the most part, the observations occur every 60~seconds, with some error, and one
 occasion where there is a delay of only 10~seconds.
 <<data_set,echo=FALSE,results="hide",fig.width=8,fig.height=5,out.width="0.5\\textwidth",fig.align="center">>=
-dat <- dget("triphistory.dat")
+dat <- dget(paste0("triphistory-", which, ".dat"))
 dat$T <- dat$time
 dat$T <- dat$T - min(dat$T)
 dat$dist[1] <- 0
@@ -252,7 +255,7 @@ where $L = 100$ is the variation of speed.
 
 
 Here's the implementation in R:
-<<kalman_filter>>=
+<<kalman_filter,fig.height=5,fig.width=9>>=
 ## observed times
 t <- dat$T
 ## observed distances
@@ -291,7 +294,7 @@ H <- function(x) cbind(1, 0)
 ## Variance matrices:
 Q <- rbind(c(580^2, -100),
            c(-100, 2.5^2))
-R <- 500^2
+R <- 250^2
 
 ## And the initialisation:
 X. <- X <- array(NA, c(2, length(x)))
@@ -333,7 +336,8 @@ EKF <- function(d) {
         
         xn <- x. + Kk %*% yk[1]
     } else {
-        Pn <- xn <- NULL
+        Pn <- P.
+        xn <- x.
     }
     
     list(x. = x., P. = P., xn = xn, Pn = Pn)
@@ -347,8 +351,6 @@ for (k in 2:length(x)) {
     X[, k] <- KF$xn
     P[,,k] <- KF$Pn
 }
-
-EKF(list(X[,k], P.[,,k], u = c(t[k], diff(t)[k-1])))
 
 plot(t, x, type = "n", xlim = c(0, 700), ylim = c(0, s(700)))
 curve(s(x), 0, 700, add=T, col="red")
@@ -364,6 +366,68 @@ points(t, x, cex = 0.4, pch = 19)
 @ 
 
 
+It looks like the bus was delayed starting its route, but after that it has no delays. Lets look at predicting the arrival time at the second-to-last stop.
+
+
+<<echo=FALSE,results="hide",fig.width=8,fig.height=5,out.width="0.8\\textwidth",fig.align="center">>=
+plotMe <- function() {
+    with(sched, plot(time, shape_dist_traveled, pch = 19, xlab = "Time (s)", ylab = "Distance (m)", cex = 0.6,
+                     col = "#00000040", main = "Scheduled arrival times", yaxs="i"))
+    curve(schedF(x), min(x), max(x), 1001, add = TRUE)
+    LASTn2 <- sched[nrow(sched) - 1, ]
+    with(LASTn2, points(time, shape_dist_traveled, pch = 19, col = "#CCCC0070"))
+    lines(c(-50, LASTn2$time), rep(LASTn2$shape_dist_traveled, 2), lty = 3)
+}
+plotMe()
+@ 
+
+After the first few EKF iterations, we can predict into the future?
+
+<<>>=
+## the initialisation:
+X. <- X <- array(NA, c(2, length(x)))
+X[, 1] <- rbind(0, s(0))
+P. <- P <- array(NA, c(2, 2, length(x)))
+P[,,1] <- rbind(c(0, 0), c(0, 100))
+
+for (k in 2:5) {
+    d <- list(xhat = X[, k-1], Phat = P[,,k-1], z = c(x[k], 0), u = c(t[k-1], diff(t)[k-1]))
+    KF <- EKF(d)
+    X.[, k] <- KF$x.
+    P.[,,k] <- KF$P.
+    X[, k] <- KF$xn
+    P[,,k] <- KF$Pn
+}
+
+plotMe()
+lines(t[1:k], X[1, 1:k], col = "blue", cex = 0.5, pch = 19)
+xhat. <- X.[1, 1:k]
+xhatSD. <- sqrt(P[1,1,1:k])
+ci.l <- qnorm(0.025, xhat., xhatSD.)
+ci.u <- qnorm(0.975, xhat., xhatSD.)
+arrows(t[1:k], ci.l, t[1:k], ci.u, length = 0.05, angle = 90, code = 3, col = "#00880060")
+points(t[1:k], xhat., pch = 21, bg = "white", col = "#00880060")
+points(t[1:k], x[1:k], cex = 0.4, pch = 19)
+
+## now, progress forward:
+for (k in 6:length(x)) {
+    d <- list(xhat = X[, k-1], Phat = P[,,k-1], u = c(t[k-1], diff(t)[k-1]))
+    KF <- EKF(d)
+    X.[, k] <- KF$x.
+    P.[,,k] <- KF$P.
+    X[, k] <- KF$xn
+    P[,,k] <- KF$Pn
+}
+
+xhat. <- X.[1, 6:k]
+xhatSD. <- sqrt(P[1,1,6:k])
+ci.l <- qnorm(0.025, xhat., xhatSD.)
+ci.u <- qnorm(0.975, xhat., xhatSD.)
+arrows(t[6:k], ci.l, t[6:k], ci.u, length = 0.05, angle = 90, code = 3, col = "#00880060")
+points(t[6:k], xhat., pch = 21, bg = "white", col = "#00880060")
+
+points(t[6:k], x[6:k], cex = 0.4, pch = 19, col = "#33333340")
+@ 
 
 
 \end{document}
