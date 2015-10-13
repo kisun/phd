@@ -105,7 +105,7 @@ An example of the schedule times is here:
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
 
-{\centering \includegraphics[width=0.5\textwidth]{figure/stop_times-1} 
+{\centering \includegraphics[width=0.5\textwidth]{figure/stop_times} 
 
 }
 
@@ -119,7 +119,7 @@ We can then use polynomial interpolation to interpolate the scheduled bus path o
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
 
-{\centering \includegraphics[width=0.5\textwidth]{figure/stop_times_curve-1} 
+{\centering \includegraphics[width=0.5\textwidth]{figure/stop_times_curve} 
 
 }
 
@@ -277,7 +277,7 @@ occasion where there is a delay of only 10~seconds.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
 
-{\centering \includegraphics[width=0.5\textwidth]{figure/data_set-1} 
+{\centering \includegraphics[width=0.5\textwidth]{figure/data_set} 
 
 }
 
@@ -389,7 +389,8 @@ Here's the implementation in R:
 
         \hlstd{xn} \hlkwb{<-} \hlstd{x.} \hlopt{+} \hlstd{Kk} \hlopt{%*%} \hlstd{yk[}\hlnum{1}\hlstd{]}
     \hlstd{\}} \hlkwa{else} \hlstd{\{}
-        \hlstd{Pn} \hlkwb{<-} \hlstd{xn} \hlkwb{<-} \hlkwa{NULL}
+        \hlstd{Pn} \hlkwb{<-} \hlstd{P.}
+        \hlstd{xn} \hlkwb{<-} \hlstd{x.}
     \hlstd{\}}
 
     \hlkwd{list}\hlstd{(}\hlkwc{x.} \hlstd{= x.,} \hlkwc{P.} \hlstd{= P.,} \hlkwc{xn} \hlstd{= xn,} \hlkwc{Pn} \hlstd{= Pn)}
@@ -416,7 +417,7 @@ Here's the implementation in R:
 \hlkwd{points}\hlstd{(t, x,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
 \end{alltt}
 \end{kframe}
-\includegraphics[width=\maxwidth]{figure/kalman_filter-1} 
+\includegraphics[width=\maxwidth]{figure/kalman_filter} 
 
 \end{knitrout}
 
@@ -427,7 +428,7 @@ It looks like the bus was delayed starting its route, but after that it has no d
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
 
-{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-2-1} 
+{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-2} 
 
 }
 
@@ -435,7 +436,59 @@ It looks like the bus was delayed starting its route, but after that it has no d
 
 \end{knitrout}
 
+After the first few EKF iterations, we can predict into the future?
 
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## the initialisation:}
+\hlstd{X.} \hlkwb{<-} \hlstd{X} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlkwd{length}\hlstd{(x)))}
+\hlstd{X[,} \hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{s}\hlstd{(}\hlnum{0}\hlstd{))}
+\hlstd{P.} \hlkwb{<-} \hlstd{P} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlnum{2}\hlstd{,} \hlkwd{length}\hlstd{(x)))}
+\hlstd{P[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{100}\hlstd{))}
+
+\hlkwa{for} \hlstd{(k} \hlkwa{in} \hlnum{2}\hlopt{:}\hlnum{5}\hlstd{) \{}
+    \hlstd{d} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{xhat} \hlstd{= X[, k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwc{Phat} \hlstd{= P[,,k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwc{z} \hlstd{=} \hlkwd{c}\hlstd{(x[k],} \hlnum{0}\hlstd{),} \hlkwc{u} \hlstd{=} \hlkwd{c}\hlstd{(t[k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwd{diff}\hlstd{(t)[k}\hlopt{-}\hlnum{1}\hlstd{]))}
+    \hlstd{KF} \hlkwb{<-} \hlkwd{EKF}\hlstd{(d)}
+    \hlstd{X.[, k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{x.}
+    \hlstd{P.[,,k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{P.}
+    \hlstd{X[, k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{xn}
+    \hlstd{P[,,k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{Pn}
+\hlstd{\}}
+
+\hlkwd{plotMe}\hlstd{()}
+\hlkwd{lines}\hlstd{(t[}\hlnum{1}\hlopt{:}\hlstd{k], X[}\hlnum{1}\hlstd{,} \hlnum{1}\hlopt{:}\hlstd{k],} \hlkwc{col} \hlstd{=} \hlstr{"blue"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+\hlstd{xhat.} \hlkwb{<-} \hlstd{X.[}\hlnum{1}\hlstd{,} \hlnum{1}\hlopt{:}\hlstd{k]}
+\hlstd{xhatSD.} \hlkwb{<-} \hlkwd{sqrt}\hlstd{(P[}\hlnum{1}\hlstd{,}\hlnum{1}\hlstd{,}\hlnum{1}\hlopt{:}\hlstd{k])}
+\hlstd{ci.l} \hlkwb{<-} \hlkwd{qnorm}\hlstd{(}\hlnum{0.025}\hlstd{, xhat., xhatSD.)}
+\hlstd{ci.u} \hlkwb{<-} \hlkwd{qnorm}\hlstd{(}\hlnum{0.975}\hlstd{, xhat., xhatSD.)}
+\hlkwd{arrows}\hlstd{(t[}\hlnum{1}\hlopt{:}\hlstd{k], ci.l, t[}\hlnum{1}\hlopt{:}\hlstd{k], ci.u,} \hlkwc{length} \hlstd{=} \hlnum{0.05}\hlstd{,} \hlkwc{angle} \hlstd{=} \hlnum{90}\hlstd{,} \hlkwc{code} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00880060"}\hlstd{)}
+\hlkwd{points}\hlstd{(t[}\hlnum{1}\hlopt{:}\hlstd{k], xhat.,} \hlkwc{pch} \hlstd{=} \hlnum{21}\hlstd{,} \hlkwc{bg} \hlstd{=} \hlstr{"white"}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00880060"}\hlstd{)}
+\hlkwd{points}\hlstd{(t[}\hlnum{1}\hlopt{:}\hlstd{k], x[}\hlnum{1}\hlopt{:}\hlstd{k],} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+
+\hlcom{## now, progress forward:}
+\hlkwa{for} \hlstd{(k} \hlkwa{in} \hlnum{6}\hlopt{:}\hlkwd{length}\hlstd{(x)) \{}
+    \hlstd{d} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{xhat} \hlstd{= X[, k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwc{Phat} \hlstd{= P[,,k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwc{u} \hlstd{=} \hlkwd{c}\hlstd{(t[k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwd{diff}\hlstd{(t)[k}\hlopt{-}\hlnum{1}\hlstd{]))}
+    \hlstd{KF} \hlkwb{<-} \hlkwd{EKF}\hlstd{(d)}
+    \hlstd{X.[, k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{x.}
+    \hlstd{P.[,,k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{P.}
+    \hlstd{X[, k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{xn}
+    \hlstd{P[,,k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{Pn}
+\hlstd{\}}
+
+\hlstd{xhat.} \hlkwb{<-} \hlstd{X.[}\hlnum{1}\hlstd{,} \hlnum{6}\hlopt{:}\hlstd{k]}
+\hlstd{xhatSD.} \hlkwb{<-} \hlkwd{sqrt}\hlstd{(P[}\hlnum{1}\hlstd{,}\hlnum{1}\hlstd{,}\hlnum{6}\hlopt{:}\hlstd{k])}
+\hlstd{ci.l} \hlkwb{<-} \hlkwd{qnorm}\hlstd{(}\hlnum{0.025}\hlstd{, xhat., xhatSD.)}
+\hlstd{ci.u} \hlkwb{<-} \hlkwd{qnorm}\hlstd{(}\hlnum{0.975}\hlstd{, xhat., xhatSD.)}
+\hlkwd{arrows}\hlstd{(t[}\hlnum{6}\hlopt{:}\hlstd{k], ci.l, t[}\hlnum{6}\hlopt{:}\hlstd{k], ci.u,} \hlkwc{length} \hlstd{=} \hlnum{0.05}\hlstd{,} \hlkwc{angle} \hlstd{=} \hlnum{90}\hlstd{,} \hlkwc{code} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00880060"}\hlstd{)}
+\hlkwd{points}\hlstd{(t[}\hlnum{6}\hlopt{:}\hlstd{k], xhat.,} \hlkwc{pch} \hlstd{=} \hlnum{21}\hlstd{,} \hlkwc{bg} \hlstd{=} \hlstr{"white"}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00880060"}\hlstd{)}
+
+\hlkwd{points}\hlstd{(t[}\hlnum{6}\hlopt{:}\hlstd{k], x[}\hlnum{6}\hlopt{:}\hlstd{k],} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#33333340"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-3} 
+
+\end{knitrout}
 
 
 \end{document}

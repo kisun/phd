@@ -379,7 +379,7 @@ for (i in 51:nrow(v1))
 
 ## EXTRA
 stopInfo <- query(dbConnect(SQLite(), "trackers.db"),
-                  "SELECT trip_id, arrival_time, departure_time, shape_dist_traveled FROM stop_times WHERE trip_id = %s ORDER BY stop_sequence", 27279972)
+                  "SELECT trip_id, arrival_time, departure_time, shape_dist_traveled FROM stop_times WHERE trip_id = %s ORDER BY stop_sequence", unique(data$trip_id)[1])
 timeSec <- time2seconds(ifelse(is.na(stopInfo$arrival_time), stopInfo$departure_time, stopInfo$arrival_time))
 stopInfo$time <- timeSec - min(timeSec)
 
