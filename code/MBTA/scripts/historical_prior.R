@@ -61,7 +61,7 @@ stops <- gtfsQuery("stop_times AS st, stops AS s",
 points(stops$stop_lon, stops$stop_lat, col = "red", pch = 19, cex = 0.5)
 
 
-## Filter out observations that occur before route has started:
+## Filter out observations that occur before route has started: 
 trip.start <- tapply(stops$departure_time, stops$trip_id, min, na.rm = TRUE)
 trip.end <- tapply(stops$arrival_time, stops$trip_id, max, na.rm = TRUE)
 del <- hms(data$time) < hms(trip.start[data$trip_id]) | hms(data$time) > hms(trip.end[data$trip_id])
@@ -104,7 +104,7 @@ stopInfo$time <- ifelse(is.na(stopInfo$arrival_time), stopInfo$departure_time, s
 ##     points(time2seconds(si$time) - time2seconds(trip.start[tid]),
 ##            si$shape_dist_traveled, pch = 19, col = "red", cex = 0.4)
 ##     tapply(1:nrow(di), paste(di$date, di$trip_id, sep = "_"),
-##            function(i) lines(di$timeIntoTrip[i], di$DIT[i]))
+##            function(i) lines(di$timeIntoTrip[i], di$DIT[i]))    
 ## }
 ## devAskNewPage(FALSE)
 
@@ -142,10 +142,10 @@ x
 ##     try({
 ##     di <- data[data$trip_id == tid, ]
 ##     si <- stopInfo[stopInfo$trip_id == tid, ]
-
+    
 ##     mat <- matrix(NA, ncol = length(unique(di$date)), nrow = nrow(si))
 ##     dits <- tapply(1:nrow(di), di$date, function(j) di$DIT[j])
-
+    
 ##     dits <- lapply(dits, function(dit) {
 ##                        if (length(dit) <= 1) return(NA)
 ##                        for (k in (length(dit):2) - 1)
@@ -160,13 +160,13 @@ x
 ##     colnames(mat) <- names(dits)
 ##     for (d in names(dits)) {
 ##         if (length(Ts[[d]]) <= 1) next
-##      #   lines(Ts[[d]], dits[[d]], col = "#666666")
-##         mat[, d] <- approx(y = Ts[[d]], x = dits[[d]], xout = si$shape_dist_traveled)$y
+##      #   lines(Ts[[d]], dits[[d]], col = "#666666")        
+##         mat[, d] <- approx(y = Ts[[d]], x = dits[[d]], xout = si$shape_dist_traveled)$y        
 ##     }
 ##     }, silent = TRUE)
 ##     arrivalTimes[[tid]] <- mat
 
-
+    
 ## }
 ## devAskNewPage(FALSE)
 
@@ -238,7 +238,7 @@ for (i in 2:10) {
                  attr(tracks2[[i]]$kalman.filter, "history")[, 5], ci, na.rm = TRUE))
         points(v1$timestamp[[i]], pred[[i]][1] * 0.3048, pch = 19, col = "red")
         lines(rep(v1$timestamp[[i]], 2), ci, col = "red")
-        points(attr(tracks2[[i]]$kalman.filter, "history")[, c(4, 5)], pch = 19, cex = 0.5)
+        points(attr(tracks2[[i]]$kalman.filter, "history")[, c(4, 5)], pch = 19, cex = 0.5) 
     }
     Sys.sleep(2)
 }
@@ -266,7 +266,7 @@ plot(attr(tracks2[[i]]$kalman.filter, "history")[, 4],
                na.rm = TRUE),
      xlim = c(min(attr(tracks2[[i]]$kalman.filter, "history")[, 4]),
               max(attr(tracks2[[i]]$kalman.filter, "history")[, 4] + t.ahead * 60)))
-points(attr(tracks2[[i]]$kalman.filter, "history")[, c(4, 5)], pch = 19, cex = 0.5)
+points(attr(tracks2[[i]]$kalman.filter, "history")[, c(4, 5)], pch = 19, cex = 0.5) 
 newX <- v1$timestamp[[i]] + t.ahead * 60
 xx <- c(newX, rev(newX))
 yy <- c(future[, 3], rev(future[, 4])) * 0.3048
@@ -287,7 +287,7 @@ for (i in 11:15) {
 
 theFuture <- function(i, track) {
     ## Update the track:
-
+    
     kf <- track[[i-1]]$kalman.filter
     track[[i]] <- trackMyBus(v1$vehicle_id[i], v1$timestamp[i], track[[i-1]]$kalman.filter, origin = "2015-08-24")
 
@@ -300,7 +300,7 @@ theFuture <- function(i, track) {
             ci <-  qnorm(c(0.025, 0.975), p[1], p[2])
             c(p, ci)
         })) -> future
-
+        
         hist <- attr(kf, "history")
 
         fut <- try({t(sapply(track[i:(i+6)], function(t) {
@@ -321,26 +321,26 @@ theFuture <- function(i, track) {
                                  tz = "EST5EDT"))
         STOPx <- time2seconds(stopInfo[stopInfo$trip_id == tracks[[i]]$track$trip, "time"]) + offset
         STOPy <- stopInfo[stopInfo$trip_id == tracks[[i]]$track$trip, "shape_dist_traveled"]
-
-
+        
+        
         plot(hist[, 4], hist[, 1] * 0.3048, type = "l",
              ylim = range(hist[, 1] * 0.3048, hist[, 5], future[, c(3, 4)] * 0.3048,
                  fut[, 3], fut[, 2] * 0.3048, STOPy, na.rm = TRUE),
              xlim = range(min(hist[, 4], na.rm = TRUE), max(hist[, 4], na.rm = TRUE) + t.ahead * 60,
                  range(fut[, 1], na.rm = TRUE), STOPx))
-
+        
         points(hist[, 4], hist[, 5], pch = 19, cex = 0.5)
-
+        
         newX <- v1$timestamp[[i]] + t.ahead * 60
         xx <- c(newX, rev(newX))
         yy <- c(future[, 3], rev(future[, 4])) * 0.3048
         polygon(xx, yy, col = "pink", border = "red")
-
+        
         points(fut[, 1], fut[, 3], cex = 0.5, pch = 19, col = "blue")
         lines(fut[, 1], fut[, 2] * 0.3048, col = "blue", lty = 2)
-
+        
         points(STOPx, STOPy, pch = 19, col = "red", cex = 0.4)
-
+                
     }, silent = TRUE)
     track[[i]]
 }
@@ -388,7 +388,8 @@ dput(stopInfo, "../../docs/kalman_filter/stopinfo-.dat")
 
 
 NR <- do.call(c, sapply(tracks, function(t) nrow(attr(t$kalman.filter, "history"))))
-USEME <- tracks[which(NR == 1)[-1] - 1]
+TIDs <- sapply(tracks, function(t) t$track$trip)
+USEME <- tracks[which(NR == 1 && TIDs %in% unique(stopInfo$trip_id))[-1] - 1]
 
 for (i in 1:length(USEME)) {
     use <- attr(USEME[[i]]$kalman.filter, "history")[-1, ]
@@ -398,5 +399,11 @@ for (i in 1:length(USEME)) {
     offset <- as.numeric(ymd(as.Date(as.POSIXct(USEME[[i]]$track$AVL$time, tz = "EST5EDT", origin = "1970-01-01")),
                              tz = "EST5EDT"))
     use$time <- use$t - offset - time2seconds(trip.start[thisTrip])
+    attr(use, "trip_id") <- thisTrip
     dput(use, paste0("../../docs/kalman_filter/triphistory-", i, ".dat"))
 }
+
+
+
+
+
