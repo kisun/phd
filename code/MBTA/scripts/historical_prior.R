@@ -76,16 +76,16 @@ points(stops$stop_lon, stops$stop_lat, col = "red", pch = 19, cex = 0.5)
 ##Now turn these into distance-into-trips:
 HISTDB <- "gtfs-historical.db"
 v1 <- data
-tracks <- vector("list", nrow(v1))
-pb <- txtProgressBar(0, nrow(v1), style = 3)
-tracks[[1]] <- trackMyBus(v1$vehicle_id[1], v1$timestamp[1], origin = as.character(v1$date[1]))
-for (i in 2:nrow(v1)) {
-    setTxtProgressBar(pb, i)
-    tracks[[i]] <- trackMyBus(v1$vehicle_id[i], v1$timestamp[i], tracks[[i-1]]$kalman.filter, origin = "2015-08-24")
-}
-close(pb)
-dput(tracks, "scripts/outputSEED45.dat")
-## #tracks <- dget("scripts/outputSEED4.dat")
+## tracks <- vector("list", nrow(v1))
+## pb <- txtProgressBar(0, nrow(v1), style = 3)
+## tracks[[1]] <- trackMyBus(v1$vehicle_id[1], v1$timestamp[1], origin = as.character(v1$date[1]))
+## for (i in 2:nrow(v1)) {
+##     setTxtProgressBar(pb, i)
+##     tracks[[i]] <- trackMyBus(v1$vehicle_id[i], v1$timestamp[i], tracks[[i-1]]$kalman.filter, origin = "2015-08-24")
+## }
+## close(pb)
+## dput(tracks, "scripts/outputSEED45.dat")
+tracks <- dget("scripts/outputSEED45.dat")
 
 data$DIT <- sapply(tracks, function(x) x$track$distance.into.trip)
 data$timeIntoTrip <- time2seconds(data$time) - time2seconds(trip.start[data$trip_id])
@@ -379,7 +379,7 @@ for (i in 51:nrow(v1))
 
 ## EXTRA
 stopInfo <- query(dbConnect(SQLite(), "trackers.db"),
-                  "SELECT trip_id, arrival_time, departure_time, shape_dist_traveled FROM stop_times WHERE trip_id = %s ORDER BY stop_sequence", 27279972)
+                  "SELECT trip_id, arrival_time, departure_time, shape_dist_traveled FROM stop_times WHERE trip_id IN %s ORDER BY trip_id, stop_sequence", unique(data$trip_id))
 timeSec <- time2seconds(ifelse(is.na(stopInfo$arrival_time), stopInfo$departure_time, stopInfo$arrival_time))
 stopInfo$time <- timeSec - min(timeSec)
 

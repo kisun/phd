@@ -77,6 +77,9 @@
 \newcommand{\bZero}{\boldsymbol{0}}
 \newcommand{\dd}[2]{\frac{\partial {#1}}{\partial {#2}}}
 
+\newcommand{\pr}{\mathbb{P}}
+\renewcommand{\Pr}[1]{\pr\left(#1\right)}
+
 
 \newcommand{\km}{_{k-1}}
 \newcommand{\kk}{_{k|k}}
@@ -374,7 +377,7 @@ Here's the implementation in R:
     \hlcom{## predict}
     \hlstd{x.} \hlkwb{<-} \hlkwd{f}\hlstd{(d}\hlopt{$}\hlstd{xhat, d}\hlopt{$}\hlstd{u)}
     \hlstd{Fk} \hlkwb{<-} \hlkwd{F}\hlstd{(d}\hlopt{$}\hlstd{xhat, d}\hlopt{$}\hlstd{u)}
-    \hlstd{P.} \hlkwb{<-} \hlstd{Fk} \hlopt{%*%} \hlstd{d}\hlopt{$}\hlstd{Phat} \hlopt{%*%} \hlkwd{t}\hlstd{(Fk)} \hlopt{+} \hlstd{Q}
+    \hlstd{P.} \hlkwb{<-} \hlstd{Fk} \hlopt{%*%} \hlstd{d}\hlopt{$}\hlstd{Phat} \hlopt{%*%} \hlkwd{t}\hlstd{(Fk)} \hlopt{+} \hlstd{Q} \hlopt{*} \hlstd{(d}\hlopt{$}\hlstd{u[}\hlnum{2}\hlstd{]} \hlopt{/} \hlnum{60}\hlstd{)}
 
     \hlcom{## update}
     \hlkwa{if} \hlstd{(}\hlstr{"z"} \hlopt{%in%} \hlkwd{names}\hlstd{(d)) \{}
@@ -389,7 +392,8 @@ Here's the implementation in R:
 
         \hlstd{xn} \hlkwb{<-} \hlstd{x.} \hlopt{+} \hlstd{Kk} \hlopt{%*%} \hlstd{yk[}\hlnum{1}\hlstd{]}
     \hlstd{\}} \hlkwa{else} \hlstd{\{}
-        \hlstd{Pn} \hlkwb{<-} \hlstd{xn} \hlkwb{<-} \hlkwa{NULL}
+        \hlstd{Pn} \hlkwb{<-} \hlstd{P.}
+        \hlstd{xn} \hlkwb{<-} \hlstd{x.}
     \hlstd{\}}
 
     \hlkwd{list}\hlstd{(}\hlkwc{x.} \hlstd{= x.,} \hlkwc{P.} \hlstd{= P.,} \hlkwc{xn} \hlstd{= xn,} \hlkwc{Pn} \hlstd{= Pn)}
@@ -405,6 +409,10 @@ Here's the implementation in R:
 \hlstd{\}}
 
 \hlkwd{plot}\hlstd{(t, x,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{700}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{s}\hlstd{(}\hlnum{700}\hlstd{)))}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/kalman_filter-1} 
+\begin{kframe}\begin{alltt}
 \hlkwd{curve}\hlstd{(}\hlkwd{s}\hlstd{(x),} \hlnum{0}\hlstd{,} \hlnum{700}\hlstd{,} \hlkwc{add}\hlstd{=T,} \hlkwc{col}\hlstd{=}\hlstr{"red"}\hlstd{)}
 \hlkwd{lines}\hlstd{(t, X[}\hlnum{1}\hlstd{, ],} \hlkwc{col} \hlstd{=} \hlstr{"blue"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
 \hlstd{xhat.} \hlkwb{<-} \hlstd{X.[}\hlnum{1}\hlstd{, ]}
@@ -416,7 +424,7 @@ Here's the implementation in R:
 \hlkwd{points}\hlstd{(t, x,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
 \end{alltt}
 \end{kframe}
-\includegraphics[width=\maxwidth]{figure/kalman_filter-1} 
+\includegraphics[width=\maxwidth]{figure/kalman_filter-2} 
 
 \end{knitrout}
 
@@ -428,6 +436,88 @@ It looks like the bus was delayed starting its route, but after that it has no d
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
 
 {\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-2-1} 
+
+}
+
+
+
+\end{knitrout}
+
+After the first few EKF iterations, we can predict into the future?
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
+
+{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-3-1} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-3-2} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-3-3} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-3-4} 
+
+}
+
+
+
+\end{knitrout}
+
+
+
+
+So, we now have a posterior distribution of where the bus will be at time $t_j = t_k + \delta_j$.
+We next need to convert this to a distribution of \emph{when} the bus will be at distance $d_i$
+(i.e., when will it arrive at stop $i$?).
+
+Using Bayes' Rule:
+\begin{align*}
+   \Pr{t = t_j | d_k = d_i}
+  &= \frac{\Pr{d_k = d_i | t = t_j} \Pr{t = t_j}}{\Pr{d_k = d_i}} \\
+  &= \frac{\Pr{d_k = d_i | t = t_j} \Pr{t = t_j}}{\int\Pr{d_k = d_i | t = t_j} \Pr{t = t_j}\,\mathrm{d}t} \\
+  \intertext{which, for the case where we compute discrete instances of $t$, is}
+  &= \frac{\Pr{d_k = d_i | t = t_j} \Pr{t = t_j}}{\sum_j\Pr{d_k = d_i | t = t_j} \Pr{t = t_j}\,\mathrm{d}t} \\
+\end{align*}
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{stop} \hlkwb{<-} \hlkwd{plotMe}\hlstd{(}\hlnum{FALSE}\hlstd{)}
+\hlstd{di} \hlkwb{<-} \hlstd{stop}\hlopt{$}\hlstd{shape_dist_traveled}
+
+\hlstd{ff} \hlkwb{<-} \hlkwd{futureSight}\hlstd{(}\hlnum{20}\hlstd{,} \hlnum{500}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=0.8\textwidth]{figure/posterior_arrival-1} 
+
+}
+
+
+\begin{kframe}\begin{alltt}
+\hlstd{Pdj} \hlkwb{<-} \hlkwd{dnorm}\hlstd{(di, ff}\hlopt{$}\hlstd{mean, ff}\hlopt{$}\hlstd{sd)}
+\hlstd{Pd} \hlkwb{<-} \hlkwd{sum}\hlstd{(Pdj)}
+
+\hlkwd{plot}\hlstd{(ff}\hlopt{$}\hlstd{t, Pdj} \hlopt{/} \hlstd{Pd,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{,} \hlkwc{xlab} \hlstd{=} \hlstr{"Time (s)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Pr(D = d | T = t)"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=0.8\textwidth]{figure/posterior_arrival-2} 
 
 }
 
