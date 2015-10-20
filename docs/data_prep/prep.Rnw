@@ -1,0 +1,113 @@
+\documentclass[10pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{xfrac}
+
+\usepackage{fullpage}
+\usepackage{parskip}
+
+<<echo=FALSE,results="hide">>=
+which <- 20
+@ 
+
+
+\newcommand{\bx}{\boldsymbol{x}}
+\newcommand{\bu}{\boldsymbol{u}}
+\newcommand{\bw}{\boldsymbol{w}}
+\newcommand{\bz}{\boldsymbol{z}}
+\newcommand{\by}{\boldsymbol{y}}
+\newcommand{\bh}{\boldsymbol{h}}
+\newcommand{\bv}{\boldsymbol{v}}
+\newcommand{\bfn}{\boldsymbol{f}}
+\newcommand{\bF}{\boldsymbol{F}}
+\newcommand{\bH}{\boldsymbol{H}}
+\newcommand{\bK}{\boldsymbol{K}}
+\newcommand{\bQ}{\boldsymbol{Q}}
+\newcommand{\bR}{\boldsymbol{R}}
+\newcommand{\bP}{\boldsymbol{P}}
+\newcommand{\bS}{\boldsymbol{S}}
+\newcommand{\bZero}{\boldsymbol{0}}
+\newcommand{\dd}[2]{\frac{\partial {#1}}{\partial {#2}}}
+
+\newcommand{\pr}{\mathbb{P}}
+\renewcommand{\Pr}[1]{\pr\left(#1\right)}
+
+
+\newcommand{\km}{_{k-1}}
+\newcommand{\kk}{_{k|k}}
+\newcommand{\kkm}{_{k|k-1}}
+\newcommand{\kmkm}{_{k-1|k-1}}
+
+
+\title{Data Preparation}
+\author{From GTFS to Something Useful}
+\date{}
+
+\begin{document}
+\maketitle
+
+
+\section{GTFS Data}
+
+The raw data comes in two pieces:
+\begin{itemize}
+\item GTFS: the schedule information,
+\item GTFS Realtime: the live vehicle position data.
+\end{itemize}
+Both of these are stored in a database (for developement, we've used an SQLite
+database). All of the necessary information is maintained in a \emph{single} database
+(i.e., GTFS and GTFS Realtime), which makes it easier to join tables and get exactly
+what's needed.
+
+So, what is needed? According to Cathey \& Dailey~(2003), we need to know:
+\begin{itemize}
+\item vehicle id,
+\item block id,\footnote{hopefully AT will give this\ldots}
+\item time,
+\item position (latitude and longitude).
+\end{itemize}
+This information, known as ``AVL'' data, is then converted into a ``track'' (i.e., something useful). Here's an example:
+
+<<gtfs_realtime_example>>=
+library(RSQLite)
+con <- dbConnect(SQLite(), "gtfs-realtime.db")
+gtfs.rt <- dbGetQuery(con, 
+                      "SELECT vehicle_id, trip_id, timestamp, \
+                              position_latitude AS pos_lat, \
+                              position_longitude AS pos_lon \
+                       FROM vehicle_positions")
+nrow(gtfs.rt)
+head(gtfs.rt)
+@ 
+
+First off, this data (from the MBTA), does not supply block ID with the realtime data.
+We must therefore see if the static GTFS will give it to us.
+We are also only interested in buses, which is identifed in the routes table as \texttt{route\_type = 3}.
+<<gtfs_realtime_example2>>=
+gtfs.rt <- dbGetQuery(con,
+                      "SELECT vp.vehicle_id, vp.trip_id, tr.block_id, rt.route_type, \
+                              vp.position_latitude AS pos_lat, \
+                              vp.position_longitude AS pos_lon \
+                         FROM vehicle_positions AS vp, 
+                              trips             AS tr, 
+                              routes            AS rt
+                        WHERE vp.trip_id    = tr.trip_id 
+                          AND tr.route_id   = rt.route_id 
+                          AND rt.route_type = 3")
+head(gtfs.rt)
+nrow(gtfs.rt) ## only busses this time
+@
+The next step is to convert this into something we can use in a model.
+The positions are converted into distances into block/trip.
+
+PROBLEM: The trip ID supplied by the GTFS realtime feed doesn't appear to always be
+accurate! In some cases, it would change before the bus actually arrived, or change after
+the bus had already switched to a new trip!
+
+To get by this, we will use the block ID and location and time to determine the trip ID,
+rather than using trip ID from the GTFS realtime feed (which we will use occasionally to
+check we are still on track).
+
+
+\end{document}

@@ -1,0 +1,196 @@
+\documentclass[10pt]{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{xfrac}
+
+\usepackage{fullpage}
+\usepackage{parskip}
+
+
+
+
+\newcommand{\bx}{\boldsymbol{x}}
+\newcommand{\bu}{\boldsymbol{u}}
+\newcommand{\bw}{\boldsymbol{w}}
+\newcommand{\bz}{\boldsymbol{z}}
+\newcommand{\by}{\boldsymbol{y}}
+\newcommand{\bh}{\boldsymbol{h}}
+\newcommand{\bv}{\boldsymbol{v}}
+\newcommand{\bfn}{\boldsymbol{f}}
+\newcommand{\bF}{\boldsymbol{F}}
+\newcommand{\bH}{\boldsymbol{H}}
+\newcommand{\bK}{\boldsymbol{K}}
+\newcommand{\bQ}{\boldsymbol{Q}}
+\newcommand{\bR}{\boldsymbol{R}}
+\newcommand{\bP}{\boldsymbol{P}}
+\newcommand{\bS}{\boldsymbol{S}}
+\newcommand{\bZero}{\boldsymbol{0}}
+\newcommand{\dd}[2]{\frac{\partial {#1}}{\partial {#2}}}
+
+\newcommand{\pr}{\mathbb{P}}
+\renewcommand{\Pr}[1]{\pr\left(#1\right)}
+
+
+\newcommand{\km}{_{k-1}}
+\newcommand{\kk}{_{k|k}}
+\newcommand{\kkm}{_{k|k-1}}
+\newcommand{\kmkm}{_{k-1|k-1}}
+
+
+\title{Data Preparation}
+\author{From GTFS to Something Useful}
+\date{}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+\maketitle
+
+
+\section{GTFS Data}
+
+The raw data comes in two pieces:
+\begin{itemize}
+\item GTFS: the schedule information,
+\item GTFS Realtime: the live vehicle position data.
+\end{itemize}
+Both of these are stored in a database (for developement, we've used an SQLite
+database). All of the necessary information is maintained in a \emph{single} database
+(i.e., GTFS and GTFS Realtime), which makes it easier to join tables and get exactly
+what's needed.
+
+So, what is needed? According to Cathey \& Dailey~(2003), we need to know:
+\begin{itemize}
+\item vehicle id,
+\item block id,\footnote{hopefully AT will give this\ldots}
+\item time,
+\item position (latitude and longitude).
+\end{itemize}
+This information, known as ``AVL'' data, is then converted into a ``track'' (i.e., something useful). Here's an example:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(RSQLite)}
+\hlstd{con} \hlkwb{<-} \hlkwd{dbConnect}\hlstd{(}\hlkwd{SQLite}\hlstd{(),} \hlstr{"gtfs-realtime.db"}\hlstd{)}
+\hlstd{gtfs.rt} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(con,}
+                      \hlstr{"SELECT vehicle_id, trip_id, timestamp, \textbackslash{}
+                              position_latitude AS pos_lat, \textbackslash{}
+                              position_longitude AS pos_lon \textbackslash{}
+                       FROM vehicle_positions"}\hlstd{)}
+\hlkwd{nrow}\hlstd{(gtfs.rt)}
+\end{alltt}
+\begin{verbatim}
+## [1] 746
+\end{verbatim}
+\begin{alltt}
+\hlkwd{head}\hlstd{(gtfs.rt)}
+\end{alltt}
+\begin{verbatim}
+##   vehicle_id  trip_id  timestamp  pos_lat   pos_lon
+## 1      v2263 27502211 1441057487 42.37224 -71.11559
+## 2      v2244 27502218 1441057484 42.36382 -71.10108
+## 3      v2144 27502219 1441057488 42.33900 -71.08020
+## 4      v2264 27502224 1441057373 42.33616 -71.07670
+## 5      v0494 27502227 1441057509 42.35750 -71.09284
+## 6      v2199 27502229 1441057478 42.34279 -71.08504
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+First off, this data (from the MBTA), does not supply block ID with the realtime data.
+We must therefore see if the static GTFS will give it to us.
+We are also only interested in buses, which is identifed in the routes table as \texttt{route\_type = 3}.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{gtfs.rt} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(con,}
+                      \hlstr{"SELECT vp.vehicle_id, vp.trip_id, tr.block_id, rt.route_type, \textbackslash{}
+                              vp.position_latitude AS pos_lat, \textbackslash{}
+                              vp.position_longitude AS pos_lon \textbackslash{}
+                         FROM vehicle_positions AS vp, 
+                              trips             AS tr, 
+                              routes            AS rt
+                        WHERE vp.trip_id    = tr.trip_id 
+                          AND tr.route_id   = rt.route_id 
+                          AND rt.route_type = 3"}\hlstd{)}
+\hlkwd{head}\hlstd{(gtfs.rt)}
+\end{alltt}
+\begin{verbatim}
+##   vehicle_id  trip_id block_id route_type  pos_lat   pos_lon
+## 1      v2263 27502211   C01-14          3 42.37224 -71.11559
+## 2      v2244 27502218   C01-13          3 42.36382 -71.10108
+## 3      v2144 27502219    C01-9          3 42.33900 -71.08020
+## 4      v2264 27502224    C01-7          3 42.33616 -71.07670
+## 5      v0494 27502227   C01-11          3 42.35750 -71.09284
+## 6      v2199 27502229    C01-2          3 42.34279 -71.08504
+\end{verbatim}
+\begin{alltt}
+\hlkwd{nrow}\hlstd{(gtfs.rt)} \hlcom{## only busses this time}
+\end{alltt}
+\begin{verbatim}
+## [1] 593
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+The next step is to convert this into something we can use in a model.
+The positions are converted into distances into block/trip.
+
+PROBLEM: The trip ID supplied by the GTFS realtime feed doesn't appear to always be
+accurate! In some cases, it would change before the bus actually arrived, or change after
+the bus had already switched to a new trip!
+
+To get by this, we will use the block ID and location and time to determine the trip ID,
+rather than using trip ID from the GTFS realtime feed (which we will use occasionally to
+check we are still on track).
+
+
+\end{document}
