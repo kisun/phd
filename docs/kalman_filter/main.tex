@@ -99,8 +99,8 @@
 \section{The Data}
 
 The data come in two parts: GTFS Realtime, for the live location of the bus, and GTFS
-Static, for the schedule information (such as route shape, and stop schedule times).
-For now, we ignore the procedures involved in converting GPS location data provided by
+Static, for the schedule information (such as route shape, and stop schedule times).  
+For now, we ignore the procedures involved in converting GPS location data provided by 
 GTFS Realtime into useable data (distance-into-trip), and instead use only the stop arrival
 times (and their distances into trip) to get a base speed curve.
 
@@ -108,7 +108,7 @@ An example of the schedule times is here:
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
 
-{\centering \includegraphics[width=0.5\textwidth]{figure/stop_times}
+{\centering \includegraphics[width=0.5\textwidth]{figure/stop_times-1} 
 
 }
 
@@ -122,7 +122,7 @@ We can then use polynomial interpolation to interpolate the scheduled bus path o
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
 
-{\centering \includegraphics[width=0.5\textwidth]{figure/stop_times_curve}
+{\centering \includegraphics[width=0.5\textwidth]{figure/stop_times_curve-1} 
 
 }
 
@@ -157,28 +157,28 @@ historical information, and a velocity ``penalty'' term:
 The control vector, $\bu_k$, will contain additional information used to predict and adjust the estimates of $\bx_k$,
 \begin{equation}
   \label{eq:control_vector}
-  \bu_k =
+  \bu_k = 
   \begin{bmatrix}
     t_k \\ \Delta t_k
   \end{bmatrix},
 \end{equation}
-where $t_k$ is the time (in seconds since the trip/block began) of observation $k$,
+where $t_k$ is the time (in seconds since the trip/block began) of observation $k$, 
 and $\Delta t_k$ is the time between observations $k$ and $k+1$.
 
 The difficulty now lies in defining $f$; at first, we can define it as ``the scheduled distance traveled in $\Delta t_k$~s, starting from $d_k$~m into the trip, with a penalty based on the velocity''. For further readability, we define $g = s^{-1}$, which gives us the ``scheduled time'' of a given distance-into-trip:
 \begin{align}
   \label{eq:function1}
-  \hat d_{k} &= f_d\left(\bx_{k-1},\bu_{k-1}\right)
+  \hat d_{k} &= f_d\left(\bx_{k-1},\bu_{k-1}\right) 
   = d_{k-1} + \left[s\left(g\left(d_{k-1}\right) + \Delta t_{k-1}\right) - d_{k-1}\right] \lambda\left(v_{k-1}\right) \\
   \Rightarrow \hat x_{k,1} &= x_{k-1,1} + \left[s\left(g\left(x_{k-1,1}\right) + u_{k-1,2}\right) - x_{k-1,1}\right] \lambda\left(x_{k-1,2}\right) \\
   \intertext{and (for now, assuming a simple velocity function)}
-  \hat v_k &= f_v\left(\bx_{k-1},\bu_{k-1}\right)
+  \hat v_k &= f_v\left(\bx_{k-1},\bu_{k-1}\right) 
   = \frac{s'\left(g\left(d_{k-1}\right) + \Delta t_{k-1}\right)}{s'\left(g\left(d_{k-1}\right)\right)} v_{k-1} \\
   \Rightarrow \hat x_{k,2} &= \frac{s'\left(g\left(x_{k-1,1}\right) + u_{k-1,2}\right)}{s'\left(g\left(x_{k-1,1}\right)\right)} x_{k-1,2}, \\
   \intertext{which gives}
-  \hat\bx_k &= \bfn\left(\bx_{k-1},\bu_{k-1}\right)
+  \hat\bx_k &= \bfn\left(\bx_{k-1},\bu_{k-1}\right) 
   = \begin{bmatrix}
-      f_d\left(\bx_{k-1},\bu_{k-1}\right) \\ f_v\left(\bx_{k-1},\bu_{k-1}\right)
+      f_d\left(\bx_{k-1},\bu_{k-1}\right) \\ f_v\left(\bx_{k-1},\bu_{k-1}\right) 
     \end{bmatrix}
 \end{align}
 However, this needs to be differentiable \ldots we can obtain derivatives of $s$ from the polynomial splines used to create it,
@@ -187,7 +187,7 @@ but will this be adequate?
 For the Jacobian,
 \begin{equation}
   \label{eq:jacobian}
-  \bF_k =
+  \bF_k = 
   \begin{bmatrix}
     \frac{\partial\bfn}{\partial x_{k,1}} & \frac{\partial\bfn}{\partial x_{k,2}}_{\hat\bx_{k|k},\bu_k}
   \end{bmatrix},
@@ -209,19 +209,19 @@ For the measurement matrix $\bH$, we use the Jacobian of the function $h$ which 
 \end{equation}
 where
 \begin{align*}
-  \bh\left(\bx_k\right)
-  &=
+  \bh\left(\bx_k\right) 
+  &= 
     \begin{bmatrix}
       x_{k,1} \\ 0
     \end{bmatrix}
 \end{align*}
 and therefore
 \begin{equation*}
-  \bH =
+  \bH = 
   \begin{bmatrix}
     \dd{h}{x_{k,1}} & \dd{h}{x_{k,2}}
   \end{bmatrix}
-  =
+  = 
   \begin{bmatrix}
     1 & 0
   \end{bmatrix}
@@ -242,7 +242,7 @@ we will use an estimate of
     580^2 & -100 \\ -100 & 2.5^2
   \end{bmatrix},
 \end{equation*}
-and $\bR$, which is essentially the measurement error, we base off of previous studies, $R = \left(150\text{~m}\right)^2$
+and $\bR$, which is essentially the measurement error, we base off of previous studies, $R = \left(150\text{~m}\right)^2$ 
 (this is a scalar because the observations are only a single variable: distance-into-trip).
 
 
@@ -280,7 +280,7 @@ occasion where there is a delay of only 10~seconds.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
 
-{\centering \includegraphics[width=0.5\textwidth]{figure/data_set}
+{\centering \includegraphics[width=0.5\textwidth]{figure/data_set-1} 
 
 }
 
@@ -294,7 +294,7 @@ We now implement the Extended Kalman Filter as described above.
 
 We assume that the initial time and location are 0, although the velocity is unknown, so the initilisation matrices are:
 \begin{equation*}
-  \mathbf{\hat x}_0 =
+  \mathbf{\hat x}_0 = 
   \begin{bmatrix}
     0 \\ s(0)
   \end{bmatrix}
@@ -349,7 +349,7 @@ Here's the implementation in R:
 
 \hlcom{## Variance matrices:}
 \hlstd{Q} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{580}\hlopt{^}\hlnum{2}\hlstd{,} \hlopt{-}\hlnum{100}\hlstd{),}
-           \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{100}\hlstd{,} \hlnum{2.5}\hlopt{^}\hlnum{2}\hlstd{))}
+           \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{10}\hlstd{,} \hlnum{2.5}\hlopt{^}\hlnum{2}\hlstd{))}
 \hlstd{R} \hlkwb{<-} \hlnum{250}\hlopt{^}\hlnum{2}
 
 \hlcom{## And the initialisation:}
@@ -409,10 +409,6 @@ Here's the implementation in R:
 \hlstd{\}}
 
 \hlkwd{plot}\hlstd{(t, x,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{700}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{s}\hlstd{(}\hlnum{700}\hlstd{)))}
-\end{alltt}
-\end{kframe}
-\includegraphics[width=\maxwidth]{figure/kalman_filter-1}
-\begin{kframe}\begin{alltt}
 \hlkwd{curve}\hlstd{(}\hlkwd{s}\hlstd{(x),} \hlnum{0}\hlstd{,} \hlnum{700}\hlstd{,} \hlkwc{add}\hlstd{=T,} \hlkwc{col}\hlstd{=}\hlstr{"red"}\hlstd{)}
 \hlkwd{lines}\hlstd{(t, X[}\hlnum{1}\hlstd{, ],} \hlkwc{col} \hlstd{=} \hlstr{"blue"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
 \hlstd{xhat.} \hlkwb{<-} \hlstd{X.[}\hlnum{1}\hlstd{, ]}
@@ -424,7 +420,7 @@ Here's the implementation in R:
 \hlkwd{points}\hlstd{(t, x,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
 \end{alltt}
 \end{kframe}
-\includegraphics[width=\maxwidth]{figure/kalman_filter-2} 
+\includegraphics[width=\maxwidth]{figure/kalman_filter-1} 
 
 \end{knitrout}
 
@@ -435,7 +431,7 @@ It looks like the bus was delayed starting its route, but after that it has no d
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
 
-{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-2}
+{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-2-1} 
 
 }
 
@@ -448,28 +444,28 @@ After the first few EKF iterations, we can predict into the future?
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
 
-{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-3-1}
+{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-3-1} 
 
 }
 
 
 
 
-{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-3-2}
+{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-3-2} 
 
 }
 
 
 
 
-{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-3-3}
+{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-3-3} 
 
 }
 
 
 
 
-{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-3-4}
+{\centering \includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-3-4} 
 
 }
 
@@ -504,7 +500,7 @@ Using Bayes' Rule:
 \end{alltt}
 \end{kframe}
 
-{\centering \includegraphics[width=0.8\textwidth]{figure/posterior_arrival-1}
+{\centering \includegraphics[width=0.8\textwidth]{figure/posterior_arrival-1} 
 
 }
 
@@ -517,7 +513,7 @@ Using Bayes' Rule:
 \end{alltt}
 \end{kframe}
 
-{\centering \includegraphics[width=0.8\textwidth]{figure/posterior_arrival-2}
+{\centering \includegraphics[width=0.8\textwidth]{figure/posterior_arrival-2} 
 
 }
 
@@ -529,54 +525,35 @@ Using Bayes' Rule:
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlcom{## the initialisation:}
-\hlstd{X.} \hlkwb{<-} \hlstd{X} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlkwd{length}\hlstd{(x)))}
-\hlstd{X[,} \hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{s}\hlstd{(}\hlnum{0}\hlstd{))}
-\hlstd{P.} \hlkwb{<-} \hlstd{P} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlnum{2}\hlstd{,} \hlkwd{length}\hlstd{(x)))}
-\hlstd{P[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{100}\hlstd{))}
+\hlstd{stop} \hlkwb{<-} \hlkwd{plotMe}\hlstd{(}\hlnum{FALSE}\hlstd{)}
+\hlstd{di} \hlkwb{<-} \hlstd{stop}\hlopt{$}\hlstd{shape_dist_traveled}
 
-\hlkwa{for} \hlstd{(k} \hlkwa{in} \hlnum{2}\hlopt{:}\hlnum{5}\hlstd{) \{}
-    \hlstd{d} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{xhat} \hlstd{= X[, k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwc{Phat} \hlstd{= P[,,k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwc{z} \hlstd{=} \hlkwd{c}\hlstd{(x[k],} \hlnum{0}\hlstd{),} \hlkwc{u} \hlstd{=} \hlkwd{c}\hlstd{(t[k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwd{diff}\hlstd{(t)[k}\hlopt{-}\hlnum{1}\hlstd{]))}
-    \hlstd{KF} \hlkwb{<-} \hlkwd{EKF}\hlstd{(d)}
-    \hlstd{X.[, k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{x.}
-    \hlstd{P.[,,k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{P.}
-    \hlstd{X[, k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{xn}
-    \hlstd{P[,,k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{Pn}
-\hlstd{\}}
-
-\hlkwd{plotMe}\hlstd{()}
-\hlkwd{lines}\hlstd{(t[}\hlnum{1}\hlopt{:}\hlstd{k], X[}\hlnum{1}\hlstd{,} \hlnum{1}\hlopt{:}\hlstd{k],} \hlkwc{col} \hlstd{=} \hlstr{"blue"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
-\hlstd{xhat.} \hlkwb{<-} \hlstd{X.[}\hlnum{1}\hlstd{,} \hlnum{1}\hlopt{:}\hlstd{k]}
-\hlstd{xhatSD.} \hlkwb{<-} \hlkwd{sqrt}\hlstd{(P[}\hlnum{1}\hlstd{,}\hlnum{1}\hlstd{,}\hlnum{1}\hlopt{:}\hlstd{k])}
-\hlstd{ci.l} \hlkwb{<-} \hlkwd{qnorm}\hlstd{(}\hlnum{0.025}\hlstd{, xhat., xhatSD.)}
-\hlstd{ci.u} \hlkwb{<-} \hlkwd{qnorm}\hlstd{(}\hlnum{0.975}\hlstd{, xhat., xhatSD.)}
-\hlkwd{arrows}\hlstd{(t[}\hlnum{1}\hlopt{:}\hlstd{k], ci.l, t[}\hlnum{1}\hlopt{:}\hlstd{k], ci.u,} \hlkwc{length} \hlstd{=} \hlnum{0.05}\hlstd{,} \hlkwc{angle} \hlstd{=} \hlnum{90}\hlstd{,} \hlkwc{code} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00880060"}\hlstd{)}
-\hlkwd{points}\hlstd{(t[}\hlnum{1}\hlopt{:}\hlstd{k], xhat.,} \hlkwc{pch} \hlstd{=} \hlnum{21}\hlstd{,} \hlkwc{bg} \hlstd{=} \hlstr{"white"}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00880060"}\hlstd{)}
-\hlkwd{points}\hlstd{(t[}\hlnum{1}\hlopt{:}\hlstd{k], x[}\hlnum{1}\hlopt{:}\hlstd{k],} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
-
-\hlcom{## now, progress forward:}
-\hlkwa{for} \hlstd{(k} \hlkwa{in} \hlnum{6}\hlopt{:}\hlkwd{length}\hlstd{(x)) \{}
-    \hlstd{d} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{xhat} \hlstd{= X[, k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwc{Phat} \hlstd{= P[,,k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwc{u} \hlstd{=} \hlkwd{c}\hlstd{(t[k}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwd{diff}\hlstd{(t)[k}\hlopt{-}\hlnum{1}\hlstd{]))}
-    \hlstd{KF} \hlkwb{<-} \hlkwd{EKF}\hlstd{(d)}
-    \hlstd{X.[, k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{x.}
-    \hlstd{P.[,,k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{P.}
-    \hlstd{X[, k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{xn}
-    \hlstd{P[,,k]} \hlkwb{<-} \hlstd{KF}\hlopt{$}\hlstd{Pn}
-\hlstd{\}}
-
-\hlstd{xhat.} \hlkwb{<-} \hlstd{X.[}\hlnum{1}\hlstd{,} \hlnum{6}\hlopt{:}\hlstd{k]}
-\hlstd{xhatSD.} \hlkwb{<-} \hlkwd{sqrt}\hlstd{(P[}\hlnum{1}\hlstd{,}\hlnum{1}\hlstd{,}\hlnum{6}\hlopt{:}\hlstd{k])}
-\hlstd{ci.l} \hlkwb{<-} \hlkwd{qnorm}\hlstd{(}\hlnum{0.025}\hlstd{, xhat., xhatSD.)}
-\hlstd{ci.u} \hlkwb{<-} \hlkwd{qnorm}\hlstd{(}\hlnum{0.975}\hlstd{, xhat., xhatSD.)}
-\hlkwd{arrows}\hlstd{(t[}\hlnum{6}\hlopt{:}\hlstd{k], ci.l, t[}\hlnum{6}\hlopt{:}\hlstd{k], ci.u,} \hlkwc{length} \hlstd{=} \hlnum{0.05}\hlstd{,} \hlkwc{angle} \hlstd{=} \hlnum{90}\hlstd{,} \hlkwc{code} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00880060"}\hlstd{)}
-\hlkwd{points}\hlstd{(t[}\hlnum{6}\hlopt{:}\hlstd{k], xhat.,} \hlkwc{pch} \hlstd{=} \hlnum{21}\hlstd{,} \hlkwc{bg} \hlstd{=} \hlstr{"white"}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00880060"}\hlstd{)}
-
-\hlkwd{points}\hlstd{(t[}\hlnum{6}\hlopt{:}\hlstd{k], x[}\hlnum{6}\hlopt{:}\hlstd{k],} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#33333340"}\hlstd{)}
+\hlstd{ff} \hlkwb{<-} \hlkwd{futureSight}\hlstd{(}\hlnum{10}\hlstd{,} \hlnum{500}\hlstd{)}
 \end{alltt}
 \end{kframe}
-\includegraphics[width=\maxwidth]{figure/unnamed-chunk-3}
+
+{\centering \includegraphics[width=0.8\textwidth]{figure/posterior_arrival2-1} 
+
+}
+
+
+\begin{kframe}\begin{alltt}
+\hlstd{Pdj} \hlkwb{<-} \hlkwd{dnorm}\hlstd{(di, ff}\hlopt{$}\hlstd{mean, ff}\hlopt{$}\hlstd{sd)}
+\hlstd{Pd} \hlkwb{<-} \hlkwd{sum}\hlstd{(Pdj)}
+
+\hlkwd{plot}\hlstd{(ff}\hlopt{$}\hlstd{t, Pdj} \hlopt{/} \hlstd{Pd,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{,} \hlkwc{xlab} \hlstd{=} \hlstr{"Time (s)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Pr(D = d | T = t)"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=0.8\textwidth]{figure/posterior_arrival2-2} 
+
+}
+
+
 
 \end{knitrout}
+
+
 
 
 \end{document}

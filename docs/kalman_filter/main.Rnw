@@ -8,7 +8,7 @@
 \usepackage{parskip}
 
 <<echo=FALSE,results="hide">>=
-which <- 1
+which <- 20
 @ 
 
 
@@ -299,7 +299,7 @@ H <- function(x) cbind(1, 0)
 
 ## Variance matrices:
 Q <- rbind(c(580^2, -100),
-           c(-100, 2.5^2))
+           c(-10, 2.5^2))
 R <- 250^2
 
 ## And the initialisation:
@@ -480,7 +480,19 @@ Pdj <- dnorm(di, ff$mean, ff$sd)
 Pd <- sum(Pdj)
 
 plot(ff$t, Pdj / Pd, type = "l", xlab = "Time (s)", ylab = "Pr(D = d | T = t)")
+@ 
 
+
+<<posterior_arrival2,fig.width=8,fig.height=5,out.width="0.8\\textwidth",fig.align="center">>=
+stop <- plotMe(FALSE)
+di <- stop$shape_dist_traveled
+
+ff <- futureSight(10, 500)
+
+Pdj <- dnorm(di, ff$mean, ff$sd)
+Pd <- sum(Pdj)
+
+plot(ff$t, Pdj / Pd, type = "l", xlab = "Time (s)", ylab = "Pr(D = d | T = t)")
 @ 
 
 
