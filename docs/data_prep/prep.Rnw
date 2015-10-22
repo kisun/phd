@@ -87,13 +87,12 @@ We must therefore see if the static GTFS will give it to us.
 We are also only interested in buses, which is identifed in the routes table as \texttt{route\_type = 3}.
 <<gtfs_realtime_example2>>=
 gtfs.rt <- dbGetQuery(con,
-                      "SELECT vp.vehicle_id, vp.trip_id, tr.block_id, rt.route_type, \
-                              vp.timestamp AS time, \
-                              vp.position_latitude AS pos_lat, \
-                              vp.position_longitude AS pos_lon \
+                      "SELECT vp.vehicle_id, vp.trip_id, tr.block_id, rt.route_type, 
+                              vp.timestamp AS time, 
+                              vp.position_latitude AS pos_lat, 
+                              vp.position_longitude AS pos_lon 
                          FROM vehicle_positions AS vp, 
-                              trips             AS tr, 
-                              routes            AS rt
+                              trips AS tr, routes AS rt 
                         WHERE vp.trip_id    = tr.trip_id 
                           AND tr.route_id   = rt.route_id 
                           AND rt.route_type = 3")
@@ -118,17 +117,16 @@ So, lets grab historical data for a day:
 con2 <- dbConnect(SQLite(), "gtfs-historical.db")
 ## let's use the 1st of september:
 hist20150901 <- dbGetQuery(con2,
-                           "SELECT vp.vehicle_id, vp.trip_id, tr.block_id, rt.route_type, \
-                                   vp.timestamp AS time, \
-                                   vp.position_latitude AS pos_lat, \
-                                   vp.position_longitude AS pos_lon \
+                           "SELECT vp.vehicle_id, vp.trip_id, tr.block_id, rt.route_type, 
+                                   vp.timestamp AS time, 
+                                   vp.position_latitude AS pos_lat, 
+                                   vp.position_longitude AS pos_lon 
                             FROM vehicle_positions AS vp, 
-                                 trips             AS tr, 
-                                 routes            AS rt
+                                 trips AS tr, routes AS rt
                             WHERE vp.trip_start_date = '20150901'
                               AND vp.trip_id    = tr.trip_id 
                               AND tr.route_id   = rt.route_id 
-                              AND rt.route_type = 3 \
+                              AND rt.route_type = 3 
                             ORDER BY time")
 
 head(hist20150901)
@@ -157,6 +155,10 @@ with(hist[1, ], points(pos_lon, pos_lat, col = "red", pch = 19))
 
 That seems roughtly correct \ldots we now need to turn the GPS coordinates into something more useful.
 Like distance into trip!
+But how\ldots?
+
+This is going to depend on the location of the data due to the curvature of the earth.
+
 
 
 
