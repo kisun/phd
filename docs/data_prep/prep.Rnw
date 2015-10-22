@@ -8,6 +8,7 @@
 \usepackage{parskip}
 
 <<echo=FALSE,results="hide">>=
+library(RSQLite)
 which <- 20
 @ 
 
@@ -87,6 +88,7 @@ We are also only interested in buses, which is identifed in the routes table as 
 <<gtfs_realtime_example2>>=
 gtfs.rt <- dbGetQuery(con,
                       "SELECT vp.vehicle_id, vp.trip_id, tr.block_id, rt.route_type, \
+                              vp.timestamp AS time, \
                               vp.position_latitude AS pos_lat, \
                               vp.position_longitude AS pos_lon \
                          FROM vehicle_positions AS vp, 
@@ -108,6 +110,54 @@ the bus had already switched to a new trip!
 To get by this, we will use the block ID and location and time to determine the trip ID,
 rather than using trip ID from the GTFS realtime feed (which we will use occasionally to
 check we are still on track).
+
+
+We need to start somewhere we can be sure about (i.e., the first trip of the first day).
+So, lets grab historical data for a day:
+<<historical_data>>=
+con2 <- dbConnect(SQLite(), "gtfs-historical.db")
+## let's use the 1st of september:
+hist20150901 <- dbGetQuery(con2,
+                           "SELECT vp.vehicle_id, vp.trip_id, tr.block_id, rt.route_type, \
+                                   vp.timestamp AS time, \
+                                   vp.position_latitude AS pos_lat, \
+                                   vp.position_longitude AS pos_lon \
+                            FROM vehicle_positions AS vp, 
+                                 trips             AS tr, 
+                                 routes            AS rt
+                            WHERE vp.trip_start_date = '20150901'
+                              AND vp.trip_id    = tr.trip_id 
+                              AND tr.route_id   = rt.route_id 
+                              AND rt.route_type = 3 \
+                            ORDER BY time")
+
+head(hist20150901)
+@ 
+
+Now we have all the data for the $1^\text{st}$ of September, let's just grab one Block:
+<<block_first>>=
+block <- "B34-125"
+hist <- hist20150901[hist20150901$block_id == block, ]
+head(hist)
+@ 
+
+Now we can see that we have the start of something useful! We can also make a couple of
+assumptions: first, the initial trip ID is correct; second, the position will be at (or
+fairly close to) the first stop (the start of the route). Let's have a look:
+
+<<draw_route,fig.width=7,fig.height=5,fig.align="center",out.width="0.5\\textwidth">>=
+shape <- dbGetQuery(con2,
+                    sprintf("SELECT shape_pt_lat AS lat, shape_pt_lon AS lon
+                     FROM shapes 
+                     WHERE shape_id = (SELECT shape_id FROM trips WHERE trip_id='%s')
+                     ORDER BY shape_pt_sequence", hist$trip_id[1]))
+plot(shape$lon, shape$lat, type = "l", asp=1, xlab = "Longitude", ylab = "Latitude")
+with(hist[1, ], points(pos_lon, pos_lat, col = "red", pch = 19))
+@ 
+
+That seems roughtly correct \ldots we now need to turn the GPS coordinates into something more useful.
+Like distance into trip!
+
 
 
 \end{document}
