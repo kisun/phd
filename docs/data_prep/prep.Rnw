@@ -159,6 +159,19 @@ But how\ldots?
 
 This is going to depend on the location of the data due to the curvature of the earth.
 
+There are three parts:
+
+\begin{enumerate}
+\item compute distance-into-shape for each shape in the data base, which is done by
+  converting the distance between two GPS points into a distance between two land-points,
+  
+\item compute the distance-into-trip for each stop along each trip of each route; this is
+  done by mapping each stop to a point along the shape, and the summing the shape distances,
+  
+\item compute the distance-into-trip for GPS vehicle positions; this is done by estimating
+  the position of the vehicle on the route, and again summing the paths up to there.
+\end{enumerate}
+
 
 
 

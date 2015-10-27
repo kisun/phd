@@ -299,7 +299,7 @@ H <- function(x) cbind(1, 0)
 
 ## Variance matrices:
 Q <- rbind(c(580^2, -100),
-           c(-10, 2.5^2))
+           c(-100, 2.5^2))
 R <- 250^2
 
 ## And the initialisation:
@@ -496,6 +496,172 @@ plot(ff$t, Pdj / Pd, type = "l", xlab = "Time (s)", ylab = "Pr(D = d | T = t)")
 @ 
 
 
+Look at the ginormous interval!
+Hopefully if we use better information about the variance etc, we can get something a tad more precise.
+
+
+
+
+\section{EFK kinda sucks\ldots Let's try Particle Filter!}
+
+
+We will be trying the \textbf{Bayesian bootstrap filter} next, which doesn't assume linearity or normality.
+For this, we need:
+
+\begin{enumerate}
+\item the distrbution of $p\left(x_0\right)$ available for sampling;
+  
+  
+\item the likelihood, $p\left(y_k | x_k\right)$, to be a known functional form;
+  
+  
+\item the noise distribution, $p\left(w_k\right)$ available for sampling.
+  
+  
+\end{enumerate}
+
+
+
+\subsubsection*{1. The distribution of $p\left(x_0\right)$}
+
+This is the initial state, which we defined earlier as
+\begin{equation}
+  \label{eq:initial_state}
+  \bx_0 \sim \mathcal{N}\left(
+    \begin{bmatrix}
+      0 \\ s(0)
+    \end{bmatrix},
+    \begin{bmatrix}
+      0 & 0 \\ 0 & L
+    \end{bmatrix}
+  \right),
+  \quad\quad L = 100,
+\end{equation}
+which is easy to sample.
+
+
+
+\subsubsection*{2. The Likelihood, $p\left(y_k | x_k\right)$}
+
+This, too, was defined earlier without the noise term; we will simply assume a linear noise term:
+\begin{equation}
+  \label{eq:likelihood_pf}
+  p\left(y_k | \bx_k\right) = \bx_k +  v_{k},\quad
+  v_k \sim \mathcal{N}\left(0,R\right),\quad
+  R = 250^2
+\end{equation}
+
+
+
+\subsubsection*{3. The noise distribution,  $p\left(w_k\right)$}
+
+Earlier, we just used
+\begin{equation}
+  \label{eq:system_noise}
+  \bw_k \sim \mathcal{N}\left(\bZero, \bQ\right),
+  \quad\quad 
+  \bQ = 
+  \begin{bmatrix}
+    580^2 & -100 \\ -100 & 2.5^2
+  \end{bmatrix}.
+\end{equation}
+This will do for now, until we have historical data to replace it with.
+
+
+
+
+The algorithm is broken up into two parts (as usual): predict and update.
+
+\subsection{Predict}
+
+\begin{equation}
+  \label{eq:predict_step}
+  \bx_k^\star(i) =  \bfn\left(\bx_{k-1}(i), \bu_{k-1} \right) +  \bw_{k-1}(i),\quad
+  \bw_{k-1}(i) \sim p\left(\bw_{k-1}\right),\quad
+  i = 1, \ldots, N
+\end{equation}
+
+
+\subsection{Update}
+
+Using the observed data, $y_k$, we calculate a weight for each sample:
+\begin{equation}
+  \label{eq:normalisation_weight}
+  q_i = \frac{
+    p\left(y_k | \bx_k^\star (i)\right)
+  }{
+    \sum_{j = 1}^N p\left(y_k | \bx_k^\star (j)\right)
+  },
+\end{equation}
+which are used as the probability masses for each element $i$ of the discrete distribution defined over 
+$\left\{\bx_k^\star (i): i = 1,\ldots,N\right\}$.
+The ``bootstrap'' occurs by taking $N$ samples from this distribution using the probabilities
+\begin{equation}
+  \label{eq:boot_probs}
+  \Pr{\bx_k(j) = \bx_k^\star(i)} = q_i.
+\end{equation}
+
+
+And that's it! To start the algorithm, we just take $N$ samples $\bx_0^\star(i)$ from
+$p\left(x_0\right)$ that we defined above.
+
+
+
+\subsection{Implementation}
+
+<<particle_filter,fig.width=8,fig.height=5,out.width="0.8\\textwidth",fig.align="center">>=
+require(mvtnorm)
+y <- dat$dist  ## the observations
+u <- cbind(dat$time, c(diff(dat$time), 0))  ## the control vector
+
+F2 <- function(x, u, w)
+    f(x, u) + w
+
+PrY.X <- function(y, x, R = 250)
+    dnorm(y, x, R)
+
+qs <- function(y, x) {
+    pi <- PrY.X(y, x)
+    sapply(pi, function(p) p / sum(pi))
+}
+
+boot <- function(x, q, N) {
+    w <- sample(1:N, N, TRUE, q)
+    x[, w]
+}
+
+N <- 500
+
+## Initialise
+
+X. <- X <- array(NA, c(2, N, length(y)))
+x0 <- c(0, s(0))
+P0 <- rbind(c(0, 0), c(0, 100))
+
+X[, , 1] <- t(rmvnorm(N, x0, P0))
+
+
+## Run
+
+for (k in 2:length(y)) {
+    ## Predict
+    wi <- t(rmvnorm(N, sigma = Q))
+    for (i in 1:N) {
+        X.[, i, k] <- F2(X[, i, k - 1], u[k - 1, ], wi[, i])
+    }
+    
+    ## Update
+    qi <- qs(y[k], X.[1,,k])
+    X[,,k] <- boot(X.[,,k], qi, N)
+}
+
+plot(matrix(rep(t[-1], N), nrow=N, byrow=T), X.[1,,-1], pch = 19, cex = 0.5,
+     ylim = c(0, max(s(t), X[1,,], X.[1,,-1])), col = "#00000030",
+     xlab = "Time (s)", ylab = "Distance into Trip (m)")
+points(matrix(rep(t, N), nrow=N, byrow=T), X[1,,], pch = 19, cex = 0.2, col = "red")
+points(t, y, pch = 19, col = "white", cex = 0.5)
+curve(s(x), 0, max(t), 1001, add = TRUE, col = "blue")
+@ 
 
 
 \end{document}

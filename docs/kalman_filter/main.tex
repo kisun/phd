@@ -349,7 +349,7 @@ Here's the implementation in R:
 
 \hlcom{## Variance matrices:}
 \hlstd{Q} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{580}\hlopt{^}\hlnum{2}\hlstd{,} \hlopt{-}\hlnum{100}\hlstd{),}
-           \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{10}\hlstd{,} \hlnum{2.5}\hlopt{^}\hlnum{2}\hlstd{))}
+           \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{100}\hlstd{,} \hlnum{2.5}\hlopt{^}\hlnum{2}\hlstd{))}
 \hlstd{R} \hlkwb{<-} \hlnum{250}\hlopt{^}\hlnum{2}
 
 \hlcom{## And the initialisation:}
@@ -554,6 +554,183 @@ Using Bayes' Rule:
 \end{knitrout}
 
 
+Look at the ginormous interval!
+Hopefully if we use better information about the variance etc, we can get something a tad more precise.
+
+
+
+
+\section{EFK kinda sucks\ldots Let's try Particle Filter!}
+
+
+We will be trying the \textbf{Bayesian bootstrap filter} next, which doesn't assume linearity or normality.
+For this, we need:
+
+\begin{enumerate}
+\item the distrbution of $p\left(x_0\right)$ available for sampling;
+  
+  
+\item the likelihood, $p\left(y_k | x_k\right)$, to be a known functional form;
+  
+  
+\item the noise distribution, $p\left(w_k\right)$ available for sampling.
+  
+  
+\end{enumerate}
+
+
+
+\subsubsection*{1. The distribution of $p\left(x_0\right)$}
+
+This is the initial state, which we defined earlier as
+\begin{equation}
+  \label{eq:initial_state}
+  \bx_0 \sim \mathcal{N}\left(
+    \begin{bmatrix}
+      0 \\ s(0)
+    \end{bmatrix},
+    \begin{bmatrix}
+      0 & 0 \\ 0 & L
+    \end{bmatrix}
+  \right),
+  \quad\quad L = 100,
+\end{equation}
+which is easy to sample.
+
+
+
+\subsubsection*{2. The Likelihood, $p\left(y_k | x_k\right)$}
+
+This, too, was defined earlier without the noise term; we will simply assume a linear noise term:
+\begin{equation}
+  \label{eq:likelihood_pf}
+  p\left(y_k | \bx_k\right) = \bx_k +  v_{k},\quad
+  v_k \sim \mathcal{N}\left(0,R\right),\quad
+  R = 250^2
+\end{equation}
+
+
+
+\subsubsection*{3. The noise distribution,  $p\left(w_k\right)$}
+
+Earlier, we just used
+\begin{equation}
+  \label{eq:system_noise}
+  \bw_k \sim \mathcal{N}\left(\bZero, \bQ\right),
+  \quad\quad 
+  \bQ = 
+  \begin{bmatrix}
+    580^2 & -100 \\ -100 & 2.5^2
+  \end{bmatrix}.
+\end{equation}
+This will do for now, until we have historical data to replace it with.
+
+
+
+
+The algorithm is broken up into two parts (as usual): predict and update.
+
+\subsection{Predict}
+
+\begin{equation}
+  \label{eq:predict_step}
+  \bx_k^\star(i) =  \bfn\left(\bx_{k-1}(i), \bu_{k-1} \right) +  \bw_{k-1}(i),\quad
+  \bw_{k-1}(i) \sim p\left(\bw_{k-1}\right),\quad
+  i = 1, \ldots, N
+\end{equation}
+
+
+\subsection{Update}
+
+Using the observed data, $y_k$, we calculate a weight for each sample:
+\begin{equation}
+  \label{eq:normalisation_weight}
+  q_i = \frac{
+    p\left(y_k | \bx_k^\star (i)\right)
+  }{
+    \sum_{j = 1}^N p\left(y_k | \bx_k^\star (j)\right)
+  },
+\end{equation}
+which are used as the probability masses for each element $i$ of the discrete distribution defined over 
+$\left\{\bx_k^\star (i): i = 1,\ldots,N\right\}$.
+The ``bootstrap'' occurs by taking $N$ samples from this distribution using the probabilities
+\begin{equation}
+  \label{eq:boot_probs}
+  \Pr{\bx_k(j) = \bx_k^\star(i)} = q_i.
+\end{equation}
+
+
+And that's it! To start the algorithm, we just take $N$ samples $\bx_0^\star(i)$ from
+$p\left(x_0\right)$ that we defined above.
+
+
+
+\subsection{Implementation}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{require}\hlstd{(mvtnorm)}
+\hlstd{y} \hlkwb{<-} \hlstd{dat}\hlopt{$}\hlstd{dist}  \hlcom{## the observations}
+\hlstd{u} \hlkwb{<-} \hlkwd{cbind}\hlstd{(dat}\hlopt{$}\hlstd{time,} \hlkwd{c}\hlstd{(}\hlkwd{diff}\hlstd{(dat}\hlopt{$}\hlstd{time),} \hlnum{0}\hlstd{))}  \hlcom{## the control vector}
+
+\hlstd{F2} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{u}\hlstd{,} \hlkwc{w}\hlstd{)}
+    \hlkwd{f}\hlstd{(x, u)} \hlopt{+} \hlstd{w}
+
+\hlstd{PrY.X} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{x}\hlstd{,} \hlkwc{R} \hlstd{=} \hlnum{250}\hlstd{)}
+    \hlkwd{dnorm}\hlstd{(y, x, R)}
+
+\hlstd{qs} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{x}\hlstd{) \{}
+    \hlstd{pi} \hlkwb{<-} \hlkwd{PrY.X}\hlstd{(y, x)}
+    \hlkwd{sapply}\hlstd{(pi,} \hlkwa{function}\hlstd{(}\hlkwc{p}\hlstd{) p} \hlopt{/} \hlkwd{sum}\hlstd{(pi))}
+\hlstd{\}}
+
+\hlstd{boot} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{q}\hlstd{,} \hlkwc{N}\hlstd{) \{}
+    \hlstd{w} \hlkwb{<-} \hlkwd{sample}\hlstd{(}\hlnum{1}\hlopt{:}\hlstd{N, N,} \hlnum{TRUE}\hlstd{, q)}
+    \hlstd{x[, w]}
+\hlstd{\}}
+
+\hlstd{N} \hlkwb{<-} \hlnum{500}
+
+\hlcom{## Initialise}
+
+\hlstd{X.} \hlkwb{<-} \hlstd{X} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{, N,} \hlkwd{length}\hlstd{(y)))}
+\hlstd{x0} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{s}\hlstd{(}\hlnum{0}\hlstd{))}
+\hlstd{P0} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{100}\hlstd{))}
+
+\hlstd{X[, ,} \hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(N, x0, P0))}
+
+
+\hlcom{## Run}
+
+\hlkwa{for} \hlstd{(k} \hlkwa{in} \hlnum{2}\hlopt{:}\hlkwd{length}\hlstd{(y)) \{}
+    \hlcom{## Predict}
+    \hlstd{wi} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(N,} \hlkwc{sigma} \hlstd{= Q))}
+    \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{N) \{}
+        \hlstd{X.[, i, k]} \hlkwb{<-} \hlkwd{F2}\hlstd{(X[, i, k} \hlopt{-} \hlnum{1}\hlstd{], u[k} \hlopt{-} \hlnum{1}\hlstd{, ], wi[, i])}
+    \hlstd{\}}
+
+    \hlcom{## Update}
+    \hlstd{qi} \hlkwb{<-} \hlkwd{qs}\hlstd{(y[k], X.[}\hlnum{1}\hlstd{,,k])}
+    \hlstd{X[,,k]} \hlkwb{<-} \hlkwd{boot}\hlstd{(X.[,,k], qi, N)}
+\hlstd{\}}
+
+\hlkwd{plot}\hlstd{(}\hlkwd{matrix}\hlstd{(}\hlkwd{rep}\hlstd{(t[}\hlopt{-}\hlnum{1}\hlstd{], N),} \hlkwc{nrow}\hlstd{=N,} \hlkwc{byrow}\hlstd{=T), X.[}\hlnum{1}\hlstd{,,}\hlopt{-}\hlnum{1}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,}
+     \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{max}\hlstd{(}\hlkwd{s}\hlstd{(t), X[}\hlnum{1}\hlstd{,,], X.[}\hlnum{1}\hlstd{,,}\hlopt{-}\hlnum{1}\hlstd{])),} \hlkwc{col} \hlstd{=} \hlstr{"#00000030"}\hlstd{,}
+     \hlkwc{xlab} \hlstd{=} \hlstr{"Time (s)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Distance into Trip (m)"}\hlstd{)}
+\hlkwd{points}\hlstd{(}\hlkwd{matrix}\hlstd{(}\hlkwd{rep}\hlstd{(t, N),} \hlkwc{nrow}\hlstd{=N,} \hlkwc{byrow}\hlstd{=T), X[}\hlnum{1}\hlstd{,,],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.2}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{)}
+\hlkwd{points}\hlstd{(t, y,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"white"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{)}
+\hlkwd{curve}\hlstd{(}\hlkwd{s}\hlstd{(x),} \hlnum{0}\hlstd{,} \hlkwd{max}\hlstd{(t),} \hlnum{1001}\hlstd{,} \hlkwc{add} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"blue"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=0.8\textwidth]{figure/particle_filter-1} 
+
+}
+
+
+
+\end{knitrout}
 
 
 \end{document}
