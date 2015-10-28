@@ -690,6 +690,8 @@ $p\left(x_0\right)$ that we defined above.
     \hlstd{x[, w]}
 \hlstd{\}}
 
+\hlstd{Q} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{300}\hlopt{^}\hlnum{2}\hlstd{,} \hlopt{-}\hlnum{70}\hlstd{),} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{70}\hlstd{,} \hlnum{2.5}\hlopt{^}\hlnum{2}\hlstd{))}
+
 \hlstd{N} \hlkwb{<-} \hlnum{500}
 
 \hlcom{## Initialise}
@@ -705,7 +707,7 @@ $p\left(x_0\right)$ that we defined above.
 
 \hlkwa{for} \hlstd{(k} \hlkwa{in} \hlnum{2}\hlopt{:}\hlkwd{length}\hlstd{(y)) \{}
     \hlcom{## Predict}
-    \hlstd{wi} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(N,} \hlkwc{sigma} \hlstd{= Q))}
+    \hlstd{wi} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(N,} \hlkwc{sigma} \hlstd{= Q} \hlopt{*} \hlstd{u[k} \hlopt{-} \hlnum{1}\hlstd{,} \hlnum{2}\hlstd{]} \hlopt{/} \hlnum{60}\hlstd{))}
     \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{N) \{}
         \hlstd{X.[, i, k]} \hlkwb{<-} \hlkwd{F2}\hlstd{(X[, i, k} \hlopt{-} \hlnum{1}\hlstd{], u[k} \hlopt{-} \hlnum{1}\hlstd{, ], wi[, i])}
     \hlstd{\}}
@@ -731,6 +733,10 @@ $p\left(x_0\right)$ that we defined above.
 
 
 \end{knitrout}
+
+
+This still isn't perfect thought, but far more modifiable. 
+
 
 
 \end{document}

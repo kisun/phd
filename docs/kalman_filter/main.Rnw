@@ -8,7 +8,7 @@
 \usepackage{parskip}
 
 <<echo=FALSE,results="hide">>=
-which <- 20
+which <- 3
 @ 
 
 
@@ -630,6 +630,8 @@ boot <- function(x, q, N) {
     x[, w]
 }
 
+Q <- rbind(c(300^2, -70), c(-70, 2.5^2))
+
 N <- 500
 
 ## Initialise
@@ -645,7 +647,7 @@ X[, , 1] <- t(rmvnorm(N, x0, P0))
 
 for (k in 2:length(y)) {
     ## Predict
-    wi <- t(rmvnorm(N, sigma = Q))
+    wi <- t(rmvnorm(N, sigma = Q * u[k - 1, 2] / 60))
     for (i in 1:N) {
         X.[, i, k] <- F2(X[, i, k - 1], u[k - 1, ], wi[, i])
     }
@@ -662,6 +664,10 @@ points(matrix(rep(t, N), nrow=N, byrow=T), X[1,,], pch = 19, cex = 0.2, col = "r
 points(t, y, pch = 19, col = "white", cex = 0.5)
 curve(s(x), 0, max(t), 1001, add = TRUE, col = "blue")
 @ 
+
+
+This still isn't perfect thought, but far more modifiable. 
+
 
 
 \end{document}
