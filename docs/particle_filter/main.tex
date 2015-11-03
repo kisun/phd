@@ -420,9 +420,9 @@ speed is unknown:
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlstd{lhood} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{x}\hlstd{)}
-    \hlkwd{dmvnorm}\hlstd{(y,} \hlkwd{h}\hlstd{(x),} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0.5}\hlstd{,} \hlnum{0.5}\hlstd{)))}
+    \hlkwd{dmvnorm}\hlstd{(y,} \hlkwd{h}\hlstd{(x),} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{)))}
 \hlstd{pw} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{n}\hlstd{)}
-    \hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{1}\hlstd{)}
+    \hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{0.2}\hlstd{)}
 \hlstd{Delta} \hlkwb{<-} \hlnum{1}
 \hlstd{A} \hlkwb{<-} \hlkwd{cbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(Delta,} \hlnum{1}\hlstd{))}
 \hlstd{G} \hlkwb{<-} \hlkwd{rbind}\hlstd{(Delta}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, Delta)}
@@ -462,13 +462,18 @@ Now for the rest of them \ldots
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
+\hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlnum{2}\hlstd{))}
 \hlstd{xx} \hlkwb{<-} \hlstd{x1}
+\hlstd{M} \hlkwb{<-} \hlkwd{length}\hlstd{(t)}
+\hlstd{xxhat.hist} \hlkwb{<-} \hlstd{xx.hist} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{, N, M))}
+\hlstd{xxhat.hist[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{x1hat}
+\hlstd{xx.hist[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{x1}
 \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlstd{t[}\hlopt{-}\hlnum{1}\hlstd{]) \{}
-    \hlstd{xxhat} \hlkwb{<-} \hlkwd{fn}\hlstd{(xx,} \hlkwd{pw}\hlstd{(N))}
+    \hlstd{xxhat.hist[,,i]} \hlkwb{<-} \hlstd{xxhat} \hlkwb{<-} \hlkwd{fn}\hlstd{(xx,} \hlkwd{pw}\hlstd{(N))}
     \hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood}\hlstd{(y[, i], xi))}
     \hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
     \hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
-    \hlstd{xx} \hlkwb{<-} \hlstd{xxhat[, ii]}
+    \hlstd{xx.hist[,,i]} \hlkwb{<-} \hlstd{xx} \hlkwb{<-} \hlstd{xxhat[, ii]}
 
     \hlstd{hxxhat} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat,} \hlnum{2}\hlstd{, h)}
     \hlstd{hxx} \hlkwb{<-} \hlkwd{apply}\hlstd{(xx,} \hlnum{2}\hlstd{, h)}
@@ -487,35 +492,38 @@ Now for the rest of them \ldots
 }
 
 
-
-
-{\centering \includegraphics[width=\maxwidth]{figure/run_pf_loop-2} 
-
-}
-
-
-
-
-{\centering \includegraphics[width=\maxwidth]{figure/run_pf_loop-3} 
-
-}
-
-
-
-
-{\centering \includegraphics[width=\maxwidth]{figure/run_pf_loop-4} 
-
-}
-
-
 \begin{kframe}\begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
 \end{alltt}
 \begin{verbatim}
 ##  distance     speed 
-## 15.702678  3.918369
+## 15.583953  3.148476
 \end{verbatim}
 \end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(xxhat.hist[}\hlnum{1}\hlstd{,,]),} \hlkwc{ylim} \hlstd{=} \hlkwd{range}\hlstd{(xxhat.hist[}\hlnum{2}\hlstd{,,]),}
+     \hlkwc{xlab} \hlstd{=} \hlstr{"Distance (m)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Speed (m/s)"}\hlstd{)}
+\hlstd{cols} \hlkwb{<-} \hlkwd{rainbow}\hlstd{(M)}
+\hlstd{colsa} \hlkwb{<-} \hlkwd{rainbow}\hlstd{(M,} \hlkwc{alpha} \hlstd{=} \hlnum{0.1}\hlstd{)}
+\hlkwd{invisible}\hlstd{(}
+    \hlkwd{sapply}\hlstd{(t,} \hlkwa{function}\hlstd{(}\hlkwc{ti}\hlstd{) \{}
+               \hlkwd{points}\hlstd{(xxhat.hist[}\hlnum{1}\hlstd{,,ti], xxhat.hist[}\hlnum{2}\hlstd{,,ti],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{col} \hlstd{= colsa[ti])}
+               \hlkwd{points}\hlstd{(xx.hist[}\hlnum{1}\hlstd{,,ti], xx.hist[}\hlnum{2}\hlstd{,,ti],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{col} \hlstd{= cols[ti],} \hlkwc{cex} \hlstd{=} \hlnum{0.3}\hlstd{)}
+           \hlstd{\})}
+    \hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/dist_speed_plot-1} 
+
+}
+
+
+
 \end{knitrout}
 
 

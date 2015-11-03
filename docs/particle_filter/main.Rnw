@@ -300,9 +300,9 @@ speed is unknown:
 
 <<run_pf>>=
 lhood <- function(y, x)
-    dmvnorm(y, h(x), diag(c(0.5, 0.5)))
+    dmvnorm(y, h(x), diag(c(1, 1)))
 pw <- function(n)
-    rnorm(n, 0, 1)
+    rnorm(n, 0, 0.2)
 Delta <- 1
 A <- cbind(c(1, 0), c(Delta, 1))
 G <- rbind(Delta^2/2, Delta)
@@ -330,14 +330,19 @@ points(Ytrue[1, ], Ytrue[2, ], pch = 19, cex = 0.3, col = "red")
 
 Now for the rest of them \ldots
 
-<<run_pf_loop>>=
+<<run_pf_loop,fig.width=16,fig.height=10>>=
+par(mfrow = c(2, 2))
 xx <- x1
+M <- length(t)
+xxhat.hist <- xx.hist <- array(NA, c(2, N, M))
+xxhat.hist[,,1] <- x1hat
+xx.hist[,,1] <- x1
 for (i in t[-1]) {
-    xxhat <- fn(xx, pw(N))
+    xxhat.hist[,,i] <- xxhat <- fn(xx, pw(N))
     weights <- apply(xxhat, 2, function(xi) lhood(y[, i], xi))
     qi <- weights / sum(weights)
     ii <- sample(N, N, TRUE, qi)
-    xx <- xxhat[, ii]
+    xx.hist[,,i] <- xx <- xxhat[, ii]
     
     hxxhat <- apply(xxhat, 2, h)
     hxx <- apply(xx, 2, h)
@@ -350,6 +355,20 @@ for (i in t[-1]) {
 }
 
 rowMeans(xx)
+@ 
+
+<<dist_speed_plot>>=
+plot(NA, xlim = range(xxhat.hist[1,,]), ylim = range(xxhat.hist[2,,]),
+     xlab = "Distance (m)", ylab = "Speed (m/s)")
+cols <- rainbow(M)
+colsa <- rainbow(M, alpha = 0.1)
+invisible(
+    sapply(t, function(ti) {
+               points(xxhat.hist[1,,ti], xxhat.hist[2,,ti], pch = 19, col = colsa[ti])
+               points(xx.hist[1,,ti], xx.hist[2,,ti], pch = 19, col = cols[ti], cex = 0.3)
+           })
+    )
+
 @ 
 
 
