@@ -64,6 +64,7 @@
 \newcommand{\bw}{\boldsymbol{w}}
 \newcommand{\bz}{\boldsymbol{z}}
 \newcommand{\by}{\boldsymbol{y}}
+\newcommand{\br}{\boldsymbol{r}}
 \newcommand{\bh}{\boldsymbol{h}}
 \newcommand{\bv}{\boldsymbol{v}}
 \newcommand{\bfn}{\boldsymbol{f}}
@@ -108,10 +109,10 @@ An example in two-dimensions where the object travels in a straight trajectory.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{x} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{9}\hlstd{)}
-\hlstd{y} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{)}
+\hlstd{x} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{40}\hlstd{)}
+\hlstd{y} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{15}\hlstd{)}
 \hlstd{t} \hlkwb{<-} \hlnum{1}
-\hlkwd{plot}\hlstd{(x, y,} \hlkwc{type} \hlstd{=} \hlstr{"b"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{20}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+\hlkwd{plot}\hlstd{(x, y,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{20}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
 \hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{v} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
 \end{alltt}
 \end{kframe}
@@ -158,8 +159,8 @@ So let us predict the next step, k = 2:
 \end{alltt}
 \begin{verbatim}
 ##      [,1]
-## [1,]   18
-## [2,]   10
+## [1,]   80
+## [2,]   30
 \end{verbatim}
 \begin{alltt}
 \hlkwd{plot}\hlstd{(x, y,} \hlkwc{type} \hlstd{=} \hlstr{"b"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{20}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
@@ -266,9 +267,186 @@ where $R =
 \end{knitrout}
 
 
-\section{Straight Trajectory, Constrained to ``Road''}
+\vfill
+\newpage
+\section{Trajectory Constrained to ``Road''}
 
-We will now constrain the particles to the road.
+
+We propose a two-stage algorithm that involves several different aspects:
+
+\begin{itemize}
+\item GPS location: this is a vector $\by = \left[p_{\mathrm{lat}}, p_{\mathrm{lon}}\right]^T$; we
+  must also take into account GPS error (which is typically known, and can at least be estimated).
+  
+
+\item Route information: we know where the bus will be going, which reduced the 2-dimentional
+  problem down to 1; we need to switch between $\by$ and $d = $ distance into trip.
+\end{itemize}
+
+
+We will be using the following system model, where, at time $k \in 1,\ldots,K$, 
+\begin{itemize}
+\item 
+  $\bx_k$ is the state $\left[d_k, v_k\right]^T$ (= distance-into-trip and velocity, respectively)
+  
+\item
+  $f_k$ is the (assumed known) system transition function, 
+  
+\item
+  $\bu_k$ are the control variables $\left[t_k, \Delta_k\right]^T$ (= time in seconds and time between
+  observations, respectively), and
+  
+\item
+  $\bw_k$ is a zero-mean white noise with known distribution $p(\bw_k)$,
+  
+\end{itemize}
+which leads us to:
+\begin{equation}
+  \label{eq:state_model1}
+  \bx_k = 
+  f_k\left(\bx_k, \bu_k\right) + \bw_k.
+\end{equation}
+
+The second part is the observation equation, which consists of
+\begin{itemize}
+\item 
+  $\by_k$, the observations (GPS coordinates),
+
+\item 
+  $h_k$, the measurement function, and
+
+\item 
+  $v_k$, the zero-mean, white system noise (e.g., GPS error, \ldots),
+\end{itemize}
+which come together to give us
+\begin{equation}
+  \label{eq:state_model2}
+  \by_k = 
+  h_k\left(\hat\bx_k\right) + \bv_k.
+\end{equation}
+In our case, $h_k = h$ will map distance-into-trip values to GPS coordinates.
+The reason for converting between distance and GPS is to help overcome potential issues that will
+arise for example when routes do a ``loop''.
+
+
+\subsection{Example 1}
+
+In this first example, the ``route'' will be a straight line, observations will be evenly
+distributed (i.e., $\Delta_k = \Delta = 1$ for simplicity), and we will use a simple first order
+dynamics equation, where $\bw_k$ is the unknown accelaration,
+\begin{equation}
+  \label{eq:simple_dynamics}
+  \bx_k = A\bx_{k-1} + Gw_k,
+\end{equation}
+where 
+$A =
+\begin{bmatrix}
+  1 & \Delta \\ 0 & 1
+\end{bmatrix}$ and 
+$G =
+\begin{bmatrix}
+  \frac{\Delta^2}{2} \\ \Delta
+\end{bmatrix}$.
+We can later complicate it.
+
+The next part is the mapping from distance to GPS. We will have a single path (with known bearing $\Psi$), so we
+can for now get away with (remembering that $d_k = \bx_{1k}$):
+\begin{equation}
+  \label{eq:d_to_gps}
+  h\left(\hat \bx_k\right) = 
+  d_k \begin{bmatrix}
+    \sin \Psi \\ \cos \Psi
+  \end{bmatrix}
+\end{equation}
+
+
+\subsubsection{Simulation Setup}
+
+The ``route'' will start from the origin and end at $\left(20, 15\right)$,
+which gives the bearing $\Psi = \tan^{-1}\left(\frac{20}{15}\right)$. 
+We then take observations at times $t \in 1, \ldots, 5$~(s), with a constant speed of 3~ms$^{-1}$ from beginning to
+end, and ``GPS error'' of 0.5~(m). Thus, the actual positions and simulated observations are:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{set.seed}\hlstd{(}\hlnum{345346}\hlstd{)}
+\hlstd{Psi} \hlkwb{<-} \hlkwd{atan}\hlstd{(}\hlnum{20}\hlopt{/}\hlnum{15}\hlstd{)}
+\hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) x[}\hlnum{1}\hlstd{]} \hlopt{*} \hlkwd{rbind}\hlstd{(}\hlkwd{sin}\hlstd{(Psi),} \hlkwd{cos}\hlstd{(Psi))}
+\hlstd{t} \hlkwb{<-} \hlnum{1}\hlopt{:}\hlnum{5}
+\hlstd{Xtrue} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{, t} \hlopt{*} \hlnum{3}\hlstd{),} \hlnum{3}\hlstd{)}
+\hlstd{Ytrue} \hlkwb{<-} \hlkwd{apply}\hlstd{(Xtrue,} \hlnum{2}\hlstd{, h)}
+\hlstd{y} \hlkwb{<-} \hlkwd{round}\hlstd{(Ytrue} \hlopt{+} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(}\hlkwd{length}\hlstd{(t)} \hlopt{+} \hlnum{1}\hlstd{,} \hlkwc{sigma} \hlstd{=} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0.5}\hlstd{,} \hlnum{0.5}\hlstd{)))),} \hlnum{4}\hlstd{)}
+
+\hlstd{theplot} \hlkwb{<-} \hlkwa{function}\hlstd{() \{}
+    \hlkwd{plot}\hlstd{(y[}\hlnum{1}\hlstd{, ], y[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{2}\hlstd{,} \hlnum{15}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,}
+         \hlkwc{xlab} \hlstd{=} \hlkwd{expression}\hlstd{(p[lon]),} \hlkwc{ylab} \hlstd{=} \hlkwd{expression}\hlstd{(p[lat]))}
+    \hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{v} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+    \hlkwd{lines}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{15}\hlstd{),} \hlkwc{lty} \hlstd{=} \hlnum{2}\hlstd{)}
+    \hlkwd{points}\hlstd{(Ytrue[}\hlnum{1}\hlstd{, ], Ytrue[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{)}
+\hlstd{\}}
+\hlkwd{theplot}\hlstd{()}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/true_positions-1} 
+
+}
+
+
+
+\end{knitrout}
+
+
+\subsubsection{Simulation Results}
+
+We need a prior distribution on the initial position, which is infact known exactly, however the
+speed is unknown:
+\begin{equation}
+  \label{eq:prior}
+  x_0 \sim \mathcal{N}\left(
+    \begin{bmatrix}
+      0 \\ v_0
+    \end{bmatrix},
+    \begin{bmatrix}
+      0 & 0 \\
+      0 & 5
+    \end{bmatrix}
+  \right),\quad v_0 = 5.
+\end{equation}
+
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{lhood} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{x}\hlstd{)}
+    \hlkwd{dmvnorm}\hlstd{(y, x,} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0.5}\hlstd{,} \hlnum{0.5}\hlstd{)))}
+\hlstd{pw} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{n}\hlstd{)}
+    \hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{2}\hlstd{)}
+\hlstd{Delta} \hlkwb{<-} \hlnum{1}
+\hlstd{A} \hlkwb{<-} \hlkwd{cbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(Delta,} \hlnum{1}\hlstd{))}
+\hlstd{G} \hlkwb{<-} \hlkwd{rbind}\hlstd{(Delta}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, Delta)}
+\hlstd{fn} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{w}\hlstd{)}
+    \hlstd{A} \hlopt{%*%} \hlstd{x} \hlopt{+} \hlstd{G} \hlopt{%*%} \hlstd{w}
+
+\hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlnum{1}\hlstd{))}
+\hlstd{N} \hlkwb{<-} \hlnum{20}
+\hlstd{x0} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(N,} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{),} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{))))}
+\hlkwd{theplot}\hlstd{()}
+
+\hlstd{x1hat} \hlkwb{<-} \hlkwd{fn}\hlstd{(x0,} \hlkwd{pw}\hlstd{(N))}
+\hlstd{hx1hat} \hlkwb{<-} \hlkwd{apply}\hlstd{(x1hat,} \hlnum{2}\hlstd{, h)}
+\hlkwd{points}\hlstd{(hx1hat[}\hlnum{1}\hlstd{, ], hx1hat[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009970"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/run_pf-1} 
+
+}
+
+
+
+\end{knitrout}
 
 
 

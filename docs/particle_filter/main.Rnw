@@ -18,6 +18,7 @@ library(mvtnorm)
 \newcommand{\bw}{\boldsymbol{w}}
 \newcommand{\bz}{\boldsymbol{z}}
 \newcommand{\by}{\boldsymbol{y}}
+\newcommand{\br}{\boldsymbol{r}}
 \newcommand{\bh}{\boldsymbol{h}}
 \newcommand{\bv}{\boldsymbol{v}}
 \newcommand{\bfn}{\boldsymbol{f}}
@@ -60,10 +61,10 @@ An example in two-dimensions where the object travels in a straight trajectory.
 
 
 <<first>>=
-x <- c(0, 9)
-y <- c(0, 5)
+x <- c(0, 40)
+y <- c(0, 15)
 t <- 1
-plot(x, y, type = "b", xlim = c(0, 20), ylim = c(-20, 20), asp = 1, pch = 19)
+plot(x, y, type = "l", xlim = c(0, 20), ylim = c(-20, 20), asp = 1, pch = 19)
 abline(h = 0, v = 0, lty = 3)
 @ 
 
@@ -159,13 +160,165 @@ points(X[, 1], X[, 2], pch = 19, cex = 0.4, col = "#00000030")
 @ 
 
 
-\section{Straight Trajectory, Constrained to ``Road''}
+\vfill
+\newpage
+\section{Trajectory Constrained to ``Road''}
 
-We will now constrain the particles to the road.
 
-<<heading>>=
-Psi <- atan(x[2] / y[2]) * 180 / pi
+We propose a two-stage algorithm that involves several different aspects:
+
+\begin{itemize}
+\item GPS location: this is a vector $\by = \left[p_{\mathrm{lat}}, p_{\mathrm{lon}}\right]^T$; we
+  must also take into account GPS error (which is typically known, and can at least be estimated).
+  
+
+\item Route information: we know where the bus will be going, which reduced the 2-dimentional
+  problem down to 1; we need to switch between $\by$ and $d = $ distance into trip.
+\end{itemize}
+
+
+We will be using the following system model, where, at time $k \in 1,\ldots,K$, 
+\begin{itemize}
+\item 
+  $\bx_k$ is the state $\left[d_k, v_k\right]^T$ (= distance-into-trip and velocity, respectively)
+  
+\item
+  $f_k$ is the (assumed known) system transition function, 
+  
+\item
+  $\bu_k$ are the control variables $\left[t_k, \Delta_k\right]^T$ (= time in seconds and time between
+  observations, respectively), and
+  
+\item
+  $\bw_k$ is a zero-mean white noise with known distribution $p(\bw_k)$,
+  
+\end{itemize}
+which leads us to:
+\begin{equation}
+  \label{eq:state_model1}
+  \bx_k = 
+  f_k\left(\bx_k, \bu_k\right) + \bw_k.
+\end{equation}
+
+The second part is the observation equation, which consists of
+\begin{itemize}
+\item 
+  $\by_k$, the observations (GPS coordinates),
+
+\item 
+  $h_k$, the measurement function, and
+
+\item 
+  $v_k$, the zero-mean, white system noise (e.g., GPS error, \ldots),
+\end{itemize}
+which come together to give us
+\begin{equation}
+  \label{eq:state_model2}
+  \by_k = 
+  h_k\left(\hat\bx_k\right) + \bv_k.
+\end{equation}
+In our case, $h_k = h$ will map distance-into-trip values to GPS coordinates.
+The reason for converting between distance and GPS is to help overcome potential issues that will
+arise for example when routes do a ``loop''.
+
+
+\subsection{Example 1}
+
+In this first example, the ``route'' will be a straight line, observations will be evenly
+distributed (i.e., $\Delta_k = \Delta = 1$ for simplicity), and we will use a simple first order
+dynamics equation, where $\bw_k$ is the unknown accelaration,
+\begin{equation}
+  \label{eq:simple_dynamics}
+  \bx_k = A\bx_{k-1} + Gw_k,
+\end{equation}
+where 
+$A =
+\begin{bmatrix}
+  1 & \Delta \\ 0 & 1
+\end{bmatrix}$ and 
+$G =
+\begin{bmatrix}
+  \frac{\Delta^2}{2} \\ \Delta
+\end{bmatrix}$.
+We can later complicate it.
+
+The next part is the mapping from distance to GPS. We will have a single path (with known bearing $\Psi$), so we
+can for now get away with (remembering that $d_k = \bx_{1k}$):
+\begin{equation}
+  \label{eq:d_to_gps}
+  h\left(\hat \bx_k\right) = 
+  d_k \begin{bmatrix}
+    \sin \Psi \\ \cos \Psi
+  \end{bmatrix}
+\end{equation}
+
+
+\subsubsection{Simulation Setup}
+
+The ``route'' will start from the origin and end at $\left(20, 15\right)$,
+which gives the bearing $\Psi = \tan^{-1}\left(\frac{20}{15}\right)$. 
+We then take observations at times $t \in 1, \ldots, 5$~(s), with a constant speed of 3~ms$^{-1}$ from beginning to
+end, and ``GPS error'' of 0.5~(m). Thus, the actual positions and simulated observations are:
+<<true_positions>>=
+set.seed(345346)
+Psi <- atan(20/15)
+h <- function(x) x[1] * rbind(sin(Psi), cos(Psi))
+t <- 1:5
+Xtrue <- rbind(c(0, t * 3), 3)
+Ytrue <- apply(Xtrue, 2, h)
+y <- round(Ytrue + t(rmvnorm(length(t) + 1, sigma = diag(c(0.5, 0.5)))), 4)
+
+theplot <- function() {
+    plot(y[1, ], y[2, ], pch = 19, xlim = c(0, 20), ylim = c(-2, 15), asp = 1,
+         xlab = expression(p[lon]), ylab = expression(p[lat]))
+    abline(h = 0, v = 0, lty = 3)
+    lines(c(0, 20), c(0, 15), lty = 2)
+    points(Ytrue[1, ], Ytrue[2, ], pch = 19, cex = 0.3, col = "red")
+}
+theplot()
 @ 
+
+
+\subsubsection{Simulation Results}
+
+We need a prior distribution on the initial position, which is infact known exactly, however the
+speed is unknown:
+\begin{equation}
+  \label{eq:prior}
+  x_0 \sim \mathcal{N}\left(
+    \begin{bmatrix}
+      0 \\ v_0
+    \end{bmatrix},
+    \begin{bmatrix}
+      0 & 0 \\
+      0 & 5
+    \end{bmatrix}
+  \right),\quad v_0 = 5.
+\end{equation}
+
+
+
+<<run_pf,fig.height=10>>=
+lhood <- function(y, x)
+    dmvnorm(y, x, diag(c(0.5, 0.5)))
+pw <- function(n)
+    rnorm(n, 0, 2)
+Delta <- 1
+A <- cbind(c(1, 0), c(Delta, 1))
+G <- rbind(Delta^2/2, Delta)
+fn <- function(x, w)
+    A %*% x + G %*% w
+
+par(mfrow = c(2, 1))
+N <- 20
+x0 <- t(rmvnorm(N, c(0, 5), diag(c(0, 5))))
+theplot()
+
+x1hat <- fn(x0, pw(N))
+hx1hat <- apply(x1hat, 2, h)
+points(hx1hat[1, ], hx1hat[2, ], pch = 19, cex = 0.5, col = "#00009970")
+@ 
+
 
 
 
