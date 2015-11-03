@@ -1,0 +1,276 @@
+\documentclass[11pt]{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{xfrac}
+
+\usepackage{fullpage}
+\usepackage{parskip}
+
+
+
+
+\newcommand{\bx}{\boldsymbol{x}}
+\newcommand{\bu}{\boldsymbol{u}}
+\newcommand{\bw}{\boldsymbol{w}}
+\newcommand{\bz}{\boldsymbol{z}}
+\newcommand{\by}{\boldsymbol{y}}
+\newcommand{\bh}{\boldsymbol{h}}
+\newcommand{\bv}{\boldsymbol{v}}
+\newcommand{\bfn}{\boldsymbol{f}}
+\newcommand{\bF}{\boldsymbol{F}}
+\newcommand{\bH}{\boldsymbol{H}}
+\newcommand{\bK}{\boldsymbol{K}}
+\newcommand{\bQ}{\boldsymbol{Q}}
+\newcommand{\bR}{\boldsymbol{R}}
+\newcommand{\bP}{\boldsymbol{P}}
+\newcommand{\bS}{\boldsymbol{S}}
+\newcommand{\bZero}{\boldsymbol{0}}
+\newcommand{\dd}[2]{\frac{\partial {#1}}{\partial {#2}}}
+
+\newcommand{\X}{\mathrm{X}}
+\newcommand{\E}{\mathrm{E}}
+\newcommand{\V}{\mathrm{V}}
+
+
+\newcommand{\pr}{\mathbb{P}}
+\renewcommand{\Pr}[1]{\pr\left(#1\right)}
+
+
+\newcommand{\km}{_{k-1}}
+\newcommand{\kk}{_{k|k}}
+\newcommand{\kkm}{_{k|k-1}}
+\newcommand{\kmkm}{_{k-1|k-1}}
+
+
+\title{Particle Filter}
+\author{Exploration}
+\date{}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+\maketitle
+
+
+\section{Straight Trajectory, Unconstrained}
+
+An example in two-dimensions where the object travels in a straight trajectory. 
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{x} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{9}\hlstd{)}
+\hlstd{y} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{)}
+\hlstd{t} \hlkwb{<-} \hlnum{1}
+\hlkwd{plot}\hlstd{(x, y,} \hlkwc{type} \hlstd{=} \hlstr{"b"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{20}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+\hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{v} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/first-1} 
+
+}
+
+
+
+\end{knitrout}
+
+We can write the formula for movement as:
+\begin{equation}
+  \label{eq:straight_state}
+  \X_k = \X_{k-1} + \V_{k-1}t_{k} + \E_kt_{k},
+\end{equation}
+where 
+$\X_k = \left[x_k, y_k\right]^T$ are the coordinates at time $k$,
+$\V_k = \left[\dot x_k, \dot y_k\right]^T$ are the $x$ and $y$ velocities at time $k$,
+and $t_k$ is the time between steps $k-1$ and $k$; here, using uniform discrete time, $t_k = t$.
+The error term is (for now) Gaussian zero-mean white-noise, $\E_k \sim \mathcal{N}\left(0, \Sigma_k\right)$,
+$\Sigma_k = \Sigma =
+\begin{bmatrix}
+  \sigma_x^2 & 0 \\ 0 & \sigma_y^2
+\end{bmatrix}$,
+$\sigma_x^2 = 2$, $\sigma_y^2 = 3$.
+For now, for velocity we will use $\dot x_k = \frac{x_k - x_{k-1}}{t_k}$, and likewise for $\dot y_k$.
+
+
+So let us predict the next step, k = 2:
+\begin{equation}
+  \label{eq:predict}
+  \hat \X_k = \X_{k-1} + \V_{k-1}t_k
+\end{equation}
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{X2} \hlkwb{<-} \hlkwd{rbind}\hlstd{(x[}\hlnum{2}\hlstd{], y[}\hlnum{2}\hlstd{])}
+\hlstd{V2} \hlkwb{<-} \hlkwd{rbind}\hlstd{(x[}\hlnum{2}\hlstd{]} \hlopt{-} \hlstd{x[}\hlnum{1}\hlstd{], y[}\hlnum{2}\hlstd{]} \hlopt{-} \hlstd{y[}\hlnum{1}\hlstd{])} \hlcom{## t = 1}
+\hlstd{Sigma} \hlkwb{<-} \hlkwd{cbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{3}\hlstd{))}
+
+\hlstd{(X3hat} \hlkwb{<-} \hlstd{X2} \hlopt{+} \hlstd{V2} \hlopt{%*%} \hlstd{t)}
+\end{alltt}
+\begin{verbatim}
+##      [,1]
+## [1,]   18
+## [2,]   10
+\end{verbatim}
+\begin{alltt}
+\hlkwd{plot}\hlstd{(x, y,} \hlkwc{type} \hlstd{=} \hlstr{"b"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{20}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+\hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{v} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+\hlkwd{points}\hlstd{(X3hat[}\hlnum{1}\hlstd{], X3hat[}\hlnum{2}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/step_2-1} 
+
+}
+
+
+
+\end{knitrout}
+
+
+
+That was easy enough! Now do it with particles\ldots
+
+Require prior distribution $p\left(\X_0\right) \sim \mathcal{N}\left(\bZero, \Sigma_0\right)$,
+$\Sigma_0 =
+\begin{bmatrix}
+  5 & 0 \\ 0 & 5
+\end{bmatrix}$.
+
+Step 1: sample the particles:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{N} \hlkwb{<-} \hlnum{500}  \hlcom{## for simplicity!!}
+\hlstd{X} \hlkwb{<-} \hlkwd{rmvnorm}\hlstd{(N,} \hlkwc{sigma} \hlstd{=} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{5}\hlstd{,} \hlnum{5}\hlstd{)))}
+
+\hlkwd{plot}\hlstd{(x, y,} \hlkwc{type} \hlstd{=} \hlstr{"b"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{20}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+\hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{v} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+\hlkwd{points}\hlstd{(X[,} \hlnum{1}\hlstd{], X[,} \hlnum{2}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00000030"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/sample_particles-1} 
+
+}
+
+
+
+\end{knitrout}
+
+Let's assume we know the direction they'll be travelling:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{V} \hlkwb{<-} \hlstd{V2}
+\hlstd{Xhats} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{t}\hlstd{(X)} \hlopt{+} \hlstd{V} \hlopt{%*%} \hlkwd{rep}\hlstd{(t, N))}
+\hlstd{Xprop} \hlkwb{<-} \hlstd{Xhats} \hlopt{+} \hlkwd{rmvnorm}\hlstd{(N,} \hlkwc{sigma} \hlstd{= Sigma)}
+
+\hlkwd{plot}\hlstd{(x, y,} \hlkwc{type} \hlstd{=} \hlstr{"b"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{20}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+\hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{v} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+\hlkwd{points}\hlstd{(Xprop[,} \hlnum{1}\hlstd{], Xprop[,} \hlnum{2}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#0000FF30"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/particle_step1-1} 
+
+}
+
+
+
+\end{knitrout}
+
+Now bootstrap by weights using 
+\begin{equation}
+  \label{eq:particle_weights}
+  q_i = \frac{p\left(y_k | x_k^\star(i)\right)}{\sum_j p\left(y_k | x_k^\star(j)\right)},
+  \quad
+  p\left(y_k | x_k^\star\right) \sim \mathcal{N}\left(x_k^\star, R\right),
+\end{equation}
+where $R =
+\begin{bmatrix}
+  3 & 0 \\ 0 & 3
+\end{bmatrix}$.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{R} \hlkwb{=} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{3}\hlstd{,} \hlnum{3}\hlstd{))}
+\hlstd{wi} \hlkwb{<-} \hlkwd{apply}\hlstd{(Xprop,} \hlnum{1}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{dmvnorm}\hlstd{(}\hlkwd{t}\hlstd{(X2), xi, R))}
+\hlstd{qi} \hlkwb{<-} \hlstd{wi} \hlopt{/} \hlkwd{sum}\hlstd{(wi)}
+
+\hlstd{i} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{,} \hlkwc{prob} \hlstd{= qi)}
+\hlstd{X} \hlkwb{<-} \hlstd{Xprop[i, ]}
+
+\hlkwd{plot}\hlstd{(x, y,} \hlkwc{type} \hlstd{=} \hlstr{"b"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{20}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+\hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{v} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+\hlkwd{points}\hlstd{(X[,} \hlnum{1}\hlstd{], X[,} \hlnum{2}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00000030"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/particle_weights-1} 
+
+}
+
+
+
+\end{knitrout}
+
+
+\section{Straight Trajectory, Constrained to ``Road''}
+
+We will now constrain the particles to the road.
+
+
+
+
+\end{document}
