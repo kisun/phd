@@ -373,9 +373,9 @@ end, and ``GPS error'' of 0.5~(m). Thus, the actual positions and simulated obse
 \hlstd{Psi} \hlkwb{<-} \hlkwd{atan}\hlstd{(}\hlnum{20}\hlopt{/}\hlnum{15}\hlstd{)}
 \hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) x[}\hlnum{1}\hlstd{]} \hlopt{*} \hlkwd{rbind}\hlstd{(}\hlkwd{sin}\hlstd{(Psi),} \hlkwd{cos}\hlstd{(Psi))}
 \hlstd{t} \hlkwb{<-} \hlnum{1}\hlopt{:}\hlnum{5}
-\hlstd{Xtrue} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{, t} \hlopt{*} \hlnum{3}\hlstd{),} \hlnum{3}\hlstd{)}
+\hlstd{Xtrue} \hlkwb{<-} \hlkwd{rbind}\hlstd{(t} \hlopt{*} \hlnum{3}\hlstd{,} \hlnum{3}\hlstd{)}
 \hlstd{Ytrue} \hlkwb{<-} \hlkwd{apply}\hlstd{(Xtrue,} \hlnum{2}\hlstd{, h)}
-\hlstd{y} \hlkwb{<-} \hlkwd{round}\hlstd{(Ytrue} \hlopt{+} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(}\hlkwd{length}\hlstd{(t)} \hlopt{+} \hlnum{1}\hlstd{,} \hlkwc{sigma} \hlstd{=} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0.5}\hlstd{,} \hlnum{0.5}\hlstd{)))),} \hlnum{4}\hlstd{)}
+\hlstd{y} \hlkwb{<-} \hlkwd{round}\hlstd{(Ytrue} \hlopt{+} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(}\hlkwd{length}\hlstd{(t),} \hlkwc{sigma} \hlstd{=} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0.5}\hlstd{,} \hlnum{0.5}\hlstd{)))),} \hlnum{4}\hlstd{)}
 
 \hlstd{theplot} \hlkwb{<-} \hlkwa{function}\hlstd{() \{}
     \hlkwd{plot}\hlstd{(y[}\hlnum{1}\hlstd{, ], y[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{2}\hlstd{,} \hlnum{15}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,}
@@ -420,23 +420,31 @@ speed is unknown:
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlstd{lhood} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{x}\hlstd{)}
-    \hlkwd{dmvnorm}\hlstd{(y, x,} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0.5}\hlstd{,} \hlnum{0.5}\hlstd{)))}
+    \hlkwd{dmvnorm}\hlstd{(y,} \hlkwd{h}\hlstd{(x),} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0.5}\hlstd{,} \hlnum{0.5}\hlstd{)))}
 \hlstd{pw} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{n}\hlstd{)}
-    \hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{2}\hlstd{)}
+    \hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{1}\hlstd{)}
 \hlstd{Delta} \hlkwb{<-} \hlnum{1}
 \hlstd{A} \hlkwb{<-} \hlkwd{cbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(Delta,} \hlnum{1}\hlstd{))}
 \hlstd{G} \hlkwb{<-} \hlkwd{rbind}\hlstd{(Delta}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, Delta)}
 \hlstd{fn} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{w}\hlstd{)}
-    \hlstd{A} \hlopt{%*%} \hlstd{x} \hlopt{+} \hlstd{G} \hlopt{%*%} \hlstd{w}
+    \hlkwd{structure}\hlstd{(A} \hlopt{%*%} \hlstd{x} \hlopt{+} \hlstd{G} \hlopt{%*%} \hlstd{w,} \hlkwc{.Dimnames} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"distance"}\hlstd{,} \hlstr{"speed"}\hlstd{),} \hlkwa{NULL}\hlstd{))}
 
-\hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlnum{1}\hlstd{))}
-\hlstd{N} \hlkwb{<-} \hlnum{20}
+\hlstd{N} \hlkwb{<-} \hlnum{200}
 \hlstd{x0} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(N,} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{),} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{))))}
 \hlkwd{theplot}\hlstd{()}
 
 \hlstd{x1hat} \hlkwb{<-} \hlkwd{fn}\hlstd{(x0,} \hlkwd{pw}\hlstd{(N))}
 \hlstd{hx1hat} \hlkwb{<-} \hlkwd{apply}\hlstd{(x1hat,} \hlnum{2}\hlstd{, h)}
-\hlkwd{points}\hlstd{(hx1hat[}\hlnum{1}\hlstd{, ], hx1hat[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009970"}\hlstd{)}
+\hlkwd{points}\hlstd{(hx1hat[}\hlnum{1}\hlstd{, ], hx1hat[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009970"}\hlstd{)}
+
+\hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(x1hat,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood}\hlstd{(y[,} \hlnum{1}\hlstd{], xi))}
+\hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
+\hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
+\hlstd{x1} \hlkwb{<-} \hlstd{x1hat[, ii]}
+
+\hlstd{hx1} \hlkwb{<-} \hlkwd{apply}\hlstd{(x1,} \hlnum{2}\hlstd{, h)}
+\hlkwd{points}\hlstd{(hx1[}\hlnum{1}\hlstd{, ], hx1[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990040"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{)}
+\hlkwd{points}\hlstd{(Ytrue[}\hlnum{1}\hlstd{, ], Ytrue[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{)}
 \end{alltt}
 \end{kframe}
 
@@ -446,6 +454,68 @@ speed is unknown:
 
 
 
+\end{knitrout}
+
+
+Now for the rest of them \ldots
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{xx} \hlkwb{<-} \hlstd{x1}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlstd{t[}\hlopt{-}\hlnum{1}\hlstd{]) \{}
+    \hlstd{xxhat} \hlkwb{<-} \hlkwd{fn}\hlstd{(xx,} \hlkwd{pw}\hlstd{(N))}
+    \hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood}\hlstd{(y[, i], xi))}
+    \hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
+    \hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
+    \hlstd{xx} \hlkwb{<-} \hlstd{xxhat[, ii]}
+
+    \hlstd{hxxhat} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat,} \hlnum{2}\hlstd{, h)}
+    \hlstd{hxx} \hlkwb{<-} \hlkwd{apply}\hlstd{(xx,} \hlnum{2}\hlstd{, h)}
+
+    \hlkwd{theplot}\hlstd{()}
+    \hlkwd{points}\hlstd{(hxxhat[}\hlnum{1}\hlstd{, ], hxxhat[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009070"}\hlstd{)}
+    \hlkwd{points}\hlstd{(hxx[}\hlnum{1}\hlstd{, ], hxx[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990040"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{)}
+    \hlkwd{points}\hlstd{(y[}\hlnum{1}\hlstd{, ], y[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+    \hlkwd{points}\hlstd{(Ytrue[}\hlnum{1}\hlstd{, i], Ytrue[}\hlnum{2}\hlstd{, i],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.6}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{)}
+\hlstd{\}}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/run_pf_loop-1} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/run_pf_loop-2} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/run_pf_loop-3} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/run_pf_loop-4} 
+
+}
+
+
+\begin{kframe}\begin{alltt}
+\hlkwd{rowMeans}\hlstd{(xx)}
+\end{alltt}
+\begin{verbatim}
+##  distance     speed 
+## 15.702678  3.918369
+\end{verbatim}
+\end{kframe}
 \end{knitrout}
 
 

@@ -264,9 +264,9 @@ set.seed(345346)
 Psi <- atan(20/15)
 h <- function(x) x[1] * rbind(sin(Psi), cos(Psi))
 t <- 1:5
-Xtrue <- rbind(c(0, t * 3), 3)
+Xtrue <- rbind(t * 3, 3)
 Ytrue <- apply(Xtrue, 2, h)
-y <- round(Ytrue + t(rmvnorm(length(t) + 1, sigma = diag(c(0.5, 0.5)))), 4)
+y <- round(Ytrue + t(rmvnorm(length(t), sigma = diag(c(0.5, 0.5)))), 4)
 
 theplot <- function() {
     plot(y[1, ], y[2, ], pch = 19, xlim = c(0, 20), ylim = c(-2, 15), asp = 1,
@@ -298,25 +298,58 @@ speed is unknown:
 
 
 
-<<run_pf,fig.height=10>>=
+<<run_pf>>=
 lhood <- function(y, x)
-    dmvnorm(y, x, diag(c(0.5, 0.5)))
+    dmvnorm(y, h(x), diag(c(0.5, 0.5)))
 pw <- function(n)
-    rnorm(n, 0, 2)
+    rnorm(n, 0, 1)
 Delta <- 1
 A <- cbind(c(1, 0), c(Delta, 1))
 G <- rbind(Delta^2/2, Delta)
 fn <- function(x, w)
-    A %*% x + G %*% w
+    structure(A %*% x + G %*% w, .Dimnames = list(c("distance", "speed"), NULL))
 
-par(mfrow = c(2, 1))
-N <- 20
+N <- 200
 x0 <- t(rmvnorm(N, c(0, 5), diag(c(0, 5))))
 theplot()
 
 x1hat <- fn(x0, pw(N))
 hx1hat <- apply(x1hat, 2, h)
-points(hx1hat[1, ], hx1hat[2, ], pch = 19, cex = 0.5, col = "#00009970")
+points(hx1hat[1, ], hx1hat[2, ], pch = 3, col = "#00009970")
+
+weights <- apply(x1hat, 2, function(xi) lhood(y[, 1], xi))
+qi <- weights / sum(weights)
+ii <- sample(N, N, TRUE, qi)
+x1 <- x1hat[, ii]
+
+hx1 <- apply(x1, 2, h)
+points(hx1[1, ], hx1[2, ], pch = 19, col = "#00990040", cex = 0.5)
+points(Ytrue[1, ], Ytrue[2, ], pch = 19, cex = 0.3, col = "red")
+@ 
+
+
+Now for the rest of them \ldots
+
+<<run_pf_loop>>=
+xx <- x1
+for (i in t[-1]) {
+    xxhat <- fn(xx, pw(N))
+    weights <- apply(xxhat, 2, function(xi) lhood(y[, i], xi))
+    qi <- weights / sum(weights)
+    ii <- sample(N, N, TRUE, qi)
+    xx <- xxhat[, ii]
+    
+    hxxhat <- apply(xxhat, 2, h)
+    hxx <- apply(xx, 2, h)
+    
+    theplot()
+    points(hxxhat[1, ], hxxhat[2, ], pch = 3, col = "#00009070")
+    points(hxx[1, ], hxx[2, ], pch = 19, col = "#00990040", cex = 0.5)
+    points(y[1, ], y[2, ], pch = 19)
+    points(Ytrue[1, i], Ytrue[2, i], pch = 19, cex = 0.6, col = "red")
+}
+
+rowMeans(xx)
 @ 
 
 
