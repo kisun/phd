@@ -1,0 +1,172 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{xfrac}
+
+\usepackage{fullpage}
+\usepackage{parskip}
+
+<<echo=FALSE,results="hide">>=
+opts_chunk$set(fig.width=8,fig.height=5,fig.align="center")
+library(mvtnorm)
+@ 
+
+
+\newcommand{\bx}{\boldsymbol{x}}
+\newcommand{\bu}{\boldsymbol{u}}
+\newcommand{\bw}{\boldsymbol{w}}
+\newcommand{\bz}{\boldsymbol{z}}
+\newcommand{\by}{\boldsymbol{y}}
+\newcommand{\bh}{\boldsymbol{h}}
+\newcommand{\bv}{\boldsymbol{v}}
+\newcommand{\bfn}{\boldsymbol{f}}
+\newcommand{\bF}{\boldsymbol{F}}
+\newcommand{\bH}{\boldsymbol{H}}
+\newcommand{\bK}{\boldsymbol{K}}
+\newcommand{\bQ}{\boldsymbol{Q}}
+\newcommand{\bR}{\boldsymbol{R}}
+\newcommand{\bP}{\boldsymbol{P}}
+\newcommand{\bS}{\boldsymbol{S}}
+\newcommand{\bZero}{\boldsymbol{0}}
+\newcommand{\dd}[2]{\frac{\partial {#1}}{\partial {#2}}}
+
+\newcommand{\X}{\mathrm{X}}
+\newcommand{\E}{\mathrm{E}}
+\newcommand{\V}{\mathrm{V}}
+
+
+\newcommand{\pr}{\mathbb{P}}
+\renewcommand{\Pr}[1]{\pr\left(#1\right)}
+
+
+\newcommand{\km}{_{k-1}}
+\newcommand{\kk}{_{k|k}}
+\newcommand{\kkm}{_{k|k-1}}
+\newcommand{\kmkm}{_{k-1|k-1}}
+
+
+\title{Particle Filter}
+\author{Exploration}
+\date{}
+
+\begin{document}
+\maketitle
+
+
+\section{Straight Trajectory, Unconstrained}
+
+An example in two-dimensions where the object travels in a straight trajectory. 
+
+
+<<first>>=
+x <- c(0, 9)
+y <- c(0, 5)
+t <- 1
+plot(x, y, type = "b", xlim = c(0, 20), ylim = c(-20, 20), asp = 1, pch = 19)
+abline(h = 0, v = 0, lty = 3)
+@ 
+
+We can write the formula for movement as:
+\begin{equation}
+  \label{eq:straight_state}
+  \X_k = \X_{k-1} + \V_{k-1}t_{k} + \E_kt_{k},
+\end{equation}
+where 
+$\X_k = \left[x_k, y_k\right]^T$ are the coordinates at time $k$,
+$\V_k = \left[\dot x_k, \dot y_k\right]^T$ are the $x$ and $y$ velocities at time $k$,
+and $t_k$ is the time between steps $k-1$ and $k$; here, using uniform discrete time, $t_k = t$.
+The error term is (for now) Gaussian zero-mean white-noise, $\E_k \sim \mathcal{N}\left(0, \Sigma_k\right)$,
+$\Sigma_k = \Sigma =
+\begin{bmatrix}
+  \sigma_x^2 & 0 \\ 0 & \sigma_y^2
+\end{bmatrix}$,
+$\sigma_x^2 = 2$, $\sigma_y^2 = 3$.
+For now, for velocity we will use $\dot x_k = \frac{x_k - x_{k-1}}{t_k}$, and likewise for $\dot y_k$.
+
+
+So let us predict the next step, k = 2:
+\begin{equation}
+  \label{eq:predict}
+  \hat \X_k = \X_{k-1} + \V_{k-1}t_k
+\end{equation}
+<<step_2>>=
+X2 <- rbind(x[2], y[2])
+V2 <- rbind(x[2] - x[1], y[2] - y[1]) ## t = 1
+Sigma <- cbind(c(2, 0), c(0, 3))
+
+(X3hat <- X2 + V2 %*% t)
+
+plot(x, y, type = "b", xlim = c(0, 20), ylim = c(-20, 20), asp = 1, pch = 19)
+abline(h = 0, v = 0, lty = 3)
+points(X3hat[1], X3hat[2], pch = 3, col = "red")
+@ 
+
+
+
+That was easy enough! Now do it with particles\ldots
+
+Require prior distribution $p\left(\X_0\right) \sim \mathcal{N}\left(\bZero, \Sigma_0\right)$,
+$\Sigma_0 =
+\begin{bmatrix}
+  5 & 0 \\ 0 & 5
+\end{bmatrix}$.
+
+Step 1: sample the particles:
+<<sample_particles>>=
+N <- 500  ## for simplicity!!
+X <- rmvnorm(N, sigma = diag(c(5, 5)))
+
+plot(x, y, type = "b", xlim = c(0, 20), ylim = c(-20, 20), asp = 1, pch = 19)
+abline(h = 0, v = 0, lty = 3)
+points(X[, 1], X[, 2], pch = 19, cex = 0.4, col = "#00000030")
+@ 
+
+Let's assume we know the direction they'll be travelling:
+<<particle_step1>>=
+V <- V2
+Xhats <- t(t(X) + V %*% rep(t, N))
+Xprop <- Xhats + rmvnorm(N, sigma = Sigma)
+
+plot(x, y, type = "b", xlim = c(0, 20), ylim = c(-20, 20), asp = 1, pch = 19)
+abline(h = 0, v = 0, lty = 3)
+points(Xprop[, 1], Xprop[, 2], pch = 19, cex = 0.4, col = "#0000FF30")
+@ 
+
+Now bootstrap by weights using 
+\begin{equation}
+  \label{eq:particle_weights}
+  q_i = \frac{p\left(y_k | x_k^\star(i)\right)}{\sum_j p\left(y_k | x_k^\star(j)\right)},
+  \quad
+  p\left(y_k | x_k^\star\right) \sim \mathcal{N}\left(x_k^\star, R\right),
+\end{equation}
+where $R =
+\begin{bmatrix}
+  3 & 0 \\ 0 & 3
+\end{bmatrix}$.
+
+<<particle_weights>>=
+R = diag(c(3, 3))
+wi <- apply(Xprop, 1, function(xi) dmvnorm(t(X2), xi, R))
+qi <- wi / sum(wi)
+
+i <- sample(N, N, TRUE, prob = qi)
+X <- Xprop[i, ]
+
+plot(x, y, type = "b", xlim = c(0, 20), ylim = c(-20, 20), asp = 1, pch = 19)
+abline(h = 0, v = 0, lty = 3)
+points(X[, 1], X[, 2], pch = 19, cex = 0.4, col = "#00000030")
+@ 
+
+
+\section{Straight Trajectory, Constrained to ``Road''}
+
+We will now constrain the particles to the road.
+
+<<heading>>=
+Psi <- atan(x[2] / y[2]) * 180 / pi
+@ 
+
+
+
+\end{document}
