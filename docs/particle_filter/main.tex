@@ -65,6 +65,7 @@
 \newcommand{\bz}{\boldsymbol{z}}
 \newcommand{\by}{\boldsymbol{y}}
 \newcommand{\br}{\boldsymbol{r}}
+\newcommand{\bs}{\boldsymbol{s}}
 \newcommand{\bh}{\boldsymbol{h}}
 \newcommand{\bv}{\boldsymbol{v}}
 \newcommand{\bfn}{\boldsymbol{f}}
@@ -101,175 +102,7 @@
 \maketitle
 
 
-\section{Straight Trajectory, Unconstrained}
-
-An example in two-dimensions where the object travels in a straight trajectory. 
-
-
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{x} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{40}\hlstd{)}
-\hlstd{y} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{15}\hlstd{)}
-\hlstd{t} \hlkwb{<-} \hlnum{1}
-\hlkwd{plot}\hlstd{(x, y,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{20}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
-\hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{v} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
-\end{alltt}
-\end{kframe}
-
-{\centering \includegraphics[width=\maxwidth]{figure/first-1} 
-
-}
-
-
-
-\end{knitrout}
-
-We can write the formula for movement as:
-\begin{equation}
-  \label{eq:straight_state}
-  \X_k = \X_{k-1} + \V_{k-1}t_{k} + \E_kt_{k},
-\end{equation}
-where 
-$\X_k = \left[x_k, y_k\right]^T$ are the coordinates at time $k$,
-$\V_k = \left[\dot x_k, \dot y_k\right]^T$ are the $x$ and $y$ velocities at time $k$,
-and $t_k$ is the time between steps $k-1$ and $k$; here, using uniform discrete time, $t_k = t$.
-The error term is (for now) Gaussian zero-mean white-noise, $\E_k \sim \mathcal{N}\left(0, \Sigma_k\right)$,
-$\Sigma_k = \Sigma =
-\begin{bmatrix}
-  \sigma_x^2 & 0 \\ 0 & \sigma_y^2
-\end{bmatrix}$,
-$\sigma_x^2 = 2$, $\sigma_y^2 = 3$.
-For now, for velocity we will use $\dot x_k = \frac{x_k - x_{k-1}}{t_k}$, and likewise for $\dot y_k$.
-
-
-So let us predict the next step, k = 2:
-\begin{equation}
-  \label{eq:predict}
-  \hat \X_k = \X_{k-1} + \V_{k-1}t_k
-\end{equation}
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{X2} \hlkwb{<-} \hlkwd{rbind}\hlstd{(x[}\hlnum{2}\hlstd{], y[}\hlnum{2}\hlstd{])}
-\hlstd{V2} \hlkwb{<-} \hlkwd{rbind}\hlstd{(x[}\hlnum{2}\hlstd{]} \hlopt{-} \hlstd{x[}\hlnum{1}\hlstd{], y[}\hlnum{2}\hlstd{]} \hlopt{-} \hlstd{y[}\hlnum{1}\hlstd{])} \hlcom{## t = 1}
-\hlstd{Sigma} \hlkwb{<-} \hlkwd{cbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{3}\hlstd{))}
-
-\hlstd{(X3hat} \hlkwb{<-} \hlstd{X2} \hlopt{+} \hlstd{V2} \hlopt{%*%} \hlstd{t)}
-\end{alltt}
-\begin{verbatim}
-##      [,1]
-## [1,]   80
-## [2,]   30
-\end{verbatim}
-\begin{alltt}
-\hlkwd{plot}\hlstd{(x, y,} \hlkwc{type} \hlstd{=} \hlstr{"b"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{20}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
-\hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{v} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
-\hlkwd{points}\hlstd{(X3hat[}\hlnum{1}\hlstd{], X3hat[}\hlnum{2}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{)}
-\end{alltt}
-\end{kframe}
-
-{\centering \includegraphics[width=\maxwidth]{figure/step_2-1} 
-
-}
-
-
-
-\end{knitrout}
-
-
-
-That was easy enough! Now do it with particles\ldots
-
-Require prior distribution $p\left(\X_0\right) \sim \mathcal{N}\left(\bZero, \Sigma_0\right)$,
-$\Sigma_0 =
-\begin{bmatrix}
-  5 & 0 \\ 0 & 5
-\end{bmatrix}$.
-
-Step 1: sample the particles:
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{N} \hlkwb{<-} \hlnum{500}  \hlcom{## for simplicity!!}
-\hlstd{X} \hlkwb{<-} \hlkwd{rmvnorm}\hlstd{(N,} \hlkwc{sigma} \hlstd{=} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{5}\hlstd{,} \hlnum{5}\hlstd{)))}
-
-\hlkwd{plot}\hlstd{(x, y,} \hlkwc{type} \hlstd{=} \hlstr{"b"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{20}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
-\hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{v} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
-\hlkwd{points}\hlstd{(X[,} \hlnum{1}\hlstd{], X[,} \hlnum{2}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00000030"}\hlstd{)}
-\end{alltt}
-\end{kframe}
-
-{\centering \includegraphics[width=\maxwidth]{figure/sample_particles-1} 
-
-}
-
-
-
-\end{knitrout}
-
-Let's assume we know the direction they'll be travelling:
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{V} \hlkwb{<-} \hlstd{V2}
-\hlstd{Xhats} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{t}\hlstd{(X)} \hlopt{+} \hlstd{V} \hlopt{%*%} \hlkwd{rep}\hlstd{(t, N))}
-\hlstd{Xprop} \hlkwb{<-} \hlstd{Xhats} \hlopt{+} \hlkwd{rmvnorm}\hlstd{(N,} \hlkwc{sigma} \hlstd{= Sigma)}
-
-\hlkwd{plot}\hlstd{(x, y,} \hlkwc{type} \hlstd{=} \hlstr{"b"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{20}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
-\hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{v} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
-\hlkwd{points}\hlstd{(Xprop[,} \hlnum{1}\hlstd{], Xprop[,} \hlnum{2}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#0000FF30"}\hlstd{)}
-\end{alltt}
-\end{kframe}
-
-{\centering \includegraphics[width=\maxwidth]{figure/particle_step1-1} 
-
-}
-
-
-
-\end{knitrout}
-
-Now bootstrap by weights using 
-\begin{equation}
-  \label{eq:particle_weights}
-  q_i = \frac{p\left(y_k | x_k^\star(i)\right)}{\sum_j p\left(y_k | x_k^\star(j)\right)},
-  \quad
-  p\left(y_k | x_k^\star\right) \sim \mathcal{N}\left(x_k^\star, R\right),
-\end{equation}
-where $R =
-\begin{bmatrix}
-  3 & 0 \\ 0 & 3
-\end{bmatrix}$.
-
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{R} \hlkwb{=} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{3}\hlstd{,} \hlnum{3}\hlstd{))}
-\hlstd{wi} \hlkwb{<-} \hlkwd{apply}\hlstd{(Xprop,} \hlnum{1}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{dmvnorm}\hlstd{(}\hlkwd{t}\hlstd{(X2), xi, R))}
-\hlstd{qi} \hlkwb{<-} \hlstd{wi} \hlopt{/} \hlkwd{sum}\hlstd{(wi)}
-
-\hlstd{i} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{,} \hlkwc{prob} \hlstd{= qi)}
-\hlstd{X} \hlkwb{<-} \hlstd{Xprop[i, ]}
-
-\hlkwd{plot}\hlstd{(x, y,} \hlkwc{type} \hlstd{=} \hlstr{"b"}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{20}\hlstd{,} \hlnum{20}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
-\hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{v} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
-\hlkwd{points}\hlstd{(X[,} \hlnum{1}\hlstd{], X[,} \hlnum{2}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00000030"}\hlstd{)}
-\end{alltt}
-\end{kframe}
-
-{\centering \includegraphics[width=\maxwidth]{figure/particle_weights-1} 
-
-}
-
-
-
-\end{knitrout}
-
-
-\vfill
-\newpage
-\section{Trajectory Constrained to ``Road''}
+\section{Trajectory Constrained tos ``Road''}
 
 
 We propose a two-stage algorithm that involves several different aspects:
@@ -329,7 +162,7 @@ The reason for converting between distance and GPS is to help overcome potential
 arise for example when routes do a ``loop''.
 
 
-\subsection{Example 1}
+\subsection{Example 1: Straight Trajectory}
 
 In this first example, the ``route'' will be a straight line, observations will be evenly
 distributed (i.e., $\Delta_k = \Delta = 1$ for simplicity), and we will use a simple first order
@@ -525,6 +358,256 @@ Now for the rest of them \ldots
 
 
 \end{knitrout}
+
+
+
+\subsection{Example 2: A Road with Corners}
+
+We will now construct an artifical road that is made up of several segments. Here's the road:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{px} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{,} \hlnum{7}\hlstd{,} \hlnum{3}\hlstd{,} \hlopt{-}\hlnum{2}\hlstd{,} \hlopt{-}\hlnum{4}\hlstd{)}
+\hlstd{py} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{3}\hlstd{,} \hlnum{6}\hlstd{,} \hlnum{8}\hlstd{,} \hlnum{7}\hlstd{,} \hlnum{2}\hlstd{)}
+\hlstd{road} \hlkwb{<-} \hlkwa{function}\hlstd{() \{}
+    \hlkwd{plot}\hlstd{(px, py,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{10}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{5}\hlstd{,} \hlnum{10}\hlstd{),} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,}
+         \hlkwc{xlab} \hlstd{=} \hlkwd{expression}\hlstd{(p[lon]),} \hlkwc{ylab} \hlstd{=} \hlkwd{expression}\hlstd{(p[lat]))}
+    \hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{v} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+\hlstd{\}}
+\hlkwd{road}\hlstd{()}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/road_segments-1} 
+
+}
+
+
+
+\end{knitrout}
+
+Currently, we are \emph{not} using real GPS coordinates, so we don't yet have to worry about
+scaling; therefore, we will use simple Euclidean distances to compute the (cumulative) length of
+each line segment.
+
+We then take observations at times $t \in 1,\ldots,5$ (s), of a ``vehicle'' travelling at 3~ms$^{-1}$,
+again with a ``GPS error'' of 0.5~(m).
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{shape} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{lon} \hlstd{= px,} \hlkwc{lat} \hlstd{= py,}
+                    \hlkwc{distance} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{cumsum}\hlstd{(}\hlkwd{sqrt}\hlstd{(}\hlkwd{diff}\hlstd{(px)}\hlopt{^}\hlnum{2} \hlopt{+} \hlkwd{diff}\hlstd{(py)}\hlopt{^}\hlnum{2}\hlstd{))))}
+\hlstd{shape}\hlopt{$}\hlstd{distance}
+\end{alltt}
+\begin{verbatim}
+## [1]  0.000000  5.830952  9.436503 13.908639 19.007659 24.392823
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+The problem now is converting from distance to cartesian (GPS). This will involve an algorithm of
+two steps:
+\begin{enumerate}
+\item 
+  Find the ``point'', $\br_j$, in the shape set that has the smallest positive difference from the
+  ``observed'' distance, $d_k$;
+
+\item 
+  Calculate the distance into the segment $\bs_j = \overrightarrow{\br_{j}\br_{j+1}} = \br_{j+1}
+  - \br_j$, and the bearing of the segment, to calcualte the GPS position of the observation:
+  \begin{equation}
+    \label{eq:bearing_calc}
+    \Psi_j = 
+    \begin{cases}
+      \tan^{-1} \frac{s_{j1}}{s_{j2}}, & r_{j1} >= 0, \\
+      360 - \tan^{-1} \frac{s_{j1}}{s_{j2}}, & r_{j1} < 0.
+    \end{cases}
+  \end{equation}
+  
+  \begin{equation}
+    \label{eq:converstion_formula}
+    h_j\left(\hat\bx_k\right) = d_k 
+    \begin{bmatrix}
+      \sin \Psi_j \\ \cos \Psi_j
+    \end{bmatrix}.
+  \end{equation}
+  
+  The subscripts are: $j$ for the segment identification, each which has its own bearing and length,
+  and $k$ for the observations (multiple observations can belong to the same segment---useful for
+  reducing computations).
+  
+\end{enumerate}
+
+For the most part, this can be added to the database;
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{shape}\hlopt{$}\hlstd{length} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{sqrt}\hlstd{(}\hlkwd{diff}\hlstd{(px)}\hlopt{^}\hlnum{2} \hlopt{+} \hlkwd{diff}\hlstd{(py)}\hlopt{^}\hlnum{2}\hlstd{),} \hlnum{NA}\hlstd{)}
+\hlstd{theta} \hlkwb{<-} \hlnum{2} \hlopt{*} \hlstd{pi} \hlopt{-} \hlstd{(}\hlkwd{atan2}\hlstd{(}\hlkwd{diff}\hlstd{(py),} \hlkwd{diff}\hlstd{(px))} \hlopt{-} \hlstd{pi} \hlopt{/} \hlnum{2}\hlstd{)}
+\hlstd{shape}\hlopt{$}\hlstd{bearing} \hlkwb{<-} \hlkwd{c}\hlstd{(theta} \hlopt{-} \hlnum{2} \hlopt{*} \hlstd{pi} \hlopt{*} \hlstd{(theta} \hlopt{>=} \hlnum{2} \hlopt{*} \hlstd{pi),} \hlnum{NA}\hlstd{)}
+\hlstd{shape}
+\end{alltt}
+\begin{verbatim}
+##   lon lat  distance   length   bearing
+## 1   0   0  0.000000 5.830952 1.0303768
+## 2   5   3  5.830952 3.605551 0.5880026
+## 3   7   6  9.436503 4.472136 5.1760366
+## 4   3   8 13.908639 5.099020 4.5149934
+## 5  -2   7 19.007659 5.385165 3.5220990
+## 6  -4   2 24.392823       NA        NA
+\end{verbatim}
+\begin{alltt}
+\hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{shape}\hlstd{) \{}
+    \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{<=} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{))}
+    \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>=} \hlkwd{max}\hlstd{(shape}\hlopt{$}\hlstd{distance))} \hlkwd{return}\hlstd{(}\hlkwd{as.numeric}\hlstd{(shape[}\hlkwd{nrow}\hlstd{(shape),} \hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]))}
+
+    \hlstd{j} \hlkwb{<-} \hlkwd{which.min}\hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlstd{shape}\hlopt{$}\hlstd{distance)} \hlopt{-} \hlnum{1}
+    \hlstd{sj} \hlkwb{<-} \hlstd{shape[j, ]}
+    \hlstd{Psi} \hlkwb{<-} \hlstd{sj}\hlopt{$}\hlstd{bearing}
+    \hlstd{d} \hlkwb{<-} \hlstd{x[}\hlnum{1}\hlstd{]} \hlopt{-} \hlstd{sj}\hlopt{$}\hlstd{distance}
+    \hlkwd{as.numeric}\hlstd{(sj[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{])} \hlopt{+} \hlstd{d} \hlopt{*} \hlkwd{c}\hlstd{(}\hlkwd{sin}\hlstd{(Psi),} \hlkwd{cos}\hlstd{(Psi))}
+\hlstd{\}}
+
+\hlstd{Ytrue} \hlkwb{<-} \hlkwd{apply}\hlstd{(Xtrue,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape)}
+\hlstd{y} \hlkwb{<-} \hlkwd{round}\hlstd{(Ytrue} \hlopt{+} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(}\hlkwd{length}\hlstd{(t),} \hlkwc{sigma} \hlstd{=} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0.5}\hlstd{,} \hlnum{0.5}\hlstd{)))),} \hlnum{4}\hlstd{)}
+
+\hlstd{theplot2} \hlkwb{<-} \hlkwa{function}\hlstd{() \{}
+    \hlkwd{road}\hlstd{()}
+    \hlkwd{points}\hlstd{(y[}\hlnum{1}\hlstd{, ], y[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+    \hlkwd{points}\hlstd{(Ytrue[}\hlnum{1}\hlstd{, ], Ytrue[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{)}
+\hlstd{\}}
+\hlkwd{theplot2}\hlstd{()}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/segment_stuff-1} 
+
+}
+
+
+
+\end{knitrout}
+
+Other than the above, everything else is basically the same!
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{lhood} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{x}\hlstd{,} \hlkwc{shape}\hlstd{)}
+    \hlkwd{dmvnorm}\hlstd{(y,} \hlkwd{h}\hlstd{(x, shape),} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{)))}
+
+\hlstd{N} \hlkwb{<-} \hlnum{200}
+\hlstd{x0} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(N,} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{),} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{))))}
+\hlkwd{theplot2}\hlstd{()}
+
+\hlstd{x1hat} \hlkwb{<-} \hlkwd{fn}\hlstd{(x0,} \hlkwd{pw}\hlstd{(N))}
+\hlstd{hx1hat} \hlkwb{<-} \hlkwd{apply}\hlstd{(x1hat,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape)}
+\hlkwd{points}\hlstd{(hx1hat[}\hlnum{1}\hlstd{, ], hx1hat[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009970"}\hlstd{)}
+
+\hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(x1hat,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood}\hlstd{(y[,} \hlnum{1}\hlstd{], xi, shape))}
+\hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
+\hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
+\hlstd{x1} \hlkwb{<-} \hlstd{x1hat[, ii]}
+
+\hlstd{hx1} \hlkwb{<-} \hlkwd{apply}\hlstd{(x1,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape)}
+\hlkwd{points}\hlstd{(hx1[}\hlnum{1}\hlstd{, ], hx1[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990040"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{)}
+\hlkwd{points}\hlstd{(Ytrue[}\hlnum{1}\hlstd{, ], Ytrue[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/results_ex2-1} 
+
+}
+
+
+
+\end{knitrout}
+
+That look wonderful! Now for the rest \ldots
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{4}\hlstd{,} \hlnum{1}\hlstd{))}
+\hlstd{xx} \hlkwb{<-} \hlstd{x1}
+\hlstd{M} \hlkwb{<-} \hlkwd{length}\hlstd{(t)}
+\hlstd{xxhat.hist} \hlkwb{<-} \hlstd{xx.hist} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{, N, M))}
+\hlstd{xxhat.hist[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{x1hat}
+\hlstd{xx.hist[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{x1}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlstd{t[}\hlopt{-}\hlnum{1}\hlstd{]) \{}
+    \hlstd{xxhat.hist[,,i]} \hlkwb{<-} \hlstd{xxhat} \hlkwb{<-} \hlkwd{fn}\hlstd{(xx,} \hlkwd{pw}\hlstd{(N))}
+    \hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood}\hlstd{(y[, i], xi, shape))}
+    \hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
+    \hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
+    \hlstd{xx.hist[,,i]} \hlkwb{<-} \hlstd{xx} \hlkwb{<-} \hlstd{xxhat[, ii]}
+
+    \hlstd{hxxhat} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape)}
+    \hlstd{hxx} \hlkwb{<-} \hlkwd{apply}\hlstd{(xx,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape)}
+    \hlkwd{theplot2}\hlstd{()}
+    \hlkwd{points}\hlstd{(hxxhat[}\hlnum{1}\hlstd{, ], hxxhat[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009070"}\hlstd{)}
+    \hlkwd{points}\hlstd{(hxx[}\hlnum{1}\hlstd{, ], hxx[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990040"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{)}
+    \hlkwd{points}\hlstd{(y[}\hlnum{1}\hlstd{, ], y[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+    \hlkwd{points}\hlstd{(Ytrue[}\hlnum{1}\hlstd{, i], Ytrue[}\hlnum{2}\hlstd{, i],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.6}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{)}
+\hlstd{\}}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=0.6\textwidth]{figure/run_pf_loop2-1} 
+
+}
+
+
+\begin{kframe}\begin{alltt}
+\hlkwd{rowMeans}\hlstd{(xx)}
+\end{alltt}
+\begin{verbatim}
+##  distance     speed 
+## 15.158491  2.963134
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+
+That's essentially it! The only part missing is how to work with GPS coordinates (instead of
+cartesian as in the examples).
+
+
+\section{GPS Coordinates}
+
+GPS coordinates are angles from the center of the Earth to points above/below the equator (latitude),
+and points east/west of the Prime Meridian in Greenwich, England (longitude). However, the relative
+scale between latitude and longitude, unlike the examples above, is not 1:1.
+Even more, it is not constant across latitudes.
+We must therefore transform GPS coordinates so the variances in lon/lat are equal on the ground.
+
+
+\subsection{A GPS Route}
+
+We'll take a route from Auckland Transport Static GTFS data.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{shapes} \hlkwb{<-} \hlkwd{read.csv}\hlstd{(}\hlstr{"data/at_shapes.txt"}\hlstd{)}
+\hlstd{plotShape} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{id}\hlstd{) \{}
+    \hlstd{sh} \hlkwb{<-} \hlstd{shapes[shapes}\hlopt{$}\hlstd{shape_id} \hlopt{==} \hlstd{id, ]}
+    \hlkwd{plot}\hlstd{(sh}\hlopt{$}\hlstd{shape_pt_lon, sh}\hlopt{$}\hlstd{shape_pt_lat,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{,} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,}
+         \hlkwc{xlab} \hlstd{=} \hlstr{"Longitude"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Latitude"}\hlstd{)}
+\hlstd{\}}
+
+\hlkwd{plotShape}\hlstd{(}\hlnum{2}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/AT_route-1} 
+
+}
+
+
+
+\end{knitrout}
+
 
 
 

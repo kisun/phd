@@ -19,6 +19,7 @@ library(mvtnorm)
 \newcommand{\bz}{\boldsymbol{z}}
 \newcommand{\by}{\boldsymbol{y}}
 \newcommand{\br}{\boldsymbol{r}}
+\newcommand{\bs}{\boldsymbol{s}}
 \newcommand{\bh}{\boldsymbol{h}}
 \newcommand{\bv}{\boldsymbol{v}}
 \newcommand{\bfn}{\boldsymbol{f}}
@@ -55,114 +56,7 @@ library(mvtnorm)
 \maketitle
 
 
-\section{Straight Trajectory, Unconstrained}
-
-An example in two-dimensions where the object travels in a straight trajectory. 
-
-
-<<first>>=
-x <- c(0, 40)
-y <- c(0, 15)
-t <- 1
-plot(x, y, type = "l", xlim = c(0, 20), ylim = c(-20, 20), asp = 1, pch = 19)
-abline(h = 0, v = 0, lty = 3)
-@ 
-
-We can write the formula for movement as:
-\begin{equation}
-  \label{eq:straight_state}
-  \X_k = \X_{k-1} + \V_{k-1}t_{k} + \E_kt_{k},
-\end{equation}
-where 
-$\X_k = \left[x_k, y_k\right]^T$ are the coordinates at time $k$,
-$\V_k = \left[\dot x_k, \dot y_k\right]^T$ are the $x$ and $y$ velocities at time $k$,
-and $t_k$ is the time between steps $k-1$ and $k$; here, using uniform discrete time, $t_k = t$.
-The error term is (for now) Gaussian zero-mean white-noise, $\E_k \sim \mathcal{N}\left(0, \Sigma_k\right)$,
-$\Sigma_k = \Sigma =
-\begin{bmatrix}
-  \sigma_x^2 & 0 \\ 0 & \sigma_y^2
-\end{bmatrix}$,
-$\sigma_x^2 = 2$, $\sigma_y^2 = 3$.
-For now, for velocity we will use $\dot x_k = \frac{x_k - x_{k-1}}{t_k}$, and likewise for $\dot y_k$.
-
-
-So let us predict the next step, k = 2:
-\begin{equation}
-  \label{eq:predict}
-  \hat \X_k = \X_{k-1} + \V_{k-1}t_k
-\end{equation}
-<<step_2>>=
-X2 <- rbind(x[2], y[2])
-V2 <- rbind(x[2] - x[1], y[2] - y[1]) ## t = 1
-Sigma <- cbind(c(2, 0), c(0, 3))
-
-(X3hat <- X2 + V2 %*% t)
-
-plot(x, y, type = "b", xlim = c(0, 20), ylim = c(-20, 20), asp = 1, pch = 19)
-abline(h = 0, v = 0, lty = 3)
-points(X3hat[1], X3hat[2], pch = 3, col = "red")
-@ 
-
-
-
-That was easy enough! Now do it with particles\ldots
-
-Require prior distribution $p\left(\X_0\right) \sim \mathcal{N}\left(\bZero, \Sigma_0\right)$,
-$\Sigma_0 =
-\begin{bmatrix}
-  5 & 0 \\ 0 & 5
-\end{bmatrix}$.
-
-Step 1: sample the particles:
-<<sample_particles>>=
-N <- 500  ## for simplicity!!
-X <- rmvnorm(N, sigma = diag(c(5, 5)))
-
-plot(x, y, type = "b", xlim = c(0, 20), ylim = c(-20, 20), asp = 1, pch = 19)
-abline(h = 0, v = 0, lty = 3)
-points(X[, 1], X[, 2], pch = 19, cex = 0.4, col = "#00000030")
-@ 
-
-Let's assume we know the direction they'll be travelling:
-<<particle_step1>>=
-V <- V2
-Xhats <- t(t(X) + V %*% rep(t, N))
-Xprop <- Xhats + rmvnorm(N, sigma = Sigma)
-
-plot(x, y, type = "b", xlim = c(0, 20), ylim = c(-20, 20), asp = 1, pch = 19)
-abline(h = 0, v = 0, lty = 3)
-points(Xprop[, 1], Xprop[, 2], pch = 19, cex = 0.4, col = "#0000FF30")
-@ 
-
-Now bootstrap by weights using 
-\begin{equation}
-  \label{eq:particle_weights}
-  q_i = \frac{p\left(y_k | x_k^\star(i)\right)}{\sum_j p\left(y_k | x_k^\star(j)\right)},
-  \quad
-  p\left(y_k | x_k^\star\right) \sim \mathcal{N}\left(x_k^\star, R\right),
-\end{equation}
-where $R =
-\begin{bmatrix}
-  3 & 0 \\ 0 & 3
-\end{bmatrix}$.
-
-<<particle_weights>>=
-R = diag(c(3, 3))
-wi <- apply(Xprop, 1, function(xi) dmvnorm(t(X2), xi, R))
-qi <- wi / sum(wi)
-
-i <- sample(N, N, TRUE, prob = qi)
-X <- Xprop[i, ]
-
-plot(x, y, type = "b", xlim = c(0, 20), ylim = c(-20, 20), asp = 1, pch = 19)
-abline(h = 0, v = 0, lty = 3)
-points(X[, 1], X[, 2], pch = 19, cex = 0.4, col = "#00000030")
-@ 
-
-
-\vfill
-\newpage
-\section{Trajectory Constrained to ``Road''}
+\section{Trajectory Constrained tos ``Road''}
 
 
 We propose a two-stage algorithm that involves several different aspects:
@@ -222,7 +116,7 @@ The reason for converting between distance and GPS is to help overcome potential
 arise for example when routes do a ``loop''.
 
 
-\subsection{Example 1}
+\subsection{Example 1: Straight Trajectory}
 
 In this first example, the ``route'' will be a straight line, observations will be evenly
 distributed (i.e., $\Delta_k = \Delta = 1$ for simplicity), and we will use a simple first order
@@ -370,6 +264,179 @@ invisible(
     )
 
 @ 
+
+
+
+\subsection{Example 2: A Road with Corners}
+
+We will now construct an artifical road that is made up of several segments. Here's the road:
+
+<<road_segments>>=
+px <- c(0, 5, 7, 3, -2, -4)
+py <- c(0, 3, 6, 8, 7, 2)
+road <- function() {
+    plot(px, py, type = "l", lty = 2, xlim = c(0, 10), ylim = c(-5, 10), asp = 1,
+         xlab = expression(p[lon]), ylab = expression(p[lat]))
+    abline(h = 0, v = 0, lty = 3)
+}
+road()
+@ 
+
+Currently, we are \emph{not} using real GPS coordinates, so we don't yet have to worry about
+scaling; therefore, we will use simple Euclidean distances to compute the (cumulative) length of
+each line segment.
+
+We then take observations at times $t \in 1,\ldots,5$ (s), of a ``vehicle'' travelling at 3~ms$^{-1}$,
+again with a ``GPS error'' of 0.5~(m).
+
+<<road_lengths>>=
+shape <- data.frame(lon = px, lat = py,
+                    distance = c(0, cumsum(sqrt(diff(px)^2 + diff(py)^2))))
+shape$distance
+@ 
+
+The problem now is converting from distance to cartesian (GPS). This will involve an algorithm of
+two steps:
+\begin{enumerate}
+\item 
+  Find the ``point'', $\br_j$, in the shape set that has the smallest positive difference from the
+  ``observed'' distance, $d_k$;
+
+\item 
+  Calculate the distance into the segment $\bs_j = \overrightarrow{\br_{j}\br_{j+1}} = \br_{j+1}
+  - \br_j$, and the bearing of the segment, to calcualte the GPS position of the observation:
+  \begin{equation}
+    \label{eq:bearing_calc}
+    \Psi_j = 
+    \begin{cases}
+      \tan^{-1} \frac{s_{j1}}{s_{j2}}, & r_{j1} >= 0, \\
+      360 - \tan^{-1} \frac{s_{j1}}{s_{j2}}, & r_{j1} < 0.
+    \end{cases}
+  \end{equation}
+  
+  \begin{equation}
+    \label{eq:converstion_formula}
+    h_j\left(\hat\bx_k\right) = d_k 
+    \begin{bmatrix}
+      \sin \Psi_j \\ \cos \Psi_j
+    \end{bmatrix}.
+  \end{equation}
+  
+  The subscripts are: $j$ for the segment identification, each which has its own bearing and length,
+  and $k$ for the observations (multiple observations can belong to the same segment---useful for
+  reducing computations).
+  
+\end{enumerate}
+
+For the most part, this can be added to the database;
+<<segment_stuff>>=
+shape$length <- c(sqrt(diff(px)^2 + diff(py)^2), NA)
+theta <- 2 * pi - (atan2(diff(py), diff(px)) - pi / 2)
+shape$bearing <- c(theta - 2 * pi * (theta >= 2 * pi), NA)
+shape
+
+h <- function(x, shape) {
+    if (x[1] <= 0) return(c(0, 0))
+    if (x[1] >= max(shape$distance)) return(as.numeric(shape[nrow(shape), 1:2]))
+    
+    j <- which.min(x[1] > shape$distance) - 1
+    sj <- shape[j, ]
+    Psi <- sj$bearing
+    d <- x[1] - sj$distance
+    as.numeric(sj[1:2]) + d * c(sin(Psi), cos(Psi))
+}
+
+Ytrue <- apply(Xtrue, 2, h, shape = shape)
+y <- round(Ytrue + t(rmvnorm(length(t), sigma = diag(c(0.5, 0.5)))), 4)
+
+theplot2 <- function() {
+    road()
+    points(y[1, ], y[2, ], pch = 19)
+    points(Ytrue[1, ], Ytrue[2, ], pch = 19, cex = 0.3, col = "red")
+}
+theplot2()
+@ 
+
+Other than the above, everything else is basically the same!
+
+<<results_ex2>>=
+lhood <- function(y, x, shape)
+    dmvnorm(y, h(x, shape), diag(c(1, 1)))
+
+N <- 200
+x0 <- t(rmvnorm(N, c(0, 5), diag(c(0, 5))))
+theplot2()
+
+x1hat <- fn(x0, pw(N))
+hx1hat <- apply(x1hat, 2, h, shape = shape)
+points(hx1hat[1, ], hx1hat[2, ], pch = 3, col = "#00009970")
+
+weights <- apply(x1hat, 2, function(xi) lhood(y[, 1], xi, shape))
+qi <- weights / sum(weights)
+ii <- sample(N, N, TRUE, qi)
+x1 <- x1hat[, ii]
+
+hx1 <- apply(x1, 2, h, shape = shape)
+points(hx1[1, ], hx1[2, ], pch = 19, col = "#00990040", cex = 0.5)
+points(Ytrue[1, ], Ytrue[2, ], pch = 19, cex = 0.3, col = "red")
+@ 
+
+That look wonderful! Now for the rest \ldots
+
+<<run_pf_loop2,fig.width=6,fig.height=10,out.width="0.6\\textwidth">>=
+par(mfrow = c(4, 1))
+xx <- x1
+M <- length(t)
+xxhat.hist <- xx.hist <- array(NA, c(2, N, M))
+xxhat.hist[,,1] <- x1hat
+xx.hist[,,1] <- x1
+for (i in t[-1]) {
+    xxhat.hist[,,i] <- xxhat <- fn(xx, pw(N))
+    weights <- apply(xxhat, 2, function(xi) lhood(y[, i], xi, shape))
+    qi <- weights / sum(weights)
+    ii <- sample(N, N, TRUE, qi)
+    xx.hist[,,i] <- xx <- xxhat[, ii]
+    
+    hxxhat <- apply(xxhat, 2, h, shape = shape)
+    hxx <- apply(xx, 2, h, shape = shape)
+    theplot2()
+    points(hxxhat[1, ], hxxhat[2, ], pch = 3, col = "#00009070")
+    points(hxx[1, ], hxx[2, ], pch = 19, col = "#00990040", cex = 0.5)
+    points(y[1, ], y[2, ], pch = 19)
+    points(Ytrue[1, i], Ytrue[2, i], pch = 19, cex = 0.6, col = "red")
+}
+
+rowMeans(xx)
+@ 
+
+
+That's essentially it! The only part missing is how to work with GPS coordinates (instead of
+cartesian as in the examples).
+
+
+\section{GPS Coordinates}
+
+GPS coordinates are angles from the center of the Earth to points above/below the equator (latitude),
+and points east/west of the Prime Meridian in Greenwich, England (longitude). However, the relative
+scale between latitude and longitude, unlike the examples above, is not 1:1.
+Even more, it is not constant across latitudes.
+We must therefore transform GPS coordinates so the variances in lon/lat are equal on the ground.
+
+
+\subsection{A GPS Route}
+
+We'll take a route from Auckland Transport Static GTFS data.
+<<AT_route>>=
+shapes <- read.csv("data/at_shapes.txt")
+plotShape <- function(id) {
+    sh <- shapes[shapes$shape_id == id, ]
+    plot(sh$shape_pt_lon, sh$shape_pt_lat, type = "l", asp = 1,
+         xlab = "Longitude", ylab = "Latitude")
+}
+
+plotShape(2)
+@ 
+
 
 
 
