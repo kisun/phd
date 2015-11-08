@@ -56,7 +56,12 @@
 \usepackage{fullpage}
 \usepackage{parskip}
 
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Loading required package: DBI}}\end{kframe}
+\end{knitrout}
 
 
 \newcommand{\bx}{\boldsymbol{x}}
@@ -597,16 +602,15 @@ We'll take a route from Auckland Transport Static GTFS data.
 \hlstd{\}}
 
 \hlstd{shapeIDs} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(con,} \hlstr{"SELECT DISTINCT shape_id FROM shapes"}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in sqliteSendQuery(con, statement, bind.data): error in statement: no such table: shapes}}\begin{alltt}
 \hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{])}
 \end{alltt}
-\end{kframe}
-
-{\centering \includegraphics[width=\maxwidth]{figure/AT_route-1} 
-
-}
 
 
-
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in dbGetQuery(con, sprintf("{}SELECT shape\_pt\_lon, shape\_pt\_lat FROM shapes WHERE shape\_id='\%s'"{}, : error in evaluating the argument 'statement' in selecting a method for function 'dbGetQuery': Error in sprintf("{}SELECT shape\_pt\_lon, shape\_pt\_lat FROM shapes WHERE shape\_id='\%s'"{},\ \ (from <text>\#3) : \\\#\#\ \  object 'shapeIDs' not found}}\end{kframe}
 \end{knitrout}
 
 
