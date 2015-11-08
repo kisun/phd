@@ -589,14 +589,15 @@ We'll take a route from Auckland Transport Static GTFS data.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{shapes} \hlkwb{<-} \hlkwd{read.csv}\hlstd{(}\hlstr{"data/at_shapes.txt"}\hlstd{)}
+\hlstd{con} \hlkwb{<-} \hlkwd{dbConnect}\hlstd{(}\hlkwd{SQLite}\hlstd{(),} \hlstr{"gtfs.db"}\hlstd{)}
 \hlstd{plotShape} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{id}\hlstd{) \{}
-    \hlstd{sh} \hlkwb{<-} \hlstd{shapes[shapes}\hlopt{$}\hlstd{shape_id} \hlopt{==} \hlstd{id, ]}
+    \hlstd{sh} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(con,} \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT shape_pt_lon, shape_pt_lat FROM shapes WHERE shape_id='%s'"}\hlstd{, id))}
     \hlkwd{plot}\hlstd{(sh}\hlopt{$}\hlstd{shape_pt_lon, sh}\hlopt{$}\hlstd{shape_pt_lat,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{,} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,}
          \hlkwc{xlab} \hlstd{=} \hlstr{"Longitude"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Latitude"}\hlstd{)}
 \hlstd{\}}
 
-\hlkwd{plotShape}\hlstd{(}\hlnum{2}\hlstd{)}
+\hlstd{shapeIDs} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(con,} \hlstr{"SELECT DISTINCT shape_id FROM shapes"}\hlstd{)}
+\hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{])}
 \end{alltt}
 \end{kframe}
 
