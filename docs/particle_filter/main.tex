@@ -594,10 +594,11 @@ We'll take a route from Auckland Transport Static GTFS data.
     \hlstd{sh} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(con,} \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT shape_pt_lon, shape_pt_lat FROM shapes WHERE shape_id='%s'"}\hlstd{, id))}
     \hlkwd{plot}\hlstd{(sh}\hlopt{$}\hlstd{shape_pt_lon, sh}\hlopt{$}\hlstd{shape_pt_lat,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{,} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,}
          \hlkwc{xlab} \hlstd{=} \hlstr{"Longitude"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Latitude"}\hlstd{)}
+    \hlkwd{invisible}\hlstd{(sh)}
 \hlstd{\}}
 
 \hlstd{shapeIDs} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(con,} \hlstr{"SELECT DISTINCT shape_id FROM shapes"}\hlstd{)}
-\hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{])}
+\hlstd{shape1} \hlkwb{<-} \hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{])}
 \end{alltt}
 \end{kframe}
 
@@ -609,7 +610,61 @@ We'll take a route from Auckland Transport Static GTFS data.
 
 \end{knitrout}
 
+Now let's say, for example, we have a GPS position for a bus of $\by = [174.78525, -36.84914]^T$.
+We want to compare the \emph{distance} of this observation to the positions of the proposed particles.
+Let's---for simplicity---assume that we ``uniformly'' place particles at every intersection (i.e.,
+each shape point; we can figure out an algorithm to project them between points later).
+It therefore seems logical to center all of the particles' coordinates, 
+$\bz_i = h(\bx_i)$, on the observation $\by$, and compute
+the distances, $e_i$, using a flat-earth approximation (any discrepancies will be minimal due to the small
+distances between points). That is, the \emph{equirectangular projection},
+which uses Earth's radius $R = 6371000$~m:
+\begin{align*}
+  a_i &= \left( r_1 - z_{1i} \right) \cos\left(\frac{r_2 + z_{2i}}{2}\right) \\
+  b_i &= r_2 - z_{2i} \\
+  e_i &= R \sqrt{a^2 + b^2},
+\end{align*}
+which can of course be vectorised fairly easily:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{distanceFlat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{z}\hlstd{,} \hlkwc{R} \hlstd{=} \hlnum{6371000}\hlstd{) \{}
+    \hlcom{# computes the distance between y and \{z\}}
+    \hlcom{# different R (such as in km) give results in those units}
+    \hlkwa{if} \hlstd{(}\hlkwd{length}\hlstd{(}\hlkwd{dim}\hlstd{(z))} \hlopt{<} \hlnum{2}\hlstd{)}
+        \hlstd{z} \hlkwb{<-} \hlkwd{cbind}\hlstd{(z)}
+    \hlcom{#R * sqrt(((y[1] - z[1, ]) * cos((y[2] + z[2, ]) / 2))^2 + (y[2] - z[2, ])^2)}
 
+    \hlstd{Y} \hlkwb{<-} \hlstd{y} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{Z} \hlkwb{<-} \hlstd{z} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{a} \hlkwb{<-} \hlstd{(Z[}\hlnum{1}\hlstd{,]} \hlopt{-} \hlstd{Y[}\hlnum{1}\hlstd{])} \hlopt{*} \hlkwd{cos}\hlstd{((Y[}\hlnum{2}\hlstd{]} \hlopt{+} \hlstd{Z[}\hlnum{2}\hlstd{, ])} \hlopt{/} \hlnum{2}\hlstd{)}
+    \hlstd{b} \hlkwb{<-} \hlstd{Z[}\hlnum{2}\hlstd{, ]} \hlopt{-} \hlstd{Y[}\hlnum{2}\hlstd{]}
+
+    \hlstd{R} \hlopt{*} \hlkwd{sqrt}\hlstd{(a}\hlopt{^}\hlnum{2} \hlopt{+} \hlstd{b}\hlopt{^}\hlnum{2}\hlstd{)}
+\hlstd{\}}
+\hlstd{y} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{174.78525}\hlstd{,} \hlopt{-}\hlnum{36.84914}\hlstd{)}
+\hlstd{z} \hlkwb{<-} \hlkwd{t}\hlstd{(shape1)}
+\hlkwd{distanceFlat}\hlstd{(y, z)}
+\end{alltt}
+\begin{verbatim}
+##  [1] 4149.9430 3773.1680 3672.3494 3561.8636 3377.5161 3190.9290 3044.6800
+##  [8] 2750.7017 2535.6988 2240.4274 2008.4752 1878.3004 1771.6265 1404.8933
+## [15] 1196.1452 1012.4265  809.3050  604.4278  512.1066  367.1038  163.3630
+## [22]  106.1185  340.3363 1066.4919 1653.8565
+\end{verbatim}
+\begin{alltt}
+\hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{])}
+\hlkwd{points}\hlstd{(y[}\hlnum{1}\hlstd{], y[}\hlnum{2}\hlstd{],} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/flat_earth_fn-1} 
+
+}
+
+
+
+\end{knitrout}
 
 
 

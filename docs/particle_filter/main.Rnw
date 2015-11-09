@@ -433,13 +433,49 @@ plotShape <- function(id) {
     sh <- dbGetQuery(con, sprintf("SELECT shape_pt_lon, shape_pt_lat FROM shapes WHERE shape_id='%s'", id))
     plot(sh$shape_pt_lon, sh$shape_pt_lat, type = "l", asp = 1,
          xlab = "Longitude", ylab = "Latitude")
+    invisible(sh)
 }
 
 shapeIDs <- dbGetQuery(con, "SELECT DISTINCT shape_id FROM shapes")
-plotShape(shapeIDs[1, 1])
+shape1 <- plotShape(shapeIDs[1, 1])
 @ 
 
-
+Now let's say, for example, we have a GPS position for a bus of $\by = [174.78525, -36.84914]^T$.
+We want to compare the \emph{distance} of this observation to the positions of the proposed particles.
+Let's---for simplicity---assume that we ``uniformly'' place particles at every intersection (i.e.,
+each shape point; we can figure out an algorithm to project them between points later).
+It therefore seems logical to center all of the particles' coordinates, 
+$\bz_i = h(\bx_i)$, on the observation $\by$, and compute
+the distances, $e_i$, using a flat-earth approximation (any discrepancies will be minimal due to the small
+distances between points). That is, the \emph{equirectangular projection},
+which uses Earth's radius $R = 6371000$~m:
+\begin{align*}
+  a_i &= \left( r_1 - z_{1i} \right) \cos\left(\frac{r_2 + z_{2i}}{2}\right) \\
+  b_i &= r_2 - z_{2i} \\
+  e_i &= R \sqrt{a^2 + b^2},
+\end{align*}
+which can of course be vectorised fairly easily:
+<<flat_earth_fn>>=
+distanceFlat <- function(y, z, R = 6371000) {
+    # computes the distance between y and {z}
+    # different R (such as in km) give results in those units
+    if (length(dim(z)) < 2)
+        z <- cbind(z)
+    #R * sqrt(((y[1] - z[1, ]) * cos((y[2] + z[2, ]) / 2))^2 + (y[2] - z[2, ])^2)
+    
+    Y <- y * pi / 180
+    Z <- z * pi / 180
+    a <- (Z[1,] - Y[1]) * cos((Y[2] + Z[2, ]) / 2)
+    b <- Z[2, ] - Y[2]
+    
+    R * sqrt(a^2 + b^2)
+}
+y <- c(174.78525, -36.84914)
+z <- t(shape1)
+distanceFlat(y, z)
+plotShape(shapeIDs[1, 1])
+points(y[1], y[2], col = "red", pch = 19)
+@ 
 
 
 
