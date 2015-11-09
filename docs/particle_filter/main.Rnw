@@ -530,14 +530,80 @@ bearing <- function(a, b) {
     if (ncol(a) != ncol(b) & ncol(a) > 1 & ncol(b) > 1)
         stop("Incorrent dimensions")
     
+    b <- b * pi / 180
+    a <- a * pi / 180
+    
     (atan2(sin(b[1, ] - a[1, ]) * cos(b[2, ]),
            cos(a[2, ]) * sin(b[2, ]) - 
              sin(a[2, ]) * cos(b[2, ]) * cos(b[1, ] - a[1, ])) * 
       180 / pi) %% 360
 }
 shape1$bearing <- c(bearing(y, z), NA)
-head(shape1){
+head(shape1)
 @ 
 
+That was also nice and easy! Well, only because we didn't have to figure out the formula!
 
+
+\subsubsection{Coordinates of Distance into Segment}
+
+Previously, we used basic trigonometry to figure out the $(X,Y)$ location mid-segment. That doesn't
+apply now that we are moving between GPS coordinates.
+Fortunately, someone smart figured out the formula for us.
+
+The GPS coordinates of a particle, $\bz = (\lambda_z, \phi_z)$ (dropping the $i$ subscript for simplicity), that travels a
+distance of $d$~m from the point $\bs = (\lambda_s, \phi_s)$ at an initial bearing of $\theta^\circ$ is:
+\begin{align*}
+  \phi_z &= 
+  \sin^{-1}\left(
+    \sin\left(\phi_s\right) \cos\left(\frac{d}{R}\right) + 
+    \cos\left(\phi_s\right)\sin\left(\frac{d}{R}\right)\cos\left(\frac{\pi\theta}{180}\right)
+  \right) \\
+  \lambda_z &=
+  \lambda_s + \frac{180}{\pi}\mathrm{atan2}\left(
+    \sin\left(\frac{\pi\theta}{180}\right) \sin\left(\frac{d}{R}\right) \cos\left(\phi_s\right),
+    \sin\left(\phi_s\right)\sin\left(\phi_z\right)
+  \right)
+\end{align*}
+
+Looks simple enough, let's use it. Let's say we are 500~m into the trip:
+<<distance_into_trip_calc>>=
+partialSegment <- function(x, theta, d, R = 6371000) {
+    D <- d / R ## for single calculation
+    Th <- theta * pi / 180  ## convert to radians
+    X <- x * pi / 180
+    
+    phi <- asin(sin(X[2]) * cos(D) + cos(X[2]) * sin(D) * cos(Th))
+    lambda <- X[1] + atan2(sin(Th) * sin(D) * cos(X[2]),
+                           sin(X[2]) * sin(phi))
+    c(lambda, phi) * 180 / pi
+}
+h <- function(x, shape) {
+    if (x[1] < 0) return(c0, 0)
+    if (x[1] > max(shape$distance)) return(as.numeric(shape[nrow(shape), 1:2]))
+    
+    j <- which.min(x[1] > shape$distance) - 1
+    sj <- shape[j, ]
+    Psi <- sj$bearing
+    d <- x[1] - sj$distance
+    
+    ## only do the calculations if we need to!
+    if (d == 0) return(as.numeric(sj[1:2]))
+    
+    partialSegment(as.numeric(sj[1:2]), Psi, d)
+}
+x <- c(500, NA)
+z <- h(x, shape1)
+
+plotShape(shapeIDs[1, 1])
+points(z[1], z[2], col = "red", pch = 19)
+
+## how about a bunch of points:
+x <- rbind(seq(shape1$distance[8], shape1$distance[11], length = 101), NA)
+z <- apply(x, 2, h, shape = shape1)
+
+points(z[1, ], z[2, ], col = "blue", pch = 19, cex = 0.2)
+
+points(shape1$lon[7], shape1$lat[7], pch = 19, cex = 0.4)
+@ 
 \end{document}

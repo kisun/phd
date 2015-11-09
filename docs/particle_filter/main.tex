@@ -56,7 +56,12 @@
 \usepackage{fullpage}
 \usepackage{parskip}
 
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Loading required package: DBI}}\end{kframe}
+\end{knitrout}
 
 
 \newcommand{\bx}{\boldsymbol{x}}
@@ -725,6 +730,9 @@ NOTE: the latitude and longitude are reversed from what we have used previously 
     \hlkwa{if} \hlstd{(}\hlkwd{ncol}\hlstd{(a)} \hlopt{!=} \hlkwd{ncol}\hlstd{(b)} \hlopt{&} \hlkwd{ncol}\hlstd{(a)} \hlopt{>} \hlnum{1} \hlopt{&} \hlkwd{ncol}\hlstd{(b)} \hlopt{>} \hlnum{1}\hlstd{)}
         \hlkwd{stop}\hlstd{(}\hlstr{"Incorrent dimensions"}\hlstd{)}
 
+    \hlstd{b} \hlkwb{<-} \hlstd{b} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{a} \hlkwb{<-} \hlstd{a} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+
     \hlstd{(}\hlkwd{atan2}\hlstd{(}\hlkwd{sin}\hlstd{(b[}\hlnum{1}\hlstd{, ]} \hlopt{-} \hlstd{a[}\hlnum{1}\hlstd{, ])} \hlopt{*} \hlkwd{cos}\hlstd{(b[}\hlnum{2}\hlstd{, ]),}
            \hlkwd{cos}\hlstd{(a[}\hlnum{2}\hlstd{, ])} \hlopt{*} \hlkwd{sin}\hlstd{(b[}\hlnum{2}\hlstd{, ])} \hlopt{-}
              \hlkwd{sin}\hlstd{(a[}\hlnum{2}\hlstd{, ])} \hlopt{*} \hlkwd{cos}\hlstd{(b[}\hlnum{2}\hlstd{, ])} \hlopt{*} \hlkwd{cos}\hlstd{(b[}\hlnum{1}\hlstd{, ]} \hlopt{-} \hlstd{a[}\hlnum{1}\hlstd{, ]))} \hlopt{*}
@@ -735,15 +743,89 @@ NOTE: the latitude and longitude are reversed from what we have used previously 
 \end{alltt}
 \begin{verbatim}
 ##        lon       lat  distance   length   bearing
-## 1 174.7985 -36.88493    0.0000 376.7768 345.94742
-## 2 174.7973 -36.88168  376.7768 104.2504 358.32890
-## 3 174.7972 -36.88074  481.0271 263.5338 281.45310
-## 4 174.7943 -36.88034  744.5610 250.6042 310.07557
-## 5 174.7920 -36.87902  995.1652 229.7301  20.95543
-## 6 174.7931 -36.87714 1224.8952 165.5958  12.49983
+## 1 174.7985 -36.88493    0.0000 376.7768 343.68534
+## 2 174.7973 -36.88168  376.7768 104.2504 358.04430
+## 3 174.7972 -36.88074  481.0271 263.5338 279.76479
+## 4 174.7943 -36.88034  744.5610 250.6042 305.63207
+## 5 174.7920 -36.87902  995.1652 229.7301  24.23082
+## 6 174.7931 -36.87714 1224.8952 165.5958  14.62306
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
 
+That was also nice and easy! Well, only because we didn't have to figure out the formula!
 
+
+\subsubsection{Coordinates of Distance into Segment}
+
+Previously, we used basic trigonometry to figure out the $(X,Y)$ location mid-segment. That doesn't
+apply now that we are moving between GPS coordinates.
+Fortunately, someone smart figured out the formula for us.
+
+The GPS coordinates of a particle, $\bz = (\lambda_z, \phi_z)$ (dropping the $i$ subscript for simplicity), that travels a
+distance of $d$~m from the point $\bs = (\lambda_s, \phi_s)$ at an initial bearing of $\theta^\circ$ is:
+\begin{align*}
+  \phi_z &= 
+  \sin^{-1}\left(
+    \sin\left(\phi_s\right) \cos\left(\frac{d}{R}\right) + 
+    \cos\left(\phi_s\right)\sin\left(\frac{d}{R}\right)\cos\left(\frac{\pi\theta}{180}\right)
+  \right) \\
+  \lambda_z &=
+  \lambda_s + \frac{180}{\pi}\mathrm{atan2}\left(
+    \sin\left(\frac{\pi\theta}{180}\right) \sin\left(\frac{d}{R}\right) \cos\left(\phi_s\right),
+    \sin\left(\phi_s\right)\sin\left(\phi_z\right)
+  \right)
+\end{align*}
+
+Looks simple enough, let's use it. Let's say we are 500~m into the trip:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{partialSegment} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{theta}\hlstd{,} \hlkwc{d}\hlstd{,} \hlkwc{R} \hlstd{=} \hlnum{6371000}\hlstd{) \{}
+    \hlstd{D} \hlkwb{<-} \hlstd{d} \hlopt{/} \hlstd{R} \hlcom{## for single calculation}
+    \hlstd{Th} \hlkwb{<-} \hlstd{theta} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}  \hlcom{## convert to radians}
+    \hlstd{X} \hlkwb{<-} \hlstd{x} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+
+    \hlstd{phi} \hlkwb{<-} \hlkwd{asin}\hlstd{(}\hlkwd{sin}\hlstd{(X[}\hlnum{2}\hlstd{])} \hlopt{*} \hlkwd{cos}\hlstd{(D)} \hlopt{+} \hlkwd{cos}\hlstd{(X[}\hlnum{2}\hlstd{])} \hlopt{*} \hlkwd{sin}\hlstd{(D)} \hlopt{*} \hlkwd{cos}\hlstd{(Th))}
+    \hlstd{lambda} \hlkwb{<-} \hlstd{X[}\hlnum{1}\hlstd{]} \hlopt{+} \hlkwd{atan2}\hlstd{(}\hlkwd{sin}\hlstd{(Th)} \hlopt{*} \hlkwd{sin}\hlstd{(D)} \hlopt{*} \hlkwd{cos}\hlstd{(X[}\hlnum{2}\hlstd{]),}
+                           \hlkwd{sin}\hlstd{(X[}\hlnum{2}\hlstd{])} \hlopt{*} \hlkwd{sin}\hlstd{(phi))}
+    \hlkwd{c}\hlstd{(lambda, phi)} \hlopt{*} \hlnum{180} \hlopt{/} \hlstd{pi}
+\hlstd{\}}
+\hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{shape}\hlstd{) \{}
+    \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{<} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(c0,} \hlnum{0}\hlstd{)}
+    \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlkwd{max}\hlstd{(shape}\hlopt{$}\hlstd{distance))} \hlkwd{return}\hlstd{(}\hlkwd{as.numeric}\hlstd{(shape[}\hlkwd{nrow}\hlstd{(shape),} \hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]))}
+
+    \hlstd{j} \hlkwb{<-} \hlkwd{which.min}\hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlstd{shape}\hlopt{$}\hlstd{distance)} \hlopt{-} \hlnum{1}
+    \hlstd{sj} \hlkwb{<-} \hlstd{shape[j, ]}
+    \hlstd{Psi} \hlkwb{<-} \hlstd{sj}\hlopt{$}\hlstd{bearing}
+    \hlstd{d} \hlkwb{<-} \hlstd{x[}\hlnum{1}\hlstd{]} \hlopt{-} \hlstd{sj}\hlopt{$}\hlstd{distance}
+
+    \hlcom{## only do the calculations if we need to!}
+    \hlkwa{if} \hlstd{(d} \hlopt{==} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(}\hlkwd{as.numeric}\hlstd{(sj[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]))}
+
+    \hlkwd{partialSegment}\hlstd{(}\hlkwd{as.numeric}\hlstd{(sj[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]), Psi, d)}
+\hlstd{\}}
+\hlstd{x} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{500}\hlstd{,} \hlnum{NA}\hlstd{)}
+\hlstd{z} \hlkwb{<-} \hlkwd{h}\hlstd{(x, shape1)}
+
+\hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{])}
+\hlkwd{points}\hlstd{(z[}\hlnum{1}\hlstd{], z[}\hlnum{2}\hlstd{],} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+
+\hlcom{## how about a bunch of points:}
+\hlstd{x} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{seq}\hlstd{(shape1}\hlopt{$}\hlstd{distance[}\hlnum{8}\hlstd{], shape1}\hlopt{$}\hlstd{distance[}\hlnum{11}\hlstd{],} \hlkwc{length} \hlstd{=} \hlnum{101}\hlstd{),} \hlnum{NA}\hlstd{)}
+\hlstd{z} \hlkwb{<-} \hlkwd{apply}\hlstd{(x,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape1)}
+
+\hlkwd{points}\hlstd{(z[}\hlnum{1}\hlstd{, ], z[}\hlnum{2}\hlstd{, ],} \hlkwc{col} \hlstd{=} \hlstr{"blue"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.2}\hlstd{)}
+
+\hlkwd{points}\hlstd{(shape1}\hlopt{$}\hlstd{lon[}\hlnum{7}\hlstd{], shape1}\hlopt{$}\hlstd{lat[}\hlnum{7}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/distance_into_trip_calc-1} 
+
+}
+
+
+
+\end{knitrout}
 \end{document}
