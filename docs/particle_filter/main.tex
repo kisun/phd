@@ -591,8 +591,9 @@ We'll take a route from Auckland Transport Static GTFS data.
 \begin{alltt}
 \hlstd{con} \hlkwb{<-} \hlkwd{dbConnect}\hlstd{(}\hlkwd{SQLite}\hlstd{(),} \hlstr{"gtfs.db"}\hlstd{)}
 \hlstd{plotShape} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{id}\hlstd{) \{}
-    \hlstd{sh} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(con,} \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT shape_pt_lon, shape_pt_lat FROM shapes WHERE shape_id='%s'"}\hlstd{, id))}
-    \hlkwd{plot}\hlstd{(sh}\hlopt{$}\hlstd{shape_pt_lon, sh}\hlopt{$}\hlstd{shape_pt_lat,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{,} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,}
+    \hlstd{sh} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(con,} \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT shape_pt_lon AS lon, shape_pt_lat AS lat
+                                   FROM shapes WHERE shape_id='%s'"}\hlstd{, id))}
+    \hlkwd{plot}\hlstd{(sh}\hlopt{$}\hlstd{lon, sh}\hlopt{$}\hlstd{lat,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{,} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,}
          \hlkwc{xlab} \hlstd{=} \hlstr{"Longitude"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Latitude"}\hlstd{)}
     \hlkwd{invisible}\hlstd{(sh)}
 \hlstd{\}}
@@ -610,6 +611,8 @@ We'll take a route from Auckland Transport Static GTFS data.
 
 \end{knitrout}
 
+\subsubsection{GPS Distances}
+
 Now let's say, for example, we have a GPS position for a bus of $\by = [174.78525, -36.84914]^T$.
 We want to compare the \emph{distance} of this observation to the positions of the proposed particles.
 Let's---for simplicity---assume that we ``uniformly'' place particles at every intersection (i.e.,
@@ -618,10 +621,10 @@ It therefore seems logical to center all of the particles' coordinates,
 $\bz_i = h(\bx_i)$, on the observation $\by$, and compute
 the distances, $e_i$, using a flat-earth approximation (any discrepancies will be minimal due to the small
 distances between points). That is, the \emph{equirectangular projection},
-which uses Earth's radius $R = 6371000$~m:
+which uses Earth's radius $R = 6371000$~m, and after converting to radians ($Q = \frac{\pi}{180}$):
 \begin{align*}
-  a_i &= \left( r_1 - z_{1i} \right) \cos\left(\frac{r_2 + z_{2i}}{2}\right) \\
-  b_i &= r_2 - z_{2i} \\
+  a_i &= Q \left( r_1 - z_{1i} \right) \cos\left(\frac{Q}{2}\left(r_2 + z_{2i}\right)\right) \\
+  b_i &= Q\left(r_2 - z_{2i}\right) \\
   e_i &= R \sqrt{a^2 + b^2},
 \end{align*}
 which can of course be vectorised fairly easily:
@@ -629,18 +632,20 @@ which can of course be vectorised fairly easily:
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlstd{distanceFlat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{z}\hlstd{,} \hlkwc{R} \hlstd{=} \hlnum{6371000}\hlstd{) \{}
-    \hlcom{# computes the distance between y and \{z\}}
+    \hlcom{# computes the distance between \{y\} and \{z\}}
     \hlcom{# different R (such as in km) give results in those units}
+    \hlkwa{if} \hlstd{(}\hlkwd{length}\hlstd{(}\hlkwd{dim}\hlstd{(y))} \hlopt{<} \hlnum{2}\hlstd{)}
+        \hlstd{y} \hlkwb{<-} \hlkwd{cbind}\hlstd{(y)}
     \hlkwa{if} \hlstd{(}\hlkwd{length}\hlstd{(}\hlkwd{dim}\hlstd{(z))} \hlopt{<} \hlnum{2}\hlstd{)}
         \hlstd{z} \hlkwb{<-} \hlkwd{cbind}\hlstd{(z)}
-    \hlcom{#R * sqrt(((y[1] - z[1, ]) * cos((y[2] + z[2, ]) / 2))^2 + (y[2] - z[2, ])^2)}
 
-    \hlstd{Y} \hlkwb{<-} \hlstd{y} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
-    \hlstd{Z} \hlkwb{<-} \hlstd{z} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
-    \hlstd{a} \hlkwb{<-} \hlstd{(Z[}\hlnum{1}\hlstd{,]} \hlopt{-} \hlstd{Y[}\hlnum{1}\hlstd{])} \hlopt{*} \hlkwd{cos}\hlstd{((Y[}\hlnum{2}\hlstd{]} \hlopt{+} \hlstd{Z[}\hlnum{2}\hlstd{, ])} \hlopt{/} \hlnum{2}\hlstd{)}
-    \hlstd{b} \hlkwb{<-} \hlstd{Z[}\hlnum{2}\hlstd{, ]} \hlopt{-} \hlstd{Y[}\hlnum{2}\hlstd{]}
+    \hlkwa{if} \hlstd{(}\hlkwd{ncol}\hlstd{(y)} \hlopt{!=} \hlkwd{ncol}\hlstd{(z)} \hlopt{&} \hlkwd{ncol}\hlstd{(y)} \hlopt{>} \hlnum{1} \hlopt{&} \hlkwd{ncol}\hlstd{(z)} \hlopt{>} \hlnum{1}\hlstd{)}
+        \hlkwd{stop}\hlstd{(}\hlstr{"Incorrent dimensions"}\hlstd{)}
 
-    \hlstd{R} \hlopt{*} \hlkwd{sqrt}\hlstd{(a}\hlopt{^}\hlnum{2} \hlopt{+} \hlstd{b}\hlopt{^}\hlnum{2}\hlstd{)}
+    \hlcom{# need to scale from degrees to radians:}
+    \hlstd{Q} \hlkwb{<-} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{R} \hlopt{*} \hlkwd{sqrt}\hlstd{((Q}\hlopt{*}\hlstd{(z[}\hlnum{1}\hlstd{,]} \hlopt{-} \hlstd{y[}\hlnum{1}\hlstd{, ])} \hlopt{*} \hlkwd{cos}\hlstd{(Q}\hlopt{*}\hlstd{(y[}\hlnum{2}\hlstd{, ]} \hlopt{+} \hlstd{z[}\hlnum{2}\hlstd{, ])} \hlopt{/} \hlnum{2}\hlstd{))}\hlopt{^}\hlnum{2} \hlopt{+}
+             \hlstd{(Q}\hlopt{*}\hlstd{(z[}\hlnum{2}\hlstd{, ]} \hlopt{-} \hlstd{y[}\hlnum{2}\hlstd{, ]))}\hlopt{^}\hlnum{2}\hlstd{)}
 \hlstd{\}}
 \hlstd{y} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{174.78525}\hlstd{,} \hlopt{-}\hlnum{36.84914}\hlstd{)}
 \hlstd{z} \hlkwb{<-} \hlkwd{t}\hlstd{(shape1)}
@@ -652,20 +657,93 @@ which can of course be vectorised fairly easily:
 ## [15] 1196.1452 1012.4265  809.3050  604.4278  512.1066  367.1038  163.3630
 ## [22]  106.1185  340.3363 1066.4919 1653.8565
 \end{verbatim}
-\begin{alltt}
-\hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{])}
-\hlkwd{points}\hlstd{(y[}\hlnum{1}\hlstd{], y[}\hlnum{2}\hlstd{],} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
-\end{alltt}
 \end{kframe}
-
-{\centering \includegraphics[width=\maxwidth]{figure/flat_earth_fn-1} 
-
-}
-
-
-
 \end{knitrout}
 
+
+\subsubsection{Route Distances}
+
+We can also use the equirectangular projection to compute the length of each segment in the route
+path, which we can use to determine distance into trip.
+We will compute bearings in the next part.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{# "from" 1->2, 2->3, 3->4, ..., (n-1)->n}
+\hlstd{y} \hlkwb{<-} \hlstd{z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)]}
+\hlstd{z} \hlkwb{<-} \hlstd{z[,} \hlopt{-}\hlnum{1}\hlstd{]}
+\hlstd{di} \hlkwb{<-} \hlkwd{distanceFlat}\hlstd{(y, z)}
+\hlstd{shape1}\hlopt{$}\hlstd{distance} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{cumsum}\hlstd{(di))}
+\hlstd{shape1}\hlopt{$}\hlstd{length} \hlkwb{<-} \hlkwd{c}\hlstd{(di,} \hlnum{NA}\hlstd{)}
+\hlstd{shape1[}\hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{3}\hlstd{,} \hlnum{23}\hlopt{:}\hlnum{25}\hlstd{), ]}
+\end{alltt}
+\begin{verbatim}
+##         lon       lat  distance   length
+## 1  174.7985 -36.88493    0.0000 376.7768
+## 2  174.7973 -36.88168  376.7768 104.2504
+## 3  174.7972 -36.88074  481.0271 263.5338
+## 23 174.7818 -36.84780 5801.5484 726.6895
+## 24 174.7742 -36.84535 6528.2379 590.9006
+## 25 174.7678 -36.84393 7119.1384       NA
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+Well, that was easy.
+
+\subsubsection{Route Bearings}
+
+The next part is a little less simple, as the ``bearing'' changes as you move around the Earth in a
+straight line.
+Not that it will change much over a few hundred meters, we will use the initial bearing, $\theta_k$.
+This will be used in the next step when we compute the position given a starting point, bearing, and
+a distance traveled. 
+
+First, let's introduce the more standard notation:
+$\phi$ is the latitude in radians, and $\lambda$ is the longitude in radians.
+We will therefore be moving from $(\phi_k, \lambda_k)$ to $(\phi_{k+1}, \lambda_{k+1})$.
+NOTE: the latitude and longitude are reversed from what we have used previously (which was $[$``$x$''$, $``$y$''$]^T$).
+
+\begin{equation}
+  \label{eq:bearing_comp}
+  \theta_k = 
+  \left(\frac{180}{\pi}\mathrm{atan2}\left(
+    \sin\left(\Delta\lambda\right) \cos\left(\phi_{k+1}\right),
+    \cos\left(\phi_k\right) \sin\left(\phi_{k+1}\right) - 
+    \sin\left(\phi_k\right)\cos\left(\phi_{k+1}\right)\cos\left(\Delta\lambda\right)
+  \right) + 180\right) \mod 360
+\end{equation}
+(The modulo converts from a bearing in $[-180^\circ, 180^\circ)$ to $[0^\circ, 360^\circ)$).
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{bearing} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{a}\hlstd{,} \hlkwc{b}\hlstd{) \{}
+    \hlkwa{if} \hlstd{(}\hlkwd{length}\hlstd{(}\hlkwd{dim}\hlstd{(a))} \hlopt{<} \hlnum{2}\hlstd{) y} \hlkwb{<-} \hlkwd{cbind}\hlstd{(a)}
+    \hlkwa{if} \hlstd{(}\hlkwd{length}\hlstd{(}\hlkwd{dim}\hlstd{(b))} \hlopt{<} \hlnum{2}\hlstd{) z} \hlkwb{<-} \hlkwd{cbind}\hlstd{(b)}
+    \hlkwa{if} \hlstd{(}\hlkwd{ncol}\hlstd{(a)} \hlopt{!=} \hlkwd{ncol}\hlstd{(b)} \hlopt{&} \hlkwd{ncol}\hlstd{(a)} \hlopt{>} \hlnum{1} \hlopt{&} \hlkwd{ncol}\hlstd{(b)} \hlopt{>} \hlnum{1}\hlstd{)}
+        \hlkwd{stop}\hlstd{(}\hlstr{"Incorrent dimensions"}\hlstd{)}
+
+    \hlstd{(}\hlkwd{atan2}\hlstd{(}\hlkwd{sin}\hlstd{(b[}\hlnum{1}\hlstd{, ]} \hlopt{-} \hlstd{a[}\hlnum{1}\hlstd{, ])} \hlopt{*} \hlkwd{cos}\hlstd{(b[}\hlnum{2}\hlstd{, ]),}
+           \hlkwd{cos}\hlstd{(a[}\hlnum{2}\hlstd{, ])} \hlopt{*} \hlkwd{sin}\hlstd{(b[}\hlnum{2}\hlstd{, ])} \hlopt{-}
+             \hlkwd{sin}\hlstd{(a[}\hlnum{2}\hlstd{, ])} \hlopt{*} \hlkwd{cos}\hlstd{(b[}\hlnum{2}\hlstd{, ])} \hlopt{*} \hlkwd{cos}\hlstd{(b[}\hlnum{1}\hlstd{, ]} \hlopt{-} \hlstd{a[}\hlnum{1}\hlstd{, ]))} \hlopt{*}
+      \hlnum{180} \hlopt{/} \hlstd{pi)} \hlopt{%%} \hlnum{360}
+\hlstd{\}}
+\hlstd{shape1}\hlopt{$}\hlstd{bearing} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{bearing}\hlstd{(y, z),} \hlnum{NA}\hlstd{)}
+\hlkwd{head}\hlstd{(shape1)}
+\end{alltt}
+\begin{verbatim}
+##        lon       lat  distance   length   bearing
+## 1 174.7985 -36.88493    0.0000 376.7768 345.94742
+## 2 174.7973 -36.88168  376.7768 104.2504 358.32890
+## 3 174.7972 -36.88074  481.0271 263.5338 281.45310
+## 4 174.7943 -36.88034  744.5610 250.6042 310.07557
+## 5 174.7920 -36.87902  995.1652 229.7301  20.95543
+## 6 174.7931 -36.87714 1224.8952 165.5958  12.49983
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
 
 
 \end{document}
