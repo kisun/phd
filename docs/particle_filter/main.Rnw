@@ -7,7 +7,7 @@
 \usepackage{fullpage}
 \usepackage{parskip}
 
-<<echo=FALSE,results="hide">>=
+<<echo=FALSE,results="hide",messages=FALSE>>=
 opts_chunk$set(fig.width=8,fig.height=5,fig.align="center")
 library(mvtnorm)
 library(RSQLite)
@@ -450,30 +450,35 @@ each shape point; we can figure out an algorithm to project them between points 
 It therefore seems logical to center all of the particles' coordinates, 
 $\bz_i = h(\bx_i)$, on the observation $\by$, and compute
 the distances, $e_i$, using a flat-earth approximation (any discrepancies will be minimal due to the small
-distances between points). That is, the \emph{equirectangular projection},
-which uses Earth's radius $R = 6371000$~m, and after converting to radians ($Q = \frac{\pi}{180}$):
+distances between points). That is, the \emph{equirectangular projection}.
+This uses Earth's radius $R = 6371000$~m, along with all values converted to \emph{radians}:
+$\by^{\mathrm{rad}} = \frac{\pi}{180}\by = \left(\lambda_y, \phi_y\right)$ and
+$\bz_i^{\mathrm{rad}} = \frac{\pi}{180}\bz_i = \left(\lambda_{z_i}, \phi_{z_i}\right)$.
 \begin{align*}
-  a_i &= Q \left( r_1 - z_{1i} \right) \cos\left(\frac{Q}{2}\left(r_2 + z_{2i}\right)\right) \\
-  b_i &= Q\left(r_2 - z_{2i}\right) \\
+  a_i &= \left( \lambda_y - \lambda_{z_{i}} \right) \cos\left(0.5\left(\phi_y + \phi_{z_i}\right)\right) \\
+  &= \Delta\lambda \cos\left(0.5\left(\phi_y + \phi_{z_i}\right)\right) \\
+  b_i &= \phi_y - \phi_{z_i} = \Delta\phi \\
   e_i &= R \sqrt{a^2 + b^2},
 \end{align*}
-which can of course be vectorised fairly easily:
+the distance in whatever units $R$ is.
+This can of course be vectorised fairly easily:
 <<flat_earth_fn>>=
 distanceFlat <- function(y, z, R = 6371000) {
-    # computes the distance between {y} and {z}
-    # different R (such as in km) give results in those units
+    ## computes the distance between {y} and {z}
+    ## different R (such as in km) give results in those units
     if (length(dim(y)) < 2)
         y <- cbind(y)
     if (length(dim(z)) < 2)
         z <- cbind(z)
-    
     if (ncol(y) != ncol(z) & ncol(y) > 1 & ncol(z) > 1)
         stop("Incorrent dimensions")
     
-    # need to scale from degrees to radians:
-    Q <- pi / 180
-    R * sqrt((Q*(z[1,] - y[1, ]) * cos(Q*(y[2, ] + z[2, ]) / 2))^2 + 
-             (Q*(z[2, ] - y[2, ]))^2)
+    ## need to scale from degrees to radians:
+    lam.y <- y[1, ] * pi / 180
+    lam.z <- z[1, ] * pi / 180
+    phi.y <- y[2, ] * pi / 180
+    phi.z <- z[2, ] * pi / 180
+    R * sqrt(((lam.y - lam.z) * cos(0.5 * (phi.y + phi.z)))^2 + (phi.y - phi.z)^2)
 }
 y <- c(174.78525, -36.84914)
 z <- t(shape1)
@@ -503,25 +508,21 @@ Well, that was easy.
 
 The next part is a little less simple, as the ``bearing'' changes as you move around the Earth in a
 straight line.
-Not that it will change much over a few hundred meters, we will use the initial bearing, $\theta_k$.
+Not that it will change much over a few hundred meters, we will use the initial bearing, $\theta^\circ$.
 This will be used in the next step when we compute the position given a starting point, bearing, and
 a distance traveled. 
 
-First, let's introduce the more standard notation:
-$\phi$ is the latitude in radians, and $\lambda$ is the longitude in radians.
-We will therefore be moving from $(\phi_k, \lambda_k)$ to $(\phi_{k+1}, \lambda_{k+1})$.
-NOTE: the latitude and longitude are reversed from what we have used previously (which was $[$``$x$''$, $``$y$''$]^T$).
-
-\begin{equation}
+Here we compute the initial bearing along segment a segment $\vec{ab}$,
+$(\phi_a, \lambda_a)$ to $(\phi_b, \lambda_b)$ (again, in radians not degrees).
+Also, $\Delta\lambda = \lambda_b - \lambda_a$.
+\begin{align}
   \label{eq:bearing_comp}
-  \theta_k = 
-  \left(\frac{180}{\pi}\mathrm{atan2}\left(
-    \sin\left(\Delta\lambda\right) \cos\left(\phi_{k+1}\right),
-    \cos\left(\phi_k\right) \sin\left(\phi_{k+1}\right) - 
-    \sin\left(\phi_k\right)\cos\left(\phi_{k+1}\right)\cos\left(\Delta\lambda\right)
-  \right) + 180\right) \mod 360
-\end{equation}
-(The modulo converts from a bearing in $[-180^\circ, 180^\circ)$ to $[0^\circ, 360^\circ)$).
+  \theta^{\mathrm{rad}} &= 
+  \mathrm{atan2}\left(\sin\Delta\lambda \cos\phi_b, 
+           \cos\phi_a \sin\phi_b - \sin\phi_a \cos\phi_b \cos\Delta\lambda\right) \\
+  \theta^\star &= \frac{180}{\pi}\theta^{\mathrm{rad}} \in \left[-180,180\right) \\
+  \theta^\circ &= \left(\theta^\star + 180\right) \mod 360 \in \left[0,360\right)
+\end{align}
 
 <<calc_bearings>>=
 bearing <- function(a, b) {
@@ -530,13 +531,15 @@ bearing <- function(a, b) {
     if (ncol(a) != ncol(b) & ncol(a) > 1 & ncol(b) > 1)
         stop("Incorrent dimensions")
     
-    b <- b * pi / 180
-    a <- a * pi / 180
+    ## convert to radians!!
+    lam.a <- a[1, ] * pi / 180
+    lam.b <- b[1, ] * pi / 180
+    phi.a <- a[2, ] * pi / 180
+    phi.b <- b[2, ] * pi / 180
     
-    (atan2(sin(b[1, ] - a[1, ]) * cos(b[2, ]),
-           cos(a[2, ]) * sin(b[2, ]) - 
-             sin(a[2, ]) * cos(b[2, ]) * cos(b[1, ] - a[1, ])) * 
-      180 / pi) %% 360
+    th.rad <- atan2(sin(lam.b - lam.a) * cos(phi.b),
+                    cos(phi.a) * sin(phi.b) - sin(phi.a) * cos(phi.b) * cos(lam.b - lam.a))
+    (th.rad * 180 / pi) %% 360
 }
 shape1$bearing <- c(bearing(y, z), NA)
 head(shape1)
@@ -551,32 +554,37 @@ Previously, we used basic trigonometry to figure out the $(X,Y)$ location mid-se
 apply now that we are moving between GPS coordinates.
 Fortunately, someone smart figured out the formula for us.
 
-The GPS coordinates of a particle, $\bz = (\lambda_z, \phi_z)$ (dropping the $i$ subscript for simplicity), that travels a
-distance of $d$~m from the point $\bs = (\lambda_s, \phi_s)$ at an initial bearing of $\theta^\circ$ is:
+The GPS coordinates of a particle, $\bz^{\mathrm{rad}} = (\lambda_z, \phi_z)$ 
+(in radians, dropping the $i$ subscript for simplicity), that travels a
+distance of $d$~m from the point $\bs = (\lambda_s, \phi_s)$ (in radians) at an initial bearing of $\theta^\circ$
+is calcualted as follows.
+We use the angle in radians, $\theta = \frac{\pi}{180}\theta^\circ$,
+and the distance in radians, $\delta = \frac{d}{R}$ ($R$ is the Earth's radius, in the same units
+and $d$).
 \begin{align*}
   \phi_z &= 
   \sin^{-1}\left(
-    \sin\left(\phi_s\right) \cos\left(\frac{d}{R}\right) + 
-    \cos\left(\phi_s\right)\sin\left(\frac{d}{R}\right)\cos\left(\frac{\pi\theta}{180}\right)
+    \sin\phi_s \cos\delta + \cos\phi_s \sin\delta \cos\theta
   \right) \\
   \lambda_z &=
-  \lambda_s + \frac{180}{\pi}\mathrm{atan2}\left(
-    \sin\left(\frac{\pi\theta}{180}\right) \sin\left(\frac{d}{R}\right) \cos\left(\phi_s\right),
-    \sin\left(\phi_s\right)\sin\left(\phi_z\right)
+  \lambda_s + \mathrm{atan2}\left(
+    \sin\theta \sin\delta \cos\phi_s,
+    \cos\delta - \sin\phi_s \sin\phi_z
   \right)
 \end{align*}
 
-Looks simple enough, let's use it. Let's say we are 500~m into the trip:
+Looks simple enough, let's use it. Let's say we are 3000~m into the trip:
 <<distance_into_trip_calc>>=
 partialSegment <- function(x, theta, d, R = 6371000) {
-    D <- d / R ## for single calculation
-    Th <- theta * pi / 180  ## convert to radians
-    X <- x * pi / 180
+    delta <- d / R ## for single calculation
+    theta <- theta * pi / 180  ## convert to radians
+    phi.s <- x[2] * pi / 180
+    lam.s <- x[1] * pi / 180
     
-    phi <- asin(sin(X[2]) * cos(D) + cos(X[2]) * sin(D) * cos(Th))
-    lambda <- X[1] + atan2(sin(Th) * sin(D) * cos(X[2]),
-                           sin(X[2]) * sin(phi))
-    c(lambda, phi) * 180 / pi
+    phi.z <- asin(sin(phi.s) * cos(delta) + cos(phi.s) * sin(delta) * cos(theta))
+    lam.z <- lam.s + atan2(sin(theta) * sin(delta) * cos(phi.s),
+                           cos(delta) - sin(phi.s) * sin(phi.z))
+    c(lam.z, phi.z) * 180 / pi
 }
 h <- function(x, shape) {
     if (x[1] < 0) return(c0, 0)
@@ -589,21 +597,12 @@ h <- function(x, shape) {
     
     ## only do the calculations if we need to!
     if (d == 0) return(as.numeric(sj[1:2]))
-    
     partialSegment(as.numeric(sj[1:2]), Psi, d)
 }
-x <- c(500, NA)
+x <- c(3000, NA)
 z <- h(x, shape1)
-
 plotShape(shapeIDs[1, 1])
-points(z[1], z[2], col = "red", pch = 19)
-
-## how about a bunch of points:
-x <- rbind(seq(shape1$distance[8], shape1$distance[11], length = 101), NA)
-z <- apply(x, 2, h, shape = shape1)
-
-points(z[1, ], z[2, ], col = "blue", pch = 19, cex = 0.2)
-
-points(shape1$lon[7], shape1$lat[7], pch = 19, cex = 0.4)
+points(shape1$lon, shape1$lat, cex = 0.4, pch = 19)
+points(z[1], z[2], col = "red", pch = 4, cex = 0.6)
 @ 
 \end{document}

@@ -56,12 +56,7 @@
 \usepackage{fullpage}
 \usepackage{parskip}
 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 
-
-{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Loading required package: DBI}}\end{kframe}
-\end{knitrout}
 
 
 \newcommand{\bx}{\boldsymbol{x}}
@@ -625,32 +620,37 @@ each shape point; we can figure out an algorithm to project them between points 
 It therefore seems logical to center all of the particles' coordinates, 
 $\bz_i = h(\bx_i)$, on the observation $\by$, and compute
 the distances, $e_i$, using a flat-earth approximation (any discrepancies will be minimal due to the small
-distances between points). That is, the \emph{equirectangular projection},
-which uses Earth's radius $R = 6371000$~m, and after converting to radians ($Q = \frac{\pi}{180}$):
+distances between points). That is, the \emph{equirectangular projection}.
+This uses Earth's radius $R = 6371000$~m, along with all values converted to \emph{radians}:
+$\by^{\mathrm{rad}} = \frac{\pi}{180}\by = \left(\lambda_y, \phi_y\right)$ and
+$\bz_i^{\mathrm{rad}} = \frac{\pi}{180}\bz_i = \left(\lambda_{z_i}, \phi_{z_i}\right)$.
 \begin{align*}
-  a_i &= Q \left( r_1 - z_{1i} \right) \cos\left(\frac{Q}{2}\left(r_2 + z_{2i}\right)\right) \\
-  b_i &= Q\left(r_2 - z_{2i}\right) \\
+  a_i &= \left( \lambda_y - \lambda_{z_{i}} \right) \cos\left(0.5\left(\phi_y + \phi_{z_i}\right)\right) \\
+  &= \Delta\lambda \cos\left(0.5\left(\phi_y + \phi_{z_i}\right)\right) \\
+  b_i &= \phi_y - \phi_{z_i} = \Delta\phi \\
   e_i &= R \sqrt{a^2 + b^2},
 \end{align*}
-which can of course be vectorised fairly easily:
+the distance in whatever units $R$ is.
+This can of course be vectorised fairly easily:
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlstd{distanceFlat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{z}\hlstd{,} \hlkwc{R} \hlstd{=} \hlnum{6371000}\hlstd{) \{}
-    \hlcom{# computes the distance between \{y\} and \{z\}}
-    \hlcom{# different R (such as in km) give results in those units}
+    \hlcom{## computes the distance between \{y\} and \{z\}}
+    \hlcom{## different R (such as in km) give results in those units}
     \hlkwa{if} \hlstd{(}\hlkwd{length}\hlstd{(}\hlkwd{dim}\hlstd{(y))} \hlopt{<} \hlnum{2}\hlstd{)}
         \hlstd{y} \hlkwb{<-} \hlkwd{cbind}\hlstd{(y)}
     \hlkwa{if} \hlstd{(}\hlkwd{length}\hlstd{(}\hlkwd{dim}\hlstd{(z))} \hlopt{<} \hlnum{2}\hlstd{)}
         \hlstd{z} \hlkwb{<-} \hlkwd{cbind}\hlstd{(z)}
-
     \hlkwa{if} \hlstd{(}\hlkwd{ncol}\hlstd{(y)} \hlopt{!=} \hlkwd{ncol}\hlstd{(z)} \hlopt{&} \hlkwd{ncol}\hlstd{(y)} \hlopt{>} \hlnum{1} \hlopt{&} \hlkwd{ncol}\hlstd{(z)} \hlopt{>} \hlnum{1}\hlstd{)}
         \hlkwd{stop}\hlstd{(}\hlstr{"Incorrent dimensions"}\hlstd{)}
 
-    \hlcom{# need to scale from degrees to radians:}
-    \hlstd{Q} \hlkwb{<-} \hlstd{pi} \hlopt{/} \hlnum{180}
-    \hlstd{R} \hlopt{*} \hlkwd{sqrt}\hlstd{((Q}\hlopt{*}\hlstd{(z[}\hlnum{1}\hlstd{,]} \hlopt{-} \hlstd{y[}\hlnum{1}\hlstd{, ])} \hlopt{*} \hlkwd{cos}\hlstd{(Q}\hlopt{*}\hlstd{(y[}\hlnum{2}\hlstd{, ]} \hlopt{+} \hlstd{z[}\hlnum{2}\hlstd{, ])} \hlopt{/} \hlnum{2}\hlstd{))}\hlopt{^}\hlnum{2} \hlopt{+}
-             \hlstd{(Q}\hlopt{*}\hlstd{(z[}\hlnum{2}\hlstd{, ]} \hlopt{-} \hlstd{y[}\hlnum{2}\hlstd{, ]))}\hlopt{^}\hlnum{2}\hlstd{)}
+    \hlcom{## need to scale from degrees to radians:}
+    \hlstd{lam.y} \hlkwb{<-} \hlstd{y[}\hlnum{1}\hlstd{, ]} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{lam.z} \hlkwb{<-} \hlstd{z[}\hlnum{1}\hlstd{, ]} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{phi.y} \hlkwb{<-} \hlstd{y[}\hlnum{2}\hlstd{, ]} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{phi.z} \hlkwb{<-} \hlstd{z[}\hlnum{2}\hlstd{, ]} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{R} \hlopt{*} \hlkwd{sqrt}\hlstd{(((lam.y} \hlopt{-} \hlstd{lam.z)} \hlopt{*} \hlkwd{cos}\hlstd{(}\hlnum{0.5} \hlopt{*} \hlstd{(phi.y} \hlopt{+} \hlstd{phi.z)))}\hlopt{^}\hlnum{2} \hlopt{+} \hlstd{(phi.y} \hlopt{-} \hlstd{phi.z)}\hlopt{^}\hlnum{2}\hlstd{)}
 \hlstd{\}}
 \hlstd{y} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{174.78525}\hlstd{,} \hlopt{-}\hlnum{36.84914}\hlstd{)}
 \hlstd{z} \hlkwb{<-} \hlkwd{t}\hlstd{(shape1)}
@@ -701,25 +701,21 @@ Well, that was easy.
 
 The next part is a little less simple, as the ``bearing'' changes as you move around the Earth in a
 straight line.
-Not that it will change much over a few hundred meters, we will use the initial bearing, $\theta_k$.
+Not that it will change much over a few hundred meters, we will use the initial bearing, $\theta^\circ$.
 This will be used in the next step when we compute the position given a starting point, bearing, and
 a distance traveled. 
 
-First, let's introduce the more standard notation:
-$\phi$ is the latitude in radians, and $\lambda$ is the longitude in radians.
-We will therefore be moving from $(\phi_k, \lambda_k)$ to $(\phi_{k+1}, \lambda_{k+1})$.
-NOTE: the latitude and longitude are reversed from what we have used previously (which was $[$``$x$''$, $``$y$''$]^T$).
-
-\begin{equation}
+Here we compute the initial bearing along segment a segment $\vec{ab}$,
+$(\phi_a, \lambda_a)$ to $(\phi_b, \lambda_b)$ (again, in radians not degrees).
+Also, $\Delta\lambda = \lambda_b - \lambda_a$.
+\begin{align}
   \label{eq:bearing_comp}
-  \theta_k = 
-  \left(\frac{180}{\pi}\mathrm{atan2}\left(
-    \sin\left(\Delta\lambda\right) \cos\left(\phi_{k+1}\right),
-    \cos\left(\phi_k\right) \sin\left(\phi_{k+1}\right) - 
-    \sin\left(\phi_k\right)\cos\left(\phi_{k+1}\right)\cos\left(\Delta\lambda\right)
-  \right) + 180\right) \mod 360
-\end{equation}
-(The modulo converts from a bearing in $[-180^\circ, 180^\circ)$ to $[0^\circ, 360^\circ)$).
+  \theta^{\mathrm{rad}} &= 
+  \mathrm{atan2}\left(\sin\Delta\lambda \cos\phi_b, 
+           \cos\phi_a \sin\phi_b - \sin\phi_a \cos\phi_b \cos\Delta\lambda\right) \\
+  \theta^\star &= \frac{180}{\pi}\theta^{\mathrm{rad}} \in \left[-180,180\right) \\
+  \theta^\circ &= \left(\theta^\star + 180\right) \mod 360 \in \left[0,360\right)
+\end{align}
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
@@ -730,13 +726,15 @@ NOTE: the latitude and longitude are reversed from what we have used previously 
     \hlkwa{if} \hlstd{(}\hlkwd{ncol}\hlstd{(a)} \hlopt{!=} \hlkwd{ncol}\hlstd{(b)} \hlopt{&} \hlkwd{ncol}\hlstd{(a)} \hlopt{>} \hlnum{1} \hlopt{&} \hlkwd{ncol}\hlstd{(b)} \hlopt{>} \hlnum{1}\hlstd{)}
         \hlkwd{stop}\hlstd{(}\hlstr{"Incorrent dimensions"}\hlstd{)}
 
-    \hlstd{b} \hlkwb{<-} \hlstd{b} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
-    \hlstd{a} \hlkwb{<-} \hlstd{a} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlcom{## convert to radians!!}
+    \hlstd{lam.a} \hlkwb{<-} \hlstd{a[}\hlnum{1}\hlstd{, ]} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{lam.b} \hlkwb{<-} \hlstd{b[}\hlnum{1}\hlstd{, ]} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{phi.a} \hlkwb{<-} \hlstd{a[}\hlnum{2}\hlstd{, ]} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{phi.b} \hlkwb{<-} \hlstd{b[}\hlnum{2}\hlstd{, ]} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
 
-    \hlstd{(}\hlkwd{atan2}\hlstd{(}\hlkwd{sin}\hlstd{(b[}\hlnum{1}\hlstd{, ]} \hlopt{-} \hlstd{a[}\hlnum{1}\hlstd{, ])} \hlopt{*} \hlkwd{cos}\hlstd{(b[}\hlnum{2}\hlstd{, ]),}
-           \hlkwd{cos}\hlstd{(a[}\hlnum{2}\hlstd{, ])} \hlopt{*} \hlkwd{sin}\hlstd{(b[}\hlnum{2}\hlstd{, ])} \hlopt{-}
-             \hlkwd{sin}\hlstd{(a[}\hlnum{2}\hlstd{, ])} \hlopt{*} \hlkwd{cos}\hlstd{(b[}\hlnum{2}\hlstd{, ])} \hlopt{*} \hlkwd{cos}\hlstd{(b[}\hlnum{1}\hlstd{, ]} \hlopt{-} \hlstd{a[}\hlnum{1}\hlstd{, ]))} \hlopt{*}
-      \hlnum{180} \hlopt{/} \hlstd{pi)} \hlopt{%%} \hlnum{360}
+    \hlstd{th.rad} \hlkwb{<-} \hlkwd{atan2}\hlstd{(}\hlkwd{sin}\hlstd{(lam.b} \hlopt{-} \hlstd{lam.a)} \hlopt{*} \hlkwd{cos}\hlstd{(phi.b),}
+                    \hlkwd{cos}\hlstd{(phi.a)} \hlopt{*} \hlkwd{sin}\hlstd{(phi.b)} \hlopt{-} \hlkwd{sin}\hlstd{(phi.a)} \hlopt{*} \hlkwd{cos}\hlstd{(phi.b)} \hlopt{*} \hlkwd{cos}\hlstd{(lam.b} \hlopt{-} \hlstd{lam.a))}
+    \hlstd{(th.rad} \hlopt{*} \hlnum{180} \hlopt{/} \hlstd{pi)} \hlopt{%%} \hlnum{360}
 \hlstd{\}}
 \hlstd{shape1}\hlopt{$}\hlstd{bearing} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{bearing}\hlstd{(y, z),} \hlnum{NA}\hlstd{)}
 \hlkwd{head}\hlstd{(shape1)}
@@ -762,34 +760,39 @@ Previously, we used basic trigonometry to figure out the $(X,Y)$ location mid-se
 apply now that we are moving between GPS coordinates.
 Fortunately, someone smart figured out the formula for us.
 
-The GPS coordinates of a particle, $\bz = (\lambda_z, \phi_z)$ (dropping the $i$ subscript for simplicity), that travels a
-distance of $d$~m from the point $\bs = (\lambda_s, \phi_s)$ at an initial bearing of $\theta^\circ$ is:
+The GPS coordinates of a particle, $\bz^{\mathrm{rad}} = (\lambda_z, \phi_z)$ 
+(in radians, dropping the $i$ subscript for simplicity), that travels a
+distance of $d$~m from the point $\bs = (\lambda_s, \phi_s)$ (in radians) at an initial bearing of $\theta^\circ$
+is calcualted as follows.
+We use the angle in radians, $\theta = \frac{\pi}{180}\theta^\circ$,
+and the distance in radians, $\delta = \frac{d}{R}$ ($R$ is the Earth's radius, in the same units
+and $d$).
 \begin{align*}
   \phi_z &= 
   \sin^{-1}\left(
-    \sin\left(\phi_s\right) \cos\left(\frac{d}{R}\right) + 
-    \cos\left(\phi_s\right)\sin\left(\frac{d}{R}\right)\cos\left(\frac{\pi\theta}{180}\right)
+    \sin\phi_s \cos\delta + \cos\phi_s \sin\delta \cos\theta
   \right) \\
   \lambda_z &=
-  \lambda_s + \frac{180}{\pi}\mathrm{atan2}\left(
-    \sin\left(\frac{\pi\theta}{180}\right) \sin\left(\frac{d}{R}\right) \cos\left(\phi_s\right),
-    \sin\left(\phi_s\right)\sin\left(\phi_z\right)
+  \lambda_s + \mathrm{atan2}\left(
+    \sin\theta \sin\delta \cos\phi_s,
+    \cos\delta - \sin\phi_s \sin\phi_z
   \right)
 \end{align*}
 
-Looks simple enough, let's use it. Let's say we are 500~m into the trip:
+Looks simple enough, let's use it. Let's say we are 3000~m into the trip:
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlstd{partialSegment} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{theta}\hlstd{,} \hlkwc{d}\hlstd{,} \hlkwc{R} \hlstd{=} \hlnum{6371000}\hlstd{) \{}
-    \hlstd{D} \hlkwb{<-} \hlstd{d} \hlopt{/} \hlstd{R} \hlcom{## for single calculation}
-    \hlstd{Th} \hlkwb{<-} \hlstd{theta} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}  \hlcom{## convert to radians}
-    \hlstd{X} \hlkwb{<-} \hlstd{x} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{delta} \hlkwb{<-} \hlstd{d} \hlopt{/} \hlstd{R} \hlcom{## for single calculation}
+    \hlstd{theta} \hlkwb{<-} \hlstd{theta} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}  \hlcom{## convert to radians}
+    \hlstd{phi.s} \hlkwb{<-} \hlstd{x[}\hlnum{2}\hlstd{]} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{lam.s} \hlkwb{<-} \hlstd{x[}\hlnum{1}\hlstd{]} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
 
-    \hlstd{phi} \hlkwb{<-} \hlkwd{asin}\hlstd{(}\hlkwd{sin}\hlstd{(X[}\hlnum{2}\hlstd{])} \hlopt{*} \hlkwd{cos}\hlstd{(D)} \hlopt{+} \hlkwd{cos}\hlstd{(X[}\hlnum{2}\hlstd{])} \hlopt{*} \hlkwd{sin}\hlstd{(D)} \hlopt{*} \hlkwd{cos}\hlstd{(Th))}
-    \hlstd{lambda} \hlkwb{<-} \hlstd{X[}\hlnum{1}\hlstd{]} \hlopt{+} \hlkwd{atan2}\hlstd{(}\hlkwd{sin}\hlstd{(Th)} \hlopt{*} \hlkwd{sin}\hlstd{(D)} \hlopt{*} \hlkwd{cos}\hlstd{(X[}\hlnum{2}\hlstd{]),}
-                           \hlkwd{sin}\hlstd{(X[}\hlnum{2}\hlstd{])} \hlopt{*} \hlkwd{sin}\hlstd{(phi))}
-    \hlkwd{c}\hlstd{(lambda, phi)} \hlopt{*} \hlnum{180} \hlopt{/} \hlstd{pi}
+    \hlstd{phi.z} \hlkwb{<-} \hlkwd{asin}\hlstd{(}\hlkwd{sin}\hlstd{(phi.s)} \hlopt{*} \hlkwd{cos}\hlstd{(delta)} \hlopt{+} \hlkwd{cos}\hlstd{(phi.s)} \hlopt{*} \hlkwd{sin}\hlstd{(delta)} \hlopt{*} \hlkwd{cos}\hlstd{(theta))}
+    \hlstd{lam.z} \hlkwb{<-} \hlstd{lam.s} \hlopt{+} \hlkwd{atan2}\hlstd{(}\hlkwd{sin}\hlstd{(theta)} \hlopt{*} \hlkwd{sin}\hlstd{(delta)} \hlopt{*} \hlkwd{cos}\hlstd{(phi.s),}
+                           \hlkwd{cos}\hlstd{(delta)} \hlopt{-} \hlkwd{sin}\hlstd{(phi.s)} \hlopt{*} \hlkwd{sin}\hlstd{(phi.z))}
+    \hlkwd{c}\hlstd{(lam.z, phi.z)} \hlopt{*} \hlnum{180} \hlopt{/} \hlstd{pi}
 \hlstd{\}}
 \hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{shape}\hlstd{) \{}
     \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{<} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(c0,} \hlnum{0}\hlstd{)}
@@ -802,22 +805,13 @@ Looks simple enough, let's use it. Let's say we are 500~m into the trip:
 
     \hlcom{## only do the calculations if we need to!}
     \hlkwa{if} \hlstd{(d} \hlopt{==} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(}\hlkwd{as.numeric}\hlstd{(sj[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]))}
-
     \hlkwd{partialSegment}\hlstd{(}\hlkwd{as.numeric}\hlstd{(sj[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]), Psi, d)}
 \hlstd{\}}
-\hlstd{x} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{500}\hlstd{,} \hlnum{NA}\hlstd{)}
+\hlstd{x} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{3000}\hlstd{,} \hlnum{NA}\hlstd{)}
 \hlstd{z} \hlkwb{<-} \hlkwd{h}\hlstd{(x, shape1)}
-
 \hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{])}
-\hlkwd{points}\hlstd{(z[}\hlnum{1}\hlstd{], z[}\hlnum{2}\hlstd{],} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
-
-\hlcom{## how about a bunch of points:}
-\hlstd{x} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{seq}\hlstd{(shape1}\hlopt{$}\hlstd{distance[}\hlnum{8}\hlstd{], shape1}\hlopt{$}\hlstd{distance[}\hlnum{11}\hlstd{],} \hlkwc{length} \hlstd{=} \hlnum{101}\hlstd{),} \hlnum{NA}\hlstd{)}
-\hlstd{z} \hlkwb{<-} \hlkwd{apply}\hlstd{(x,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape1)}
-
-\hlkwd{points}\hlstd{(z[}\hlnum{1}\hlstd{, ], z[}\hlnum{2}\hlstd{, ],} \hlkwc{col} \hlstd{=} \hlstr{"blue"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.2}\hlstd{)}
-
-\hlkwd{points}\hlstd{(shape1}\hlopt{$}\hlstd{lon[}\hlnum{7}\hlstd{], shape1}\hlopt{$}\hlstd{lat[}\hlnum{7}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{)}
+\hlkwd{points}\hlstd{(shape1}\hlopt{$}\hlstd{lon, shape1}\hlopt{$}\hlstd{lat,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+\hlkwd{points}\hlstd{(z[}\hlnum{1}\hlstd{], z[}\hlnum{2}\hlstd{],} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.6}\hlstd{)}
 \end{alltt}
 \end{kframe}
 
