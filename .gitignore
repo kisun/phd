@@ -96,3 +96,9 @@ Thumbs.db
 **/gtfs-rt/*
 *.proto
 *.pb
+
+
+
+## others
+.sass-cache
+node_modules
