@@ -64,12 +64,14 @@
 \newcommand{\bw}{\boldsymbol{w}}
 \newcommand{\bz}{\boldsymbol{z}}
 \newcommand{\by}{\boldsymbol{y}}
+\newcommand{\bY}{\boldsymbol{Y}}
 \newcommand{\br}{\boldsymbol{r}}
 \newcommand{\bs}{\boldsymbol{s}}
 \newcommand{\bh}{\boldsymbol{h}}
 \newcommand{\bv}{\boldsymbol{v}}
 \newcommand{\bfn}{\boldsymbol{f}}
 \newcommand{\bF}{\boldsymbol{F}}
+\newcommand{\bg}{\boldsymbol{g}}
 \newcommand{\bH}{\boldsymbol{H}}
 \newcommand{\bK}{\boldsymbol{K}}
 \newcommand{\bQ}{\boldsymbol{Q}}
@@ -795,7 +797,7 @@ Looks simple enough, let's use it. Let's say we are 3000~m into the trip:
     \hlkwd{c}\hlstd{(lam.z, phi.z)} \hlopt{*} \hlnum{180} \hlopt{/} \hlstd{pi}
 \hlstd{\}}
 \hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{shape}\hlstd{) \{}
-    \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{<} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(c0,} \hlnum{0}\hlstd{)}
+    \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{<=} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{))}
     \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlkwd{max}\hlstd{(shape}\hlopt{$}\hlstd{distance))} \hlkwd{return}\hlstd{(}\hlkwd{as.numeric}\hlstd{(shape[}\hlkwd{nrow}\hlstd{(shape),} \hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]))}
 
     \hlstd{j} \hlkwb{<-} \hlkwd{which.min}\hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlstd{shape}\hlopt{$}\hlstd{distance)} \hlopt{-} \hlnum{1}
@@ -827,126 +829,232 @@ Hopefully this will be all we need for the following applications. We also make 
 location, so it should be transferable between cities, countries, and continents.
 
 
-\section{MBTA GTFS Realtime Data}
+\section{Mock GTFS Realtime Data}
 
-Currently, we don't have access to Realtime data from Auckland Transport. Therefore, we will make do
-with historical data collected from MBTA (Massachusettes).
-Once it's all loaded into an SQLite database, we can extract some data.
+The next step is to create some mock data (i.e., bus locations at a sequence of time
+points).  In the first few sections, we used equal time differences, so it makes sense to
+first apply our model using evenly spaced time points. We will do this in two stages:
+\begin{enumerate}
+\item 
+  using a constant speed function (essentially the same as the previous simulation), and
+  
+  
+\item 
+  using the schedule data and fit a smooth polynomial through this, the derivative of
+  which will give us scheduled speed.
+\end{enumerate}
+Both will use the same route as used above.
+
+
+\subsection{Constant Speed}
+
+We will assume the bus travels at a \emph{constant speed} of 40~km/h $\approx 11$~m/s.
+The function $h$ defined at the end of the previous section will be used to convert from (distance,speed)
+to GPS coordinates.
+We also need to be able to add random ``noise'' to these measurements for the simulation, 
+which we will later need to use as a distribution $p(\bv_k)$.
+
+We are going to assume that the variability is equal in all directions, therefore we can simplify everything
+to a univariate distribution of ``distances'', each associated with a random bearing $\theta\in[0,180)$ 
+(negative distances provide the other half of the circle).
+Therefore, we can simulate from:
+\begin{equation*}
+  \bv = 
+  \begin{bmatrix}
+    d \\ \theta
+  \end{bmatrix},\qquad
+  \begin{matrix}
+    d\sim \mathcal{N}\left(0,\sigma_v^2\right)\\
+    \theta \sim \mathcal{U}\left[0,180\right)
+  \end{matrix}.
+\end{equation*}
+We therefore simply add this to our function, as we know how to add a certain distance to a GPS 
+coordinate with initial bearing (\S~2.1.4). Thus,
+\begin{equation}
+  \label{eq:observation_}
+  \by_k = \bY_k + \bv_k,
+\end{equation}
+where ``addition'' is of a (distance, bearing) to a GPS coordinate.
+
+
+\subsubsection{Data Generation}
+
+Let's create some mock data:
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{con2} \hlkwb{<-} \hlkwa{function}\hlstd{()} \hlkwd{dbConnect}\hlstd{(}\hlkwd{SQLite}\hlstd{(),} \hlstr{"mbta_gtfs_historical.db"}\hlstd{)}
-\hlcom{## we know route_type 3 = bus}
-\hlstd{all.routes} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}\hlkwd{con2}\hlstd{(),}
-                         \hlstr{"SELECT route_id, route_long_name 
-                          FROM routes WHERE route_type=3"}\hlstd{)}
-\hlkwd{head}\hlstd{(all.routes)}
-\end{alltt}
-\begin{verbatim}
-##   route_id        route_long_name
-## 1      741        Silver Line SL1
-## 2      742        Silver Line SL2
-## 3      751        Silver Line SL4
-## 4      749        Silver Line SL5
-## 5      746 Silver Line Waterfront
-## 6      701                   <NA>
-\end{verbatim}
-\end{kframe}
-\end{knitrout}
-Let's checkout Route 746 - Silver Line Waterfront
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{route.shapes} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}\hlkwd{con2}\hlstd{(),}
-                           \hlstr{"SELECT * FROM shapes 
-                            WHERE shape_id IN (SELECT DISTINCT shape_id 
-                                               FROM trips 
-                                               WHERE route_id='746' LIMIT 1)"}\hlstd{)}
-\hlkwd{head}\hlstd{(route.shapes)}
-\end{alltt}
-\begin{verbatim}
-##   shape_id shape_pt_lat shape_pt_lon shape_pt_sequence shape_dist_traveled
-## 1  7460006     42.34712    -71.03885             10001                  NA
-## 2  7460006     42.34712    -71.03912             10002                  NA
-## 3  7460006     42.34716    -71.03952             10003                  NA
-## 4  7460006     42.34720    -71.03984             10004                  NA
-## 5  7460006     42.34753    -71.04068             10005                  NA
-## 6  7460006     42.34831    -71.04260             10006                  NA
-\end{verbatim}
-\begin{alltt}
-\hlstd{shapeID} \hlkwb{<-} \hlkwd{unique}\hlstd{(route.shapes}\hlopt{$}\hlstd{shape_id)}
-\hlkwd{plotShape}\hlstd{(shapeID,} \hlkwd{con2}\hlstd{())}
+\hlstd{t} \hlkwb{<-} \hlkwd{seq}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{10}\hlstd{)} \hlopt{*} \hlnum{60}  \hlcom{# time in minutes * 60 = seconds}
+\hlstd{n} \hlkwb{<-} \hlkwd{length}\hlstd{(t)}
+
+\hlstd{Xtrue} \hlkwb{<-} \hlkwd{rbind}\hlstd{(t} \hlopt{*} \hlnum{11}\hlstd{,} \hlnum{11}\hlstd{)}
+\hlstd{Ytrue} \hlkwb{<-} \hlkwd{apply}\hlstd{(Xtrue,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape1)}
+
+\hlstd{v} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{50}\hlstd{),} \hlkwd{runif}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{180}\hlstd{))}
+\hlstd{y} \hlkwb{<-} \hlkwd{sapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlstd{n,} \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{)} \hlkwd{partialSegment}\hlstd{(Ytrue[, i], v[}\hlnum{2}\hlstd{, i], v[}\hlnum{1}\hlstd{, i]))}
+
+\hlstd{thePlot3} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x1}\hlstd{,} \hlkwc{x2}\hlstd{) \{}
+    \hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{], con)}
+    \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{missing}\hlstd{(x1))} \hlkwd{points}\hlstd{(x1[}\hlnum{1}\hlstd{, ], x1[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009970"}\hlstd{)}
+    \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{missing}\hlstd{(x2))} \hlkwd{points}\hlstd{(x2[}\hlnum{1}\hlstd{, ], x2[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990040"}\hlstd{)}
+    \hlkwd{points}\hlstd{(Ytrue[}\hlnum{1}\hlstd{, ], Ytrue[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{)}
+    \hlkwd{points}\hlstd{(y[}\hlnum{1}\hlstd{, ], y[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.6}\hlstd{)}
+\hlstd{\}}
+\hlkwd{thePlot3}\hlstd{()}
 \end{alltt}
 \end{kframe}
 
-{\centering \includegraphics[width=\maxwidth]{figure/checkout_routes-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/constant_speed_mock-1} 
 
 }
 
 
 
 \end{knitrout}
-Checkout some data on it!
+
+
+\subsubsection{Likelihood}
+
+We need a likelihood for the observation. We will continue on with our assumption of equal distances,
+and therefore simply model the distances, $d_k$, between the particles and the observation.
+We can just use the function from before (ignoring direction).
+For consistency, we will use $\sigma_v = 50$ as in the simulation;
+in practice, we should be able to estimate the accuracy either from the GPS model,
+or more likely by computing the ``distance from the road'' of GPS observations.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{shape.history} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
-    \hlkwd{con2}\hlstd{(),}
-    \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT trip_id, COUNT(*) AS n FROM vehicle_positions 
-             WHERE trip_id IN (SELECT trip_id FROM trips 
-             WHERE shape_id='%s') 
-             GROUP BY trip_id ORDER BY n DESC"}\hlstd{,}
-            \hlstd{shapeID))}
-\hlkwd{head}\hlstd{(shape.history)}
+\hlstd{lhood} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{x}\hlstd{,} \hlkwc{shape}\hlstd{)}
+    \hlkwd{dnorm}\hlstd{(}\hlkwd{distanceFlat}\hlstd{(y,} \hlkwd{h}\hlstd{(x,} \hlkwc{shape} \hlstd{= shape)),} \hlnum{0}\hlstd{,} \hlkwc{sd} \hlstd{=} \hlnum{50}\hlstd{)}
 \end{alltt}
-\begin{verbatim}
-##    trip_id   n
-## 1 27638465 398
-## 2 27638511 169
-## 3 27638483 167
-## 4 27638497 128
-## 5 27638360 116
-## 6 27638453 116
-\end{verbatim}
-\begin{alltt}
-\hlstd{trip.history} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
-    \hlkwd{con2}\hlstd{(),}
-    \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT trip_id, trip_start_date, 
-             position_latitude AS lat, position_longitude AS lon, timestamp 
-             FROM vehicle_positions 
-             WHERE trip_id='%s' 
-             ORDER BY trip_id, timestamp"}\hlstd{,}
-            \hlstd{shape.history}\hlopt{$}\hlstd{trip_id[}\hlnum{1}\hlstd{]))}
-\hlkwd{head}\hlstd{(trip.history)}
-\end{alltt}
-\begin{verbatim}
-##    trip_id trip_start_date      lat       lon  timestamp
-## 1 27638465        20150817 42.34703 -71.03745 1439819633
-## 2 27638465        20150817 42.34686 -71.03720 1439819649
-## 3 27638465        20150817 42.34666 -71.03526 1439819709
-## 4 27638465        20150817 42.34521 -71.03201 1439819769
-## 5 27638465        20150817 42.34472 -71.03034 1439819829
-## 6 27638465        20150817 42.34460 -71.02708 1439819889
-\end{verbatim}
 \end{kframe}
 \end{knitrout}
 
-Alright, how about just for 03 September 2015:
+
+\subsubsection{Simulation}
+
+We'll use the same equations as in \S~1.1 (random acceleration), and the same prior on $x_0$:
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{data} \hlkwb{<-} \hlstd{trip.history[trip.history}\hlopt{$}\hlstd{trip_start_date} \hlopt{==} \hlstr{"20150903"}\hlstd{, ]}
-\hlkwd{head}\hlstd{(data)}
+\hlcom{## random error on particles:}
+\hlstd{pw} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{n}\hlstd{)}
+    \hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{0.1}\hlstd{)}
+\hlstd{Delta} \hlkwb{<-} \hlnum{60} \hlcom{## seconds}
+\hlstd{A} \hlkwb{<-} \hlkwd{cbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(Delta,} \hlnum{1}\hlstd{))}
+\hlstd{G} \hlkwb{<-} \hlkwd{rbind}\hlstd{(Delta}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, Delta)}
+\hlstd{fn} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{w}\hlstd{)}
+    \hlkwd{structure}\hlstd{(A} \hlopt{%*%} \hlstd{x} \hlopt{+} \hlstd{G} \hlopt{%*%} \hlstd{w,} \hlkwc{.Dimnames} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"distance"}\hlstd{,} \hlstr{"speed"}\hlstd{),} \hlkwa{NULL}\hlstd{))}
+
+\hlstd{N} \hlkwb{<-} \hlnum{300} \hlcom{## particles}
+\hlstd{x0} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(N,} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{),} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{))))} \hlcom{# should really just use rbind(0, rnorm()) ...}
+
+\hlstd{x1hat} \hlkwb{<-} \hlkwd{fn}\hlstd{(x0,} \hlkwd{pw}\hlstd{(N))}
+\hlstd{hx1hat} \hlkwb{<-} \hlkwd{apply}\hlstd{(x1hat,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape1)}
+
+\hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(x1hat,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood}\hlstd{(y[,} \hlnum{1}\hlstd{], xi, shape1))}
+\hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
+\hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
+\hlstd{x1} \hlkwb{<-} \hlstd{x1hat[, ii]}
+\hlstd{hx1} \hlkwb{<-} \hlkwd{apply}\hlstd{(x1,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape1)}
+
+\hlkwd{thePlot3}\hlstd{(hx1hat, hx1)}
 \end{alltt}
-\begin{verbatim}
-##      trip_id trip_start_date      lat       lon  timestamp
-## 367 27638465        20150903 42.34694 -71.03824 1441288392
-## 368 27638465        20150903 42.34718 -71.04029 1441288542
-## 369 27638465        20150903 42.34793 -71.04181 1441288593
-## 370 27638465        20150903 42.34718 -71.03954 1441289481
-## 371 27638465        20150903 42.34716 -71.03944 1441289517
-## 372 27638465        20150903 42.34710 -71.03823 1441289552
-\end{verbatim}
 \end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation_init-1} 
+
+}
+
+
+
 \end{knitrout}
+
+And, yes, now all of them!
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{xx} \hlkwb{<-} \hlstd{x1}
+\hlstd{M} \hlkwb{<-} \hlkwd{length}\hlstd{(t)}
+\hlstd{xxhat.hist} \hlkwb{<-} \hlstd{xx.hist} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{, N, M))}
+\hlstd{xxhat.hist[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{x1hat}
+\hlstd{xx.hist[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{x1}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{2}\hlopt{:}\hlstd{M) \{}
+    \hlstd{xxhat.hist[,,i]} \hlkwb{<-} \hlstd{xxhat} \hlkwb{<-} \hlkwd{fn}\hlstd{(xx,} \hlkwd{pw}\hlstd{(N))}
+    \hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood}\hlstd{(y[, i], xi, shape1))}
+    \hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
+    \hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
+    \hlstd{xx.hist[,,i]} \hlkwb{<-} \hlstd{xx} \hlkwb{<-} \hlstd{xxhat[, ii]}
+    \hlstd{hxxhat} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape1)}
+
+    \hlstd{hxx} \hlkwb{<-} \hlkwd{apply}\hlstd{(xx,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape1)}
+    \hlkwd{thePlot3}\hlstd{(hxxhat, hxx)}
+\hlstd{\}}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-1} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-2} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-3} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-4} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-5} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-6} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-7} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-8} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-9} 
+
+}
+
+
+
+\end{knitrout}
+
 \end{document}

@@ -19,12 +19,14 @@ library(RSQLite)
 \newcommand{\bw}{\boldsymbol{w}}
 \newcommand{\bz}{\boldsymbol{z}}
 \newcommand{\by}{\boldsymbol{y}}
+\newcommand{\bY}{\boldsymbol{Y}}
 \newcommand{\br}{\boldsymbol{r}}
 \newcommand{\bs}{\boldsymbol{s}}
 \newcommand{\bh}{\boldsymbol{h}}
 \newcommand{\bv}{\boldsymbol{v}}
 \newcommand{\bfn}{\boldsymbol{f}}
 \newcommand{\bF}{\boldsymbol{F}}
+\newcommand{\bg}{\boldsymbol{g}}
 \newcommand{\bH}{\boldsymbol{H}}
 \newcommand{\bK}{\boldsymbol{K}}
 \newcommand{\bQ}{\boldsymbol{Q}}
@@ -587,7 +589,7 @@ partialSegment <- function(x, theta, d, R = 6371000) {
     c(lam.z, phi.z) * 180 / pi
 }
 h <- function(x, shape) {
-    if (x[1] < 0) return(c0, 0)
+    if (x[1] <= 0) return(c(0, 0))
     if (x[1] > max(shape$distance)) return(as.numeric(shape[nrow(shape), 1:2]))
     
     j <- which.min(x[1] > shape$distance) - 1
@@ -610,64 +612,139 @@ Hopefully this will be all we need for the following applications. We also make 
 location, so it should be transferable between cities, countries, and continents.
 
 
-\section{MBTA GTFS Realtime Data}
+\section{Mock GTFS Realtime Data}
 
-Currently, we don't have access to Realtime data from Auckland Transport. Therefore, we will make do
-with historical data collected from MBTA (Massachusettes).
-Once it's all loaded into an SQLite database, we can extract some data.
-<<mbta_getdata,cache=TRUE>>=
-con2 <- function() dbConnect(SQLite(), "mbta_gtfs_historical.db")
-## we know route_type 3 = bus
-all.routes <- dbGetQuery(con2(), 
-                         "SELECT route_id, route_long_name 
-                          FROM routes WHERE route_type=3")
-head(all.routes)
+The next step is to create some mock data (i.e., bus locations at a sequence of time
+points).  In the first few sections, we used equal time differences, so it makes sense to
+first apply our model using evenly spaced time points. We will do this in two stages:
+\begin{enumerate}
+\item 
+  using a constant speed function (essentially the same as the previous simulation), and
+  
+  
+\item 
+  using the schedule data and fit a smooth polynomial through this, the derivative of
+  which will give us scheduled speed.
+\end{enumerate}
+Both will use the same route as used above.
+
+
+\subsection{Constant Speed}
+
+We will assume the bus travels at a \emph{constant speed} of 40~km/h $\approx 11$~m/s.
+The function $h$ defined at the end of the previous section will be used to convert from (distance,speed)
+to GPS coordinates.
+We also need to be able to add random ``noise'' to these measurements for the simulation, 
+which we will later need to use as a distribution $p(\bv_k)$.
+
+We are going to assume that the variability is equal in all directions, therefore we can simplify everything
+to a univariate distribution of ``distances'', each associated with a random bearing $\theta\in[0,180)$ 
+(negative distances provide the other half of the circle).
+Therefore, we can simulate from:
+\begin{equation*}
+  \bv = 
+  \begin{bmatrix}
+    d \\ \theta
+  \end{bmatrix},\qquad
+  \begin{matrix}
+    d\sim \mathcal{N}\left(0,\sigma_v^2\right)\\
+    \theta \sim \mathcal{U}\left[0,180\right)
+  \end{matrix}.
+\end{equation*}
+We therefore simply add this to our function, as we know how to add a certain distance to a GPS 
+coordinate with initial bearing (\S~2.1.4). Thus,
+\begin{equation}
+  \label{eq:observation_}
+  \by_k = \bY_k + \bv_k,
+\end{equation}
+where ``addition'' is of a (distance, bearing) to a GPS coordinate.
+
+
+\subsubsection{Data Generation}
+
+Let's create some mock data:
+<<constant_speed_mock>>=
+t <- seq(1:10) * 60  # time in minutes * 60 = seconds
+n <- length(t)
+
+Xtrue <- rbind(t * 11, 11)
+Ytrue <- apply(Xtrue, 2, h, shape = shape1)
+
+v <- rbind(rnorm(n, 0, 50), runif(n, 0, 180))
+y <- sapply(1:n, function(i) partialSegment(Ytrue[, i], v[2, i], v[1, i]))
+
+thePlot3 <- function(x1, x2) {
+    plotShape(shapeIDs[1, 1], con)
+    if (!missing(x1)) points(x1[1, ], x1[2, ], pch = 3, col = "#00009970")
+    if (!missing(x2)) points(x2[1, ], x2[2, ], pch = 3, cex = 0.5, col = "#00990040")
+    points(Ytrue[1, ], Ytrue[2, ], pch = 19, col = "red", cex = 0.5)
+    points(y[1, ], y[2, ], pch = 19, cex = 0.6)
+}
+thePlot3()
 @ 
-Let's checkout Route 746 - Silver Line Waterfront
-<<checkout_routes,cache=TRUE>>=
-route.shapes <- dbGetQuery(con2(), 
-                           "SELECT * FROM shapes 
-                            WHERE shape_id IN (SELECT DISTINCT shape_id 
-                                               FROM trips 
-                                               WHERE route_id='746' LIMIT 1)") 
-head(route.shapes)
-shapeID <- unique(route.shapes$shape_id)
-plotShape(shapeID, con2())
-@
-Checkout some data on it!
-<<get_trip_history,cache=TRUE>>=
-shape.history <- dbGetQuery(
-    con2(),
-    sprintf("SELECT trip_id, COUNT(*) AS n FROM vehicle_positions 
-             WHERE trip_id IN (SELECT trip_id FROM trips 
-             WHERE shape_id='%s') 
-             GROUP BY trip_id ORDER BY n DESC",
-            shapeID))
-head(shape.history)
 
-trip.history <- dbGetQuery(
-    con2(),
-    sprintf("SELECT trip_id, trip_start_date, 
-             position_latitude AS lat, position_longitude AS lon, timestamp 
-             FROM vehicle_positions 
-             WHERE trip_id IN ('%s')
-             ORDER BY trip_id, timestamp",
-            paste0(shape.history$trip_id, collapse="','")))
-head(trip.history)
 
-@
+\subsubsection{Likelihood}
 
-Alright, how about just one day, one trip:
-<<one_dat>>=
-tripID <- "27638495"
-date <- "20150827"
-data <- trip.history[trip.history$trip_id == tripID & 
-                     trip.history$trip_start_date == date, ]
-head(data)
-shape2 <- plotShape(shapeID, con2())
-points(shape2$lon[1], shape2$lat[1], pch = 19, cex=0.5)
-points(data$lon, data$lat, pch = 4, col = "red")
-
-data$time <- data$timestamp - min(data$timestamp)
+We need a likelihood for the observation. We will continue on with our assumption of equal distances,
+and therefore simply model the distances, $d_k$, between the particles and the observation.
+We can just use the function from before (ignoring direction).
+For consistency, we will use $\sigma_v = 50$ as in the simulation;
+in practice, we should be able to estimate the accuracy either from the GPS model,
+or more likely by computing the ``distance from the road'' of GPS observations.
+<<lhood_GPS>>=
+lhood <- function(y, x, shape)
+    dnorm(distanceFlat(y, h(x, shape = shape)), 0, sd = 50)
 @ 
+
+
+\subsubsection{Simulation}
+
+We'll use the same equations as in \S~1.1 (random acceleration), and the same prior on $x_0$:
+<<simulation_init>>=
+## random error on particles:
+pw <- function(n)
+    rnorm(n, 0, 0.1)
+Delta <- 60 ## seconds
+A <- cbind(c(1, 0), c(Delta, 1))
+G <- rbind(Delta^2/2, Delta)
+fn <- function(x, w)
+    structure(A %*% x + G %*% w, .Dimnames = list(c("distance", "speed"), NULL))
+
+N <- 300 ## particles
+x0 <- t(rmvnorm(N, c(0, 5), diag(c(0, 5)))) # should really just use rbind(0, rnorm()) ...
+
+x1hat <- fn(x0, pw(N))
+hx1hat <- apply(x1hat, 2, h, shape = shape1)
+
+weights <- apply(x1hat, 2, function(xi) lhood(y[, 1], xi, shape1))
+qi <- weights / sum(weights)
+ii <- sample(N, N, TRUE, qi)
+x1 <- x1hat[, ii]
+hx1 <- apply(x1, 2, h, shape = shape1)
+
+thePlot3(hx1hat, hx1)
+@ 
+
+And, yes, now all of them!
+
+<<simulation__all>>=
+xx <- x1
+M <- length(t)
+xxhat.hist <- xx.hist <- array(NA, c(2, N, M))
+xxhat.hist[,,1] <- x1hat
+xx.hist[,,1] <- x1
+for (i in 2:M) {
+    xxhat.hist[,,i] <- xxhat <- fn(xx, pw(N))
+    weights <- apply(xxhat, 2, function(xi) lhood(y[, i], xi, shape1))
+    qi <- weights / sum(weights)
+    ii <- sample(N, N, TRUE, qi)
+    xx.hist[,,i] <- xx <- xxhat[, ii]
+    hxxhat <- apply(xxhat, 2, h, shape = shape1)
+    
+    hxx <- apply(xx, 2, h, shape = shape1)
+    thePlot3(hxxhat, hxx)
+}
+@ 
+
 \end{document}
