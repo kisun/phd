@@ -154,7 +154,7 @@ The ``route'' will start from the origin and end at $\left(20, 15\right)$,
 which gives the bearing $\Psi = \tan^{-1}\left(\frac{20}{15}\right)$. 
 We then take observations at times $t \in 1, \ldots, 5$~(s), with a constant speed of 3~ms$^{-1}$ from beginning to
 end, and ``GPS error'' of 0.5~(m). Thus, the actual positions and simulated observations are:
-<<true_positions>>=
+<<true_positions,cache=TRUE>>=
 set.seed(345346)
 Psi <- atan(20/15)
 h <- function(x) x[1] * rbind(sin(Psi), cos(Psi))
@@ -193,7 +193,7 @@ speed is unknown:
 
 
 
-<<run_pf>>=
+<<run_pf,cache=TRUE>>=
 lhood <- function(y, x)
     dmvnorm(y, h(x), diag(c(1, 1)))
 pw <- function(n)
@@ -225,7 +225,7 @@ points(Ytrue[1, ], Ytrue[2, ], pch = 19, cex = 0.3, col = "red")
 
 Now for the rest of them \ldots
 
-<<run_pf_loop,fig.width=16,fig.height=10>>=
+<<run_pf_loop,fig.width=16,fig.height=10,cache=TRUE>>=
 par(mfrow = c(2, 2))
 xx <- x1
 M <- length(t)
@@ -252,7 +252,7 @@ for (i in t[-1]) {
 rowMeans(xx)
 @ 
 
-<<dist_speed_plot>>=
+<<dist_speed_plots>>=
 plot(NA, xlim = range(xxhat.hist[1,,]), ylim = range(xxhat.hist[2,,]),
      xlab = "Distance (m)", ylab = "Speed (m/s)")
 cols <- rainbow(M)
@@ -330,7 +330,7 @@ two steps:
 \end{enumerate}
 
 For the most part, this can be added to the database;
-<<segment_stuff>>=
+<<segment_stuff,cache=TRUE>>=
 shape$length <- c(sqrt(diff(px)^2 + diff(py)^2), NA)
 theta <- 2 * pi - (atan2(diff(py), diff(px)) - pi / 2)
 shape$bearing <- c(theta - 2 * pi * (theta >= 2 * pi), NA)
@@ -360,7 +360,7 @@ theplot2()
 
 Other than the above, everything else is basically the same!
 
-<<results_ex2>>=
+<<results_ex2,cache=TRUE>>=
 lhood <- function(y, x, shape)
     dmvnorm(y, h(x, shape), diag(c(1, 1)))
 
@@ -384,7 +384,7 @@ points(Ytrue[1, ], Ytrue[2, ], pch = 19, cex = 0.3, col = "red")
 
 That look wonderful! Now for the rest \ldots
 
-<<run_pf_loop2,fig.width=6,fig.height=10,out.width="0.6\\textwidth">>=
+<<run_pf_loop2,fig.width=6,fig.height=10,out.width="0.6\\textwidth",cache=TRUE>>=
 par(mfrow = c(4, 1))
 xx <- x1
 M <- length(t)
@@ -429,8 +429,8 @@ We must therefore transform GPS coordinates so the variances in lon/lat are equa
 We'll take a route from Auckland Transport Static GTFS data.
 <<AT_route>>=
 con <- dbConnect(SQLite(), "gtfs.db")
-plotShape <- function(id) {
-    sh <- dbGetQuery(con, sprintf("SELECT shape_pt_lon AS lon, shape_pt_lat AS lat
+plotShape <- function(id, conn = con) {
+    sh <- dbGetQuery(conn, sprintf("SELECT shape_pt_lon AS lon, shape_pt_lat AS lat
                                    FROM shapes WHERE shape_id='%s'", id))
     plot(sh$lon, sh$lat, type = "l", asp = 1,
          xlab = "Longitude", ylab = "Latitude")
@@ -438,7 +438,7 @@ plotShape <- function(id) {
 }
 
 shapeIDs <- dbGetQuery(con, "SELECT DISTINCT shape_id FROM shapes")
-shape1 <- plotShape(shapeIDs[1, 1])
+shape1 <- plotShape(shapeIDs[1, 1], con)
 @ 
 
 \subsubsection{GPS Distances}
@@ -601,8 +601,73 @@ h <- function(x, shape) {
 }
 x <- c(3000, NA)
 z <- h(x, shape1)
-plotShape(shapeIDs[1, 1])
+plotShape(shapeIDs[1, 1], con)
 points(shape1$lon, shape1$lat, cex = 0.4, pch = 19)
 points(z[1], z[2], col = "red", pch = 4, cex = 0.6)
+@ 
+
+Hopefully this will be all we need for the following applications. We also make no assumptions about
+location, so it should be transferable between cities, countries, and continents.
+
+
+\section{MBTA GTFS Realtime Data}
+
+Currently, we don't have access to Realtime data from Auckland Transport. Therefore, we will make do
+with historical data collected from MBTA (Massachusettes).
+Once it's all loaded into an SQLite database, we can extract some data.
+<<mbta_getdata,cache=TRUE>>=
+con2 <- function() dbConnect(SQLite(), "mbta_gtfs_historical.db")
+## we know route_type 3 = bus
+all.routes <- dbGetQuery(con2(), 
+                         "SELECT route_id, route_long_name 
+                          FROM routes WHERE route_type=3")
+head(all.routes)
+@ 
+Let's checkout Route 746 - Silver Line Waterfront
+<<checkout_routes,cache=TRUE>>=
+route.shapes <- dbGetQuery(con2(), 
+                           "SELECT * FROM shapes 
+                            WHERE shape_id IN (SELECT DISTINCT shape_id 
+                                               FROM trips 
+                                               WHERE route_id='746' LIMIT 1)") 
+head(route.shapes)
+shapeID <- unique(route.shapes$shape_id)
+plotShape(shapeID, con2())
+@
+Checkout some data on it!
+<<get_trip_history,cache=TRUE>>=
+shape.history <- dbGetQuery(
+    con2(),
+    sprintf("SELECT trip_id, COUNT(*) AS n FROM vehicle_positions 
+             WHERE trip_id IN (SELECT trip_id FROM trips 
+             WHERE shape_id='%s') 
+             GROUP BY trip_id ORDER BY n DESC",
+            shapeID))
+head(shape.history)
+
+trip.history <- dbGetQuery(
+    con2(),
+    sprintf("SELECT trip_id, trip_start_date, 
+             position_latitude AS lat, position_longitude AS lon, timestamp 
+             FROM vehicle_positions 
+             WHERE trip_id IN ('%s')
+             ORDER BY trip_id, timestamp",
+            paste0(shape.history$trip_id, collapse="','")))
+head(trip.history)
+
+@
+
+Alright, how about just one day, one trip:
+<<one_dat>>=
+tripID <- "27638495"
+date <- "20150827"
+data <- trip.history[trip.history$trip_id == tripID & 
+                     trip.history$trip_start_date == date, ]
+head(data)
+shape2 <- plotShape(shapeID, con2())
+points(shape2$lon[1], shape2$lat[1], pch = 19, cex=0.5)
+points(data$lon, data$lat, pch = 4, col = "red")
+
+data$time <- data$timestamp - min(data$timestamp)
 @ 
 \end{document}

@@ -351,7 +351,7 @@ Now for the rest of them \ldots
 \end{alltt}
 \end{kframe}
 
-{\centering \includegraphics[width=\maxwidth]{figure/dist_speed_plot-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/dist_speed_plots-1} 
 
 }
 
@@ -590,8 +590,8 @@ We'll take a route from Auckland Transport Static GTFS data.
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlstd{con} \hlkwb{<-} \hlkwd{dbConnect}\hlstd{(}\hlkwd{SQLite}\hlstd{(),} \hlstr{"gtfs.db"}\hlstd{)}
-\hlstd{plotShape} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{id}\hlstd{) \{}
-    \hlstd{sh} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(con,} \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT shape_pt_lon AS lon, shape_pt_lat AS lat
+\hlstd{plotShape} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{id}\hlstd{,} \hlkwc{conn} \hlstd{= con) \{}
+    \hlstd{sh} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(conn,} \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT shape_pt_lon AS lon, shape_pt_lat AS lat
                                    FROM shapes WHERE shape_id='%s'"}\hlstd{, id))}
     \hlkwd{plot}\hlstd{(sh}\hlopt{$}\hlstd{lon, sh}\hlopt{$}\hlstd{lat,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{,} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,}
          \hlkwc{xlab} \hlstd{=} \hlstr{"Longitude"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Latitude"}\hlstd{)}
@@ -599,7 +599,7 @@ We'll take a route from Auckland Transport Static GTFS data.
 \hlstd{\}}
 
 \hlstd{shapeIDs} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(con,} \hlstr{"SELECT DISTINCT shape_id FROM shapes"}\hlstd{)}
-\hlstd{shape1} \hlkwb{<-} \hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{])}
+\hlstd{shape1} \hlkwb{<-} \hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{], con)}
 \end{alltt}
 \end{kframe}
 
@@ -809,7 +809,7 @@ Looks simple enough, let's use it. Let's say we are 3000~m into the trip:
 \hlstd{\}}
 \hlstd{x} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{3000}\hlstd{,} \hlnum{NA}\hlstd{)}
 \hlstd{z} \hlkwb{<-} \hlkwd{h}\hlstd{(x, shape1)}
-\hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{])}
+\hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{], con)}
 \hlkwd{points}\hlstd{(shape1}\hlopt{$}\hlstd{lon, shape1}\hlopt{$}\hlstd{lat,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
 \hlkwd{points}\hlstd{(z[}\hlnum{1}\hlstd{], z[}\hlnum{2}\hlstd{],} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.6}\hlstd{)}
 \end{alltt}
@@ -821,5 +821,132 @@ Looks simple enough, let's use it. Let's say we are 3000~m into the trip:
 
 
 
+\end{knitrout}
+
+Hopefully this will be all we need for the following applications. We also make no assumptions about
+location, so it should be transferable between cities, countries, and continents.
+
+
+\section{MBTA GTFS Realtime Data}
+
+Currently, we don't have access to Realtime data from Auckland Transport. Therefore, we will make do
+with historical data collected from MBTA (Massachusettes).
+Once it's all loaded into an SQLite database, we can extract some data.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{con2} \hlkwb{<-} \hlkwa{function}\hlstd{()} \hlkwd{dbConnect}\hlstd{(}\hlkwd{SQLite}\hlstd{(),} \hlstr{"mbta_gtfs_historical.db"}\hlstd{)}
+\hlcom{## we know route_type 3 = bus}
+\hlstd{all.routes} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}\hlkwd{con2}\hlstd{(),}
+                         \hlstr{"SELECT route_id, route_long_name 
+                          FROM routes WHERE route_type=3"}\hlstd{)}
+\hlkwd{head}\hlstd{(all.routes)}
+\end{alltt}
+\begin{verbatim}
+##   route_id        route_long_name
+## 1      741        Silver Line SL1
+## 2      742        Silver Line SL2
+## 3      751        Silver Line SL4
+## 4      749        Silver Line SL5
+## 5      746 Silver Line Waterfront
+## 6      701                   <NA>
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+Let's checkout Route 746 - Silver Line Waterfront
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{route.shapes} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}\hlkwd{con2}\hlstd{(),}
+                           \hlstr{"SELECT * FROM shapes 
+                            WHERE shape_id IN (SELECT DISTINCT shape_id 
+                                               FROM trips 
+                                               WHERE route_id='746' LIMIT 1)"}\hlstd{)}
+\hlkwd{head}\hlstd{(route.shapes)}
+\end{alltt}
+\begin{verbatim}
+##   shape_id shape_pt_lat shape_pt_lon shape_pt_sequence shape_dist_traveled
+## 1  7460006     42.34712    -71.03885             10001                  NA
+## 2  7460006     42.34712    -71.03912             10002                  NA
+## 3  7460006     42.34716    -71.03952             10003                  NA
+## 4  7460006     42.34720    -71.03984             10004                  NA
+## 5  7460006     42.34753    -71.04068             10005                  NA
+## 6  7460006     42.34831    -71.04260             10006                  NA
+\end{verbatim}
+\begin{alltt}
+\hlstd{shapeID} \hlkwb{<-} \hlkwd{unique}\hlstd{(route.shapes}\hlopt{$}\hlstd{shape_id)}
+\hlkwd{plotShape}\hlstd{(shapeID,} \hlkwd{con2}\hlstd{())}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/checkout_routes-1} 
+
+}
+
+
+
+\end{knitrout}
+Checkout some data on it!
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{shape.history} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
+    \hlkwd{con2}\hlstd{(),}
+    \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT trip_id, COUNT(*) AS n FROM vehicle_positions 
+             WHERE trip_id IN (SELECT trip_id FROM trips 
+             WHERE shape_id='%s') 
+             GROUP BY trip_id ORDER BY n DESC"}\hlstd{,}
+            \hlstd{shapeID))}
+\hlkwd{head}\hlstd{(shape.history)}
+\end{alltt}
+\begin{verbatim}
+##    trip_id   n
+## 1 27638465 398
+## 2 27638511 169
+## 3 27638483 167
+## 4 27638497 128
+## 5 27638360 116
+## 6 27638453 116
+\end{verbatim}
+\begin{alltt}
+\hlstd{trip.history} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
+    \hlkwd{con2}\hlstd{(),}
+    \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT trip_id, trip_start_date, 
+             position_latitude AS lat, position_longitude AS lon, timestamp 
+             FROM vehicle_positions 
+             WHERE trip_id='%s' 
+             ORDER BY trip_id, timestamp"}\hlstd{,}
+            \hlstd{shape.history}\hlopt{$}\hlstd{trip_id[}\hlnum{1}\hlstd{]))}
+\hlkwd{head}\hlstd{(trip.history)}
+\end{alltt}
+\begin{verbatim}
+##    trip_id trip_start_date      lat       lon  timestamp
+## 1 27638465        20150817 42.34703 -71.03745 1439819633
+## 2 27638465        20150817 42.34686 -71.03720 1439819649
+## 3 27638465        20150817 42.34666 -71.03526 1439819709
+## 4 27638465        20150817 42.34521 -71.03201 1439819769
+## 5 27638465        20150817 42.34472 -71.03034 1439819829
+## 6 27638465        20150817 42.34460 -71.02708 1439819889
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+Alright, how about just for 03 September 2015:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{data} \hlkwb{<-} \hlstd{trip.history[trip.history}\hlopt{$}\hlstd{trip_start_date} \hlopt{==} \hlstr{"20150903"}\hlstd{, ]}
+\hlkwd{head}\hlstd{(data)}
+\end{alltt}
+\begin{verbatim}
+##      trip_id trip_start_date      lat       lon  timestamp
+## 367 27638465        20150903 42.34694 -71.03824 1441288392
+## 368 27638465        20150903 42.34718 -71.04029 1441288542
+## 369 27638465        20150903 42.34793 -71.04181 1441288593
+## 370 27638465        20150903 42.34718 -71.03954 1441289481
+## 371 27638465        20150903 42.34716 -71.03944 1441289517
+## 372 27638465        20150903 42.34710 -71.03823 1441289552
+\end{verbatim}
+\end{kframe}
 \end{knitrout}
 \end{document}

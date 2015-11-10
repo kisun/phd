@@ -97,7 +97,7 @@ Thumbs.db
 *.proto
 *.pb
 
-
+**/cache/
 
 ## others
 .sass-cache
