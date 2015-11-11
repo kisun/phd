@@ -735,20 +735,25 @@ M <- length(t)
 xxhat.hist <- xx.hist <- array(NA, c(2, N, M))
 xxhat.hist[,,1] <- x1hat
 xx.hist[,,1] <- x1
-for (i in 2:M) {
-    xxhat.hist[,,i] <- xxhat <- fn(xx, pw(N))
-    weights <- apply(xxhat, 2, function(xi) lhood(y[, i], xi, shape1))
-    qi <- weights / sum(weights)
-    ii <- sample(N, N, TRUE, qi)
-    xx.hist[,,i] <- xx <- xxhat[, ii]
-    hxxhat <- apply(xxhat, 2, h, shape = shape1)
-    
-    hxx <- apply(xx, 2, h, shape = shape1)
-    thePlot3(hxxhat, hxx)
-}
+system.time({
+    for (i in 2:M) {
+        xxhat.hist[,,i] <- xxhat <- fn(xx, pw(N))
+        weights <- apply(xxhat, 2, function(xi) lhood(y[, i], xi, shape1))
+        qi <- weights / sum(weights)
+        ii <- sample(N, N, TRUE, qi)
+        xx.hist[,,i] <- xx <- xxhat[, ii]
+        hxxhat <- apply(xxhat, 2, h, shape = shape1)
+        
+        hxx <- apply(xx, 2, h, shape = shape1)
+        thePlot3(hxxhat, hxx)
+    }
+})
 
 rowMeans(xx)
 @ 
+
+So, about 0.15~s to analyse one data point. In R. Without any thoughts having gone into making
+things efficient.
 
 
 \subsubsection{Variable Speed and Irregular Time Observations}
