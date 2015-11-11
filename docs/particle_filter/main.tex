@@ -894,8 +894,8 @@ Let's create some mock data:
 
 \hlstd{thePlot3} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x1}\hlstd{,} \hlkwc{x2}\hlstd{) \{}
     \hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{], con)}
-    \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{missing}\hlstd{(x1))} \hlkwd{points}\hlstd{(x1[}\hlnum{1}\hlstd{, ], x1[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009970"}\hlstd{)}
-    \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{missing}\hlstd{(x2))} \hlkwd{points}\hlstd{(x2[}\hlnum{1}\hlstd{, ], x2[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990040"}\hlstd{)}
+    \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{missing}\hlstd{(x1))} \hlkwd{points}\hlstd{(x1[}\hlnum{1}\hlstd{, ], x1[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{)}
+    \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{missing}\hlstd{(x2))} \hlkwd{points}\hlstd{(x2[}\hlnum{1}\hlstd{, ], x2[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
     \hlkwd{points}\hlstd{(Ytrue[}\hlnum{1}\hlstd{, ], Ytrue[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{)}
     \hlkwd{points}\hlstd{(y[}\hlnum{1}\hlstd{, ], y[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.6}\hlstd{)}
 \hlstd{\}}
@@ -938,7 +938,7 @@ We'll use the same equations as in \S~1.1 (random acceleration), and the same pr
 \begin{alltt}
 \hlcom{## random error on particles:}
 \hlstd{pw} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{n}\hlstd{)}
-    \hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{0.1}\hlstd{)}
+    \hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{0.05}\hlstd{)}
 \hlstd{Delta} \hlkwb{<-} \hlnum{60} \hlcom{## seconds}
 \hlstd{A} \hlkwb{<-} \hlkwd{cbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(Delta,} \hlnum{1}\hlstd{))}
 \hlstd{G} \hlkwb{<-} \hlkwd{rbind}\hlstd{(Delta}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, Delta)}
@@ -946,7 +946,7 @@ We'll use the same equations as in \S~1.1 (random acceleration), and the same pr
     \hlkwd{structure}\hlstd{(A} \hlopt{%*%} \hlstd{x} \hlopt{+} \hlstd{G} \hlopt{%*%} \hlstd{w,} \hlkwc{.Dimnames} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"distance"}\hlstd{,} \hlstr{"speed"}\hlstd{),} \hlkwa{NULL}\hlstd{))}
 
 \hlstd{N} \hlkwb{<-} \hlnum{300} \hlcom{## particles}
-\hlstd{x0} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(N,} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{),} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{))))} \hlcom{# should really just use rbind(0, rnorm()) ...}
+\hlstd{x0} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(N,} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{),} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{50}\hlstd{))))} \hlcom{# should really just use rbind(0, rnorm()) ...}
 
 \hlstd{x1hat} \hlkwb{<-} \hlkwd{fn}\hlstd{(x0,} \hlkwd{pw}\hlstd{(N))}
 \hlstd{hx1hat} \hlkwb{<-} \hlkwd{apply}\hlstd{(x1hat,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape1)}
@@ -974,6 +974,7 @@ And, yes, now all of them!
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
+\hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{3}\hlstd{,} \hlnum{3}\hlstd{))}
 \hlstd{xx} \hlkwb{<-} \hlstd{x1}
 \hlstd{M} \hlkwb{<-} \hlkwd{length}\hlstd{(t)}
 \hlstd{xxhat.hist} \hlkwb{<-} \hlstd{xx.hist} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{, N, M))}
@@ -998,63 +999,24 @@ And, yes, now all of them!
 }
 
 
-
-
-{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-2} 
-
-}
-
-
-
-
-{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-3} 
-
-}
-
-
-
-
-{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-4} 
-
-}
-
-
-
-
-{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-5} 
-
-}
-
-
-
-
-{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-6} 
-
-}
-
-
-
-
-{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-7} 
-
-}
-
-
-
-
-{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-8} 
-
-}
-
-
-
-
-{\centering \includegraphics[width=\maxwidth]{figure/simulation__all-9} 
-
-}
-
-
-
+\begin{kframe}\begin{alltt}
+\hlkwd{rowMeans}\hlstd{(xx)}
+\end{alltt}
+\begin{verbatim}
+##   distance      speed 
+## 6603.07022   11.73706
+\end{verbatim}
+\end{kframe}
 \end{knitrout}
+
+
+\subsubsection{Variable Speed and Irregular Time Observations}
+
+This is easy to generalise, as we make no assumption about the frequency of observations;
+we fixed $\Delta = 60$~s in the above example, but this could easily be adjusted for each observation.
+
+
+
+
 
 \end{document}

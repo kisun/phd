@@ -675,8 +675,8 @@ y <- sapply(1:n, function(i) partialSegment(Ytrue[, i], v[2, i], v[1, i]))
 
 thePlot3 <- function(x1, x2) {
     plotShape(shapeIDs[1, 1], con)
-    if (!missing(x1)) points(x1[1, ], x1[2, ], pch = 3, col = "#00009970")
-    if (!missing(x2)) points(x2[1, ], x2[2, ], pch = 3, cex = 0.5, col = "#00990040")
+    if (!missing(x1)) points(x1[1, ], x1[2, ], pch = 3, col = "#00009930")
+    if (!missing(x2)) points(x2[1, ], x2[2, ], pch = 3, cex = 0.5, col = "#00990070")
     points(Ytrue[1, ], Ytrue[2, ], pch = 19, col = "red", cex = 0.5)
     points(y[1, ], y[2, ], pch = 19, cex = 0.6)
 }
@@ -701,10 +701,10 @@ lhood <- function(y, x, shape)
 \subsubsection{Simulation}
 
 We'll use the same equations as in \S~1.1 (random acceleration), and the same prior on $x_0$:
-<<simulation_init>>=
+<<simulation_init,cache=TRUE>>=
 ## random error on particles:
 pw <- function(n)
-    rnorm(n, 0, 0.1)
+    rnorm(n, 0, 0.05)
 Delta <- 60 ## seconds
 A <- cbind(c(1, 0), c(Delta, 1))
 G <- rbind(Delta^2/2, Delta)
@@ -712,7 +712,7 @@ fn <- function(x, w)
     structure(A %*% x + G %*% w, .Dimnames = list(c("distance", "speed"), NULL))
 
 N <- 300 ## particles
-x0 <- t(rmvnorm(N, c(0, 5), diag(c(0, 5)))) # should really just use rbind(0, rnorm()) ...
+x0 <- t(rmvnorm(N, c(0, 5), diag(c(0, 50)))) # should really just use rbind(0, rnorm()) ...
 
 x1hat <- fn(x0, pw(N))
 hx1hat <- apply(x1hat, 2, h, shape = shape1)
@@ -728,7 +728,8 @@ thePlot3(hx1hat, hx1)
 
 And, yes, now all of them!
 
-<<simulation__all>>=
+<<simulation__all,fig.width=8,fig.height=8,cache=TRUE>>=
+par(mfrow = c(3, 3))
 xx <- x1
 M <- length(t)
 xxhat.hist <- xx.hist <- array(NA, c(2, N, M))
@@ -745,6 +746,18 @@ for (i in 2:M) {
     hxx <- apply(xx, 2, h, shape = shape1)
     thePlot3(hxxhat, hxx)
 }
+
+rowMeans(xx)
 @ 
+
+
+\subsubsection{Variable Speed and Irregular Time Observations}
+
+This is easy to generalise, as we make no assumption about the frequency of observations;
+we fixed $\Delta = 60$~s in the above example, but this could easily be adjusted for each observation.
+
+
+
+
 
 \end{document}
