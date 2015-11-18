@@ -56,12 +56,7 @@
 \usepackage{fullpage}
 \usepackage{parskip}
 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 
-
-{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Loading required package: DBI}}\end{kframe}
-\end{knitrout}
 
 
 \newcommand{\bx}{\boldsymbol{x}}
@@ -1008,7 +1003,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##   0.932   0.000   0.932
+##   1.334   0.000   1.335
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1029,8 +1024,238 @@ things efficient.
 This is easy to generalise, as we make no assumption about the frequency of observations;
 we fixed $\Delta = 60$~s in the above example, but this could easily be adjusted for each observation.
 
+To get starting, we are simply going to use the schedule information for a trip as the ``observed
+data'', and see how the model performs.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{all.trips} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(con,} \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT DISTINCT trip_id FROM trips WHERE shape_id='%s'"}\hlstd{, shapeIDs[}\hlnum{1}\hlstd{,}\hlnum{1}\hlstd{]))}
+\hlstd{trip1} \hlkwb{<-} \hlstd{all.trips[}\hlnum{1}\hlstd{,}\hlnum{1}\hlstd{]}
+\hlstd{sched1} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
+    \hlstd{con,}
+    \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT st.arrival_time AS arrive, st.departure_time AS depart, st.stop_id, 
+                    s.stop_lat, s.stop_lon, st.shape_dist_traveled AS distance
+             FROM stop_times AS st, stops AS s 
+             WHERE trip_id='%s' AND st.stop_id=s.stop_id"}\hlstd{, trip1))}
+\hlkwd{head}\hlstd{(sched1)}
+\end{alltt}
+\begin{verbatim}
+##     arrive   depart stop_id  stop_lat stop_lon distance
+## 1     <NA> 06:15:00    6072 -36.88493 174.7985       NA
+## 2 06:15:00 06:15:00    6726 -36.88168 174.7973       NA
+## 3 06:16:00 06:16:00    5084 -36.88074 174.7972       NA
+## 4 06:16:00 06:16:00    5085 -36.88034 174.7943       NA
+## 5 06:16:00 06:16:00    2152 -36.87902 174.7920       NA
+## 6 06:17:00 06:17:00    2153 -36.87714 174.7931       NA
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+We don't actually need the \emph{distance} column right now---this will be used later when computing 
+which stop interval the bus is in. What we do need is to condense it down into unique time observations
+(currently, there are several stops at each ``minute'').
+We will take the first of each, and take the departure time (or arrival if its missing);
+we will also convert times into seconds since the route began.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(lubridate)}
+\hlstd{sched1}\hlopt{$}\hlstd{time} \hlkwb{<-} \hlkwd{hms}\hlstd{(}\hlkwd{ifelse}\hlstd{(}\hlkwd{is.na}\hlstd{(sched1}\hlopt{$}\hlstd{depart), sched1}\hlopt{$}\hlstd{arrive, sched1}\hlopt{$}\hlstd{depart))}
+\hlstd{sched1}\hlopt{$}\hlstd{time_seconds} \hlkwb{<-} \hlstd{(}\hlkwd{hour}\hlstd{(sched1}\hlopt{$}\hlstd{time)} \hlopt{*} \hlnum{60} \hlopt{+} \hlkwd{minute}\hlstd{(sched1}\hlopt{$}\hlstd{time))} \hlopt{*} \hlnum{60}
+\hlstd{sched1}\hlopt{$}\hlstd{time} \hlkwb{<-} \hlstd{sched1}\hlopt{$}\hlstd{time_seconds} \hlopt{-} \hlkwd{min}\hlstd{(sched1}\hlopt{$}\hlstd{time_seconds)}
+\hlstd{data} \hlkwb{<-} \hlkwd{do.call}\hlstd{(}
+    \hlstd{rbind,}
+    \hlkwd{tapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(sched1), sched1}\hlopt{$}\hlstd{time,}
+           \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) sched1[x[}\hlnum{1}\hlstd{],} \hlkwd{c}\hlstd{(}\hlstr{"time"}\hlstd{,} \hlstr{"stop_id"}\hlstd{,} \hlstr{"stop_lat"}\hlstd{,} \hlstr{"stop_lon"}\hlstd{), ]))}
+\hlstd{data[}\hlnum{1}\hlopt{:}\hlnum{3}\hlstd{, ]}
+\end{alltt}
+\begin{verbatim}
+##     time stop_id  stop_lat stop_lon
+## 0      0    6072 -36.88493 174.7985
+## 60    60    5084 -36.88074 174.7972
+## 120  120    2153 -36.87714 174.7931
+\end{verbatim}
+\begin{alltt}
+\hlstd{t} \hlkwb{<-} \hlstd{data}\hlopt{$}\hlstd{time}
+\hlstd{y} \hlkwb{<-} \hlkwd{rbind}\hlstd{(data}\hlopt{$}\hlstd{stop_lon[}\hlopt{-}\hlnum{1}\hlstd{], data}\hlopt{$}\hlstd{stop_lat[}\hlopt{-}\hlnum{1}\hlstd{])}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+And now we just apply the simulation, but allow for differing $\Delta$:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## random error on particles:}
+\hlstd{pw} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{n}\hlstd{)}
+    \hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{0.03}\hlstd{)}
+\hlstd{Delta} \hlkwb{<-} \hlkwd{diff}\hlstd{(t)} \hlcom{## seconds}
+\hlstd{A} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{)} \hlkwd{cbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(d,} \hlnum{1}\hlstd{))}
+\hlstd{G} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{)} \hlkwd{rbind}\hlstd{(d}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, d)}
+\hlstd{fn} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{u}\hlstd{,} \hlkwc{w}\hlstd{)}  \hlcom{## x: [distance, velocity]; u: [delta]; w: [error]}
+    \hlkwd{structure}\hlstd{(}\hlkwd{A}\hlstd{(u)} \hlopt{%*%} \hlstd{x} \hlopt{+} \hlkwd{G}\hlstd{(u)} \hlopt{%*%} \hlstd{w,} \hlkwc{.Dimnames} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"distance"}\hlstd{,} \hlstr{"speed"}\hlstd{),} \hlkwa{NULL}\hlstd{))}
+
+\hlstd{thePlot4} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x1}\hlstd{,} \hlkwc{x2}\hlstd{) \{}
+    \hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{], con)}
+    \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{missing}\hlstd{(x1))} \hlkwd{points}\hlstd{(x1[}\hlnum{1}\hlstd{, ], x1[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{)}
+    \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{missing}\hlstd{(x2))} \hlkwd{points}\hlstd{(x2[}\hlnum{1}\hlstd{, ], x2[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
+    \hlcom{#points(Ytrue[1, ], Ytrue[2, ], pch = 19, col = "red", cex = 0.5)}
+    \hlkwd{points}\hlstd{(y[}\hlnum{1}\hlstd{, ], y[}\hlnum{2}\hlstd{, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.6}\hlstd{)}
+\hlstd{\}}
+
+\hlstd{lhood2} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{x}\hlstd{,} \hlkwc{shape}\hlstd{)}
+    \hlkwd{dnorm}\hlstd{(}\hlkwd{distanceFlat}\hlstd{(y,} \hlkwd{h}\hlstd{(x,} \hlkwc{shape} \hlstd{= shape)),} \hlnum{0}\hlstd{,} \hlkwc{sd} \hlstd{=} \hlnum{50}\hlstd{)} \hlopt{*} \hlkwd{ifelse}\hlstd{(x[}\hlnum{2}\hlstd{]} \hlopt{<=} \hlnum{0}\hlstd{,} \hlnum{0.000001}\hlstd{,} \hlnum{1}\hlstd{)}
+
+\hlstd{N} \hlkwb{<-} \hlnum{500} \hlcom{## particles}
+\hlstd{x0} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(N,} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{),} \hlkwd{diag}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{50}\hlstd{))))} \hlcom{# should really just use rbind(0, rnorm()) ...}
+
+\hlstd{x1hat} \hlkwb{<-} \hlkwd{fn}\hlstd{(x0, Delta[}\hlnum{1}\hlstd{],} \hlkwd{pw}\hlstd{(N))}
+\hlstd{hx1hat} \hlkwb{<-} \hlkwd{apply}\hlstd{(x1hat,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape1)}
+
+\hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(x1hat,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood2}\hlstd{(y[,} \hlnum{1}\hlstd{], xi, shape1))}
+\hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
+\hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
+\hlstd{x1} \hlkwb{<-} \hlstd{x1hat[, ii]}
+\hlstd{hx1} \hlkwb{<-} \hlkwd{apply}\hlstd{(x1,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape1)}
+
+\hlkwd{thePlot4}\hlstd{(hx1hat, hx1)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation_init_sched-1} 
+
+}
 
 
+
+\end{knitrout}
+
+And, yes, now all of them!
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{3}\hlstd{))}
+\hlstd{xx} \hlkwb{<-} \hlstd{x1}
+\hlstd{M} \hlkwb{<-} \hlkwd{length}\hlstd{(Delta)}
+\hlstd{xxhat.hist} \hlkwb{<-} \hlstd{xx.hist} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{, N, M))}
+\hlstd{xxhat.hist[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{x1hat}
+\hlstd{xx.hist[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{x1}
+\hlkwd{system.time}\hlstd{(\{}
+    \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{2}\hlopt{:}\hlstd{M) \{}
+        \hlstd{xxhat.hist[,,i]} \hlkwb{<-} \hlstd{xxhat} \hlkwb{<-} \hlkwd{fn}\hlstd{(xx, Delta[i],} \hlkwd{pw}\hlstd{(N))}
+        \hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood2}\hlstd{(y[, i], xi, shape1))}
+        \hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
+        \hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
+        \hlstd{xx.hist[,,i]} \hlkwb{<-} \hlstd{xx} \hlkwb{<-} \hlstd{xxhat[, ii]}
+        \hlstd{hxxhat} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape1)}
+
+        \hlstd{hxx} \hlkwb{<-} \hlkwd{apply}\hlstd{(xx,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape1)}
+        \hlkwd{thePlot4}\hlstd{(hxxhat, hxx)}
+    \hlstd{\}}
+\hlstd{\})}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation_sched_all-1} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation_sched_all-2} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation_sched_all-3} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation_sched_all-4} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/simulation_sched_all-5} 
+
+}
+
+
+\begin{kframe}\begin{verbatim}
+##    user  system elapsed 
+##   3.932   0.008   3.943
+\end{verbatim}
+\begin{alltt}
+\hlkwd{rowMeans}\hlstd{(xx)}
+\end{alltt}
+\begin{verbatim}
+##    distance       speed 
+## 7530.581815    6.673048
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+How about speed over  time?
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{speedhat.hist} \hlkwb{<-} \hlstd{xxhat.hist[}\hlnum{2}\hlstd{,,]}
+\hlstd{speed.hist} \hlkwb{<-} \hlstd{xx.hist[}\hlnum{2}\hlstd{,,]}
+\hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(t),} \hlkwc{ylim} \hlstd{=} \hlkwd{range}\hlstd{(speed.hist, speedhat.hist),}
+     \hlkwc{xlab} \hlstd{=} \hlstr{"Time (s)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Speed (m/s)"}\hlstd{)}
+\hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{M) \{}
+    \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i}\hlopt{+}\hlnum{1}\hlstd{], N), speedhat.hist[, i],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{)}
+    \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i}\hlopt{+}\hlnum{1}\hlstd{], N), speed.hist[, i],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
+\hlstd{\}}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-2-1} 
+
+}
+
+
+
+\end{knitrout}
+
+From that, it looks like we need to put a positive-speed constraint on the proposal distribution;
+however, we also need to change the way we view \emph{speed}: it will not be an unknown, fairly
+constant variable. Instead, we will use as much information as is avaialble to us to esimate the
+speed along each segment of road.
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{speedhat} \hlkwb{<-} \hlkwd{as.numeric}\hlstd{(speedhat.hist)}
+\hlstd{speed} \hlkwb{<-} \hlkwd{as.numeric}\hlstd{(speed.hist)}
+\hlstd{disthat} \hlkwb{<-} \hlkwd{as.numeric}\hlstd{(xxhat.hist[}\hlnum{1}\hlstd{,,])}
+\hlstd{dist} \hlkwb{<-} \hlkwd{as.numeric}\hlstd{(xx.hist[}\hlnum{1}\hlstd{,,])}
+
+\hlkwd{plot}\hlstd{(disthat, speedhat,} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{,}
+     \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(dist, disthat),} \hlkwc{ylim} \hlstd{=} \hlkwd{range}\hlstd{(speed, speedhat),}
+     \hlkwc{xlab} \hlstd{=} \hlstr{"Distance (m)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Speed (m/s"}\hlstd{)}
+\hlkwd{points}\hlstd{(dist, speed,} \hlkwc{pch} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-3-1} 
+
+}
+
+
+
+\end{knitrout}
 
 
 \end{document}

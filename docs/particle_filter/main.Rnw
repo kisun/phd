@@ -761,8 +761,132 @@ things efficient.
 This is easy to generalise, as we make no assumption about the frequency of observations;
 we fixed $\Delta = 60$~s in the above example, but this could easily be adjusted for each observation.
 
+To get starting, we are simply going to use the schedule information for a trip as the ``observed
+data'', and see how the model performs.
+<<get_sched_data>>=
+all.trips <- dbGetQuery(con, sprintf("SELECT DISTINCT trip_id FROM trips WHERE shape_id='%s'", shapeIDs[1,1]))
+trip1 <- all.trips[1,1]
+sched1 <- dbGetQuery(
+    con, 
+    sprintf("SELECT st.arrival_time AS arrive, st.departure_time AS depart, st.stop_id, 
+                    s.stop_lat, s.stop_lon, st.shape_dist_traveled AS distance
+             FROM stop_times AS st, stops AS s 
+             WHERE trip_id='%s' AND st.stop_id=s.stop_id", trip1))
+head(sched1)
+@ 
+
+We don't actually need the \emph{distance} column right now---this will be used later when computing 
+which stop interval the bus is in. What we do need is to condense it down into unique time observations
+(currently, there are several stops at each ``minute'').
+We will take the first of each, and take the departure time (or arrival if its missing);
+we will also convert times into seconds since the route began.
+<<manip_data>>=
+library(lubridate)
+sched1$time <- hms(ifelse(is.na(sched1$depart), sched1$arrive, sched1$depart))
+sched1$time_seconds <- (hour(sched1$time) * 60 + minute(sched1$time)) * 60
+sched1$time <- sched1$time_seconds - min(sched1$time_seconds)
+data <- do.call(
+    rbind, 
+    tapply(1:nrow(sched1), sched1$time, 
+           function(x) sched1[x[1], c("time", "stop_id", "stop_lat", "stop_lon"), ]))
+data[1:3, ]
+t <- data$time
+y <- rbind(data$stop_lon[-1], data$stop_lat[-1])
+@ 
+
+And now we just apply the simulation, but allow for differing $\Delta$:
+<<simulation_init_sched,cache=TRUE>>=
+## random error on particles:
+pw <- function(n)
+    rnorm(n, 0, 0.03)
+Delta <- diff(t) ## seconds
+A <- function(d) cbind(c(1, 0), c(d, 1))
+G <- function(d) rbind(d^2/2, d)
+fn <- function(x, u, w)  ## x: [distance, velocity]; u: [delta]; w: [error]
+    structure(A(u) %*% x + G(u) %*% w, .Dimnames = list(c("distance", "speed"), NULL))
+
+thePlot4 <- function(x1, x2) {
+    plotShape(shapeIDs[1, 1], con)
+    if (!missing(x1)) points(x1[1, ], x1[2, ], pch = 3, col = "#00009930")
+    if (!missing(x2)) points(x2[1, ], x2[2, ], pch = 3, cex = 0.5, col = "#00990070")
+    #points(Ytrue[1, ], Ytrue[2, ], pch = 19, col = "red", cex = 0.5)
+    points(y[1, ], y[2, ], pch = 19, cex = 0.6)
+}
+
+lhood2 <- function(y, x, shape)
+    dnorm(distanceFlat(y, h(x, shape = shape)), 0, sd = 50) * ifelse(x[2] <= 0, 0.000001, 1)
+
+N <- 500 ## particles
+x0 <- t(rmvnorm(N, c(0, 5), diag(c(0, 50)))) # should really just use rbind(0, rnorm()) ...
+
+x1hat <- fn(x0, Delta[1], pw(N))
+hx1hat <- apply(x1hat, 2, h, shape = shape1)
+
+weights <- apply(x1hat, 2, function(xi) lhood2(y[, 1], xi, shape1))
+qi <- weights / sum(weights)
+ii <- sample(N, N, TRUE, qi)
+x1 <- x1hat[, ii]
+hx1 <- apply(x1, 2, h, shape = shape1)
+
+thePlot4(hx1hat, hx1)
+@ 
+
+And, yes, now all of them!
+
+<<simulation_sched_all,fig.width=8,fig.height=5,cache=TRUE>>=
+par(mfrow = c(1, 3))
+xx <- x1
+M <- length(Delta)
+xxhat.hist <- xx.hist <- array(NA, c(2, N, M))
+xxhat.hist[,,1] <- x1hat
+xx.hist[,,1] <- x1
+system.time({
+    for (i in 2:M) {
+        xxhat.hist[,,i] <- xxhat <- fn(xx, Delta[i], pw(N))
+        weights <- apply(xxhat, 2, function(xi) lhood2(y[, i], xi, shape1))
+        qi <- weights / sum(weights)
+        ii <- sample(N, N, TRUE, qi)
+        xx.hist[,,i] <- xx <- xxhat[, ii]
+        hxxhat <- apply(xxhat, 2, h, shape = shape1)
+        
+        hxx <- apply(xx, 2, h, shape = shape1)
+        thePlot4(hxxhat, hxx)
+    }
+})
+rowMeans(xx)
+@ 
+
+How about speed over  time?
+<<>>=
+speedhat.hist <- xxhat.hist[2,,]
+speed.hist <- xx.hist[2,,]
+plot(NA, xlim = range(t), ylim = range(speed.hist, speedhat.hist),
+     xlab = "Time (s)", ylab = "Speed (m/s)")
+abline(h = 0, lty = 3)
+for (i in 1:M) {
+    points(rep(t[i+1], N), speedhat.hist[, i], pch = 4, col = "#00009930")
+    points(rep(t[i+1], N), speed.hist[, i], pch = 4, cex = 0.5, col = "#00990070")
+}
+@ 
+
+From that, it looks like we need to put a positive-speed constraint on the proposal distribution;
+however, we also need to change the way we view \emph{speed}: it will not be an unknown, fairly
+constant variable. Instead, we will use as much information as is avaialble to us to esimate the
+speed along each segment of road.
 
 
+<<>>=
+speedhat <- as.numeric(speedhat.hist)
+speed <- as.numeric(speed.hist)
+disthat <- as.numeric(xxhat.hist[1,,])
+dist <- as.numeric(xx.hist[1,,])
+
+plot(disthat, speedhat, pch = 3, col = "#00009930",
+     xlim = range(dist, disthat), ylim = range(speed, speedhat),
+     xlab = "Distance (m)", ylab = "Speed (m/s")
+points(dist, speed, pch = 3, cex = 0.5, col = "#00990070")
+
+@ 
 
 
 \end{document}
