@@ -889,4 +889,19 @@ points(dist, speed, pch = 3, cex = 0.5, col = "#00990070")
 @ 
 
 
+
+\section{MBTA GTFS Realtime Feed}
+
+Thankfully, we can get some data! 
+
+<<>>=
+mbta <- dbConnect(SQLite(), "mbta_gtfsrt.db")
+
+hist <- dbGetQuery(mbta, "SELECT DISTINCT trip_id FROM vehicle_positions")
+
+@ 
+
+
+
+
 \end{document}
