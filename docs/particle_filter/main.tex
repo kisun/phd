@@ -72,7 +72,7 @@
 \newcommand{\bfn}{\boldsymbol{f}}
 \newcommand{\bF}{\boldsymbol{F}}
 \newcommand{\bg}{\boldsymbol{g}}
-\newcommand{\bH}{\boldsymbol{H}}
+\newcommand{\bH}{\boldsymbol{2H}}
 \newcommand{\bK}{\boldsymbol{K}}
 \newcommand{\bQ}{\boldsymbol{Q}}
 \newcommand{\bR}{\boldsymbol{R}}
@@ -597,6 +597,7 @@ We'll take a route from Auckland Transport Static GTFS data.
                                    FROM shapes WHERE shape_id='%s'"}\hlstd{, id))}
     \hlkwd{plot}\hlstd{(sh}\hlopt{$}\hlstd{lon, sh}\hlopt{$}\hlstd{lat,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{,} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,}
          \hlkwc{xlab} \hlstd{=} \hlstr{"Longitude"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Latitude"}\hlstd{)}
+    \hlkwd{points}\hlstd{(sh}\hlopt{$}\hlstd{lon[}\hlnum{1}\hlstd{], sh}\hlopt{$}\hlstd{lat[}\hlnum{1}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
     \hlkwd{invisible}\hlstd{(sh)}
 \hlstd{\}}
 
@@ -1003,7 +1004,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##   0.932   0.000   0.932
+##   1.334   0.000   1.335
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1192,7 +1193,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##   2.724   0.004   2.731
+##   3.932   0.008   3.943
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1261,8 +1262,280 @@ speed along each segment of road.
 
 \section{MBTA GTFS Realtime Feed}
 
+Thankfully, we can get some data! The connection to the database is:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{mbta} \hlkwb{<-} \hlkwd{dbConnect}\hlstd{(}\hlkwd{SQLite}\hlstd{(),} \hlstr{"mbta_gtfsrt.db"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+And the historical data can be sorted through nicely:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{hist} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
+    \hlstd{mbta,} \hlstr{"SELECT v.trip_id, t.shape_id, COUNT(v.trip_id) AS n
+           FROM vehicle_positions AS v, 
+                trips AS t, routes AS r
+           WHERE v.trip_id=t.trip_id
+             AND t.route_id=r.route_id
+             AND r.route_type=3
+           GROUP BY v.trip_id ORDER BY n DESC"}\hlstd{)}
+\hlkwd{head}\hlstd{(hist)}
+\end{alltt}
+\begin{verbatim}
+##    trip_id shape_id    n
+## 1 27638244  7420013 2399
+## 2 27638190  7420013 2205
+## 3 27508685  5530028 1393
+## 4 27936496  4490021 1275
+## 5 27937019  4590008 1211
+## 6 27501654   660056 1202
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+So, trip \verb+27638244+ looks pretty popular. We'll get some useful information for that.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{tID} \hlkwb{<-} \hlstd{hist[}\hlnum{1}\hlstd{,} \hlstr{"trip_id"}\hlstd{]}
+\hlstd{sID} \hlkwb{<-} \hlstd{hist[}\hlnum{1}\hlstd{,} \hlstr{"shape_id"}\hlstd{]}
+\hlkwd{plotShape}\hlstd{(sID, mbta)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/trip_route_info-1} 
+
+}
 
 
 
+\end{knitrout}
+
+
+\subsection{Data Sorting}
+
+We've first got to sort through the data. We will start at the beginning (the first trip) and work
+our way through---hopefully we will be able to start generating priors and stuff!
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{# Get all days}
+\hlstd{all.dates} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
+    \hlstd{mbta,}
+    \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT DISTINCT trip_start_date FROM vehicle_positions WHERE trip_id='%s'"}\hlstd{,}
+            \hlstd{tID))}
+\hlstd{(dates} \hlkwb{<-} \hlstd{all.dates}\hlopt{$}\hlstd{trip_start_date)}
+\end{alltt}
+\begin{verbatim}
+## [1] "20150817" "20150820" "20150824" "20150825" "20150826" "20150827"
+## [7] "20150831" "20150901" "20150903"
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+We now need a function to obtain all of the necessary data for a trip on a given day:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{getTripData} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{date}\hlstd{,} \hlkwc{id}\hlstd{,} \hlkwc{conn} \hlstd{= con) \{}
+    \hlstd{d} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(conn,}
+                    \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT position_latitude AS lat, position_longitude AS lon,
+                                    timestamp AS time
+                             FROM vehicle_positions
+                             WHERE trip_id='%s' AND trip_start_date='%s'
+                             ORDER BY timestamp"}\hlstd{, id, date))}
+    \hlkwd{attr}\hlstd{(d,} \hlstr{"date"}\hlstd{)} \hlkwb{<-} \hlstd{date}
+    \hlkwd{attr}\hlstd{(d,} \hlstr{"trip_id"}\hlstd{)} \hlkwb{<-} \hlstd{id}
+    \hlkwd{class}\hlstd{(d)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"triphistory"}\hlstd{,} \hlkwd{class}\hlstd{(d))}
+    \hlstd{d}
+\hlstd{\}}
+\hlstd{print.triphistory} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{...}\hlstd{) \{}
+    \hlkwd{print.data.frame}\hlstd{(x)}
+    \hlkwd{cat}\hlstd{(}\hlstr{"\textbackslash{}n"}\hlstd{)}
+    \hlkwd{print}\hlstd{(}\hlkwd{structure}\hlstd{(}\hlkwd{c}\hlstd{(}\hlkwd{attr}\hlstd{(x,} \hlstr{"date"}\hlstd{),} \hlkwd{attr}\hlstd{(x,} \hlstr{"trip_id"}\hlstd{)),} \hlkwc{.Names} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"date"}\hlstd{,} \hlstr{"trip_id"}\hlstd{)))}
+\hlstd{\}}
+\hlstd{points.triphistory} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{...}\hlstd{) \{}
+    \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{lon, x}\hlopt{$}\hlstd{lat,} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{)}
+\hlstd{\}}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+So, on the first day:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{day1} \hlkwb{<-} \hlkwd{getTripData}\hlstd{(dates[}\hlnum{1}\hlstd{], tID, mbta)}
+\hlkwd{head}\hlstd{(day1)}
+\end{alltt}
+\begin{verbatim}
+##        lat       lon       time
+## 1 42.35349 -71.05190 1439817349
+## 2 42.35273 -71.05531 1439817410
+## 3 42.35183 -71.05594 1439817440
+## 4 42.35192 -71.05589 1439817501
+## 5 42.35261 -71.05546 1439817561
+## 6 42.35127 -71.04459 1439817719
+## 
+##       date    trip_id 
+## "20150817" "27638244"
+\end{verbatim}
+\begin{alltt}
+\hlstd{tripShape} \hlkwb{<-} \hlkwd{plotShape}\hlstd{(sID, mbta)}
+\hlkwd{points}\hlstd{(day1)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/first_day-1} 
+
+}
+
+
+
+\end{knitrout}
+
+So, it's obvious that some points don't belong to the trip---they are of where the bus went
+before/after it started/finished (we won't worry about them for now).
+
+\subsection{A Particle Filter Modelling Function}
+
+Previously we've just copy+pasted the necessary code. Now we'll make a function to do it moreorless properly.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{particleFilter} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{data}\hlstd{,} \hlkwc{shape}\hlstd{,}
+                           \hlkwc{N} \hlstd{=} \hlnum{200}\hlstd{,}
+                           \hlkwc{x0} \hlstd{=} \hlkwd{rbind}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{rlnorm}\hlstd{(N,} \hlnum{0}\hlstd{,} \hlnum{2}\hlstd{)),}
+                           \hlkwc{GPS.error} \hlstd{=} \hlnum{20}\hlstd{,}
+                           \hlkwc{sig.e} \hlstd{=} \hlnum{0.03}\hlstd{,}
+                           \hlkwc{...}\hlstd{) \{}
+    \hlcom{## Sort out the shape information (using previously defined functions)}
+    \hlstd{z} \hlkwb{<-} \hlkwd{t}\hlstd{(shape)}
+    \hlstd{di} \hlkwb{<-} \hlkwd{distanceFlat}\hlstd{(z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)], z[,} \hlopt{-}\hlnum{1}\hlstd{])}
+    \hlstd{shape}\hlopt{$}\hlstd{distance} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{cumsum}\hlstd{(di))}
+    \hlstd{shape}\hlopt{$}\hlstd{length} \hlkwb{<-} \hlkwd{c}\hlstd{(di,} \hlnum{NA}\hlstd{)}
+    \hlstd{shape}\hlopt{$}\hlstd{bearing} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{bearing}\hlstd{(z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)], z[,} \hlopt{-}\hlnum{1}\hlstd{]),} \hlnum{NA}\hlstd{)}
+    \hlstd{shape} \hlkwb{<-} \hlstd{shape[shape}\hlopt{$}\hlstd{length} \hlopt{>} \hlnum{0} \hlopt{|} \hlkwd{is.na}\hlstd{(shape}\hlopt{$}\hlstd{length), ]}
+
+    \hlcom{## Preparation (redefining all functions):}
+    \hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) \{}
+        \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{<=} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{))}
+        \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlkwd{max}\hlstd{(shape}\hlopt{$}\hlstd{distance))} \hlkwd{return}\hlstd{(}\hlkwd{as.numeric}\hlstd{(shape[}\hlkwd{nrow}\hlstd{(shape),} \hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]))}
+        \hlstd{j} \hlkwb{<-} \hlkwd{which.min}\hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlstd{shape}\hlopt{$}\hlstd{distance)} \hlopt{-} \hlnum{1}
+        \hlstd{sj} \hlkwb{<-} \hlstd{shape[j, ]}
+        \hlstd{Psi} \hlkwb{<-} \hlstd{sj}\hlopt{$}\hlstd{bearing}
+        \hlstd{d} \hlkwb{<-} \hlstd{x[}\hlnum{1}\hlstd{]} \hlopt{-} \hlstd{sj}\hlopt{$}\hlstd{distance}
+
+        \hlcom{## only do the calculations if we need to!}
+        \hlkwa{if} \hlstd{(d} \hlopt{==} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(}\hlkwd{as.numeric}\hlstd{(sj[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]))}
+        \hlkwd{partialSegment}\hlstd{(}\hlkwd{as.numeric}\hlstd{(sj[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]), Psi, d)}
+    \hlstd{\}}
+    \hlcom{## The likelihood:}
+    \hlstd{lhood} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{x}\hlstd{)}
+        \hlkwd{dnorm}\hlstd{(}\hlkwd{distanceFlat}\hlstd{(y,} \hlkwd{h}\hlstd{(x)),} \hlnum{0}\hlstd{,} \hlkwc{sd} \hlstd{= GPS.error)} \hlopt{*}
+            \hlkwd{ifelse}\hlstd{(x[}\hlnum{2}\hlstd{]} \hlopt{<=} \hlnum{0}\hlstd{,} \hlnum{0.000001}\hlstd{,} \hlnum{1}\hlstd{)}
+    \hlcom{## The random component:}
+    \hlstd{pw} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{n}\hlstd{)}
+        \hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{, sig.e)}
+
+    \hlcom{## The formal model ... will definitely change!!!}
+    \hlstd{A} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{)} \hlkwd{cbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(d,} \hlnum{1}\hlstd{))}
+    \hlstd{G} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{)} \hlkwd{rbind}\hlstd{(d}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, d)}
+    \hlstd{fn} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{u}\hlstd{,} \hlkwc{w}\hlstd{)} \hlcom{## x: [distance, velocity]; u: [delta]; w: [error]}
+        \hlkwd{structure}\hlstd{(}\hlkwd{A}\hlstd{(u)} \hlopt{%*%} \hlstd{x} \hlopt{+} \hlkwd{G}\hlstd{(u)} \hlopt{%*%} \hlstd{w,}
+                  \hlkwc{.Dimnames} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"distance"}\hlstd{,} \hlstr{"speed"}\hlstd{),} \hlkwa{NULL}\hlstd{))}
+
+    \hlcom{## Data prep:}
+    \hlstd{y} \hlkwb{<-} \hlkwd{rbind}\hlstd{(data}\hlopt{$}\hlstd{lon, data}\hlopt{$}\hlstd{lat)}
+    \hlstd{t} \hlkwb{<-} \hlstd{data}\hlopt{$}\hlstd{time}
+    \hlstd{Delta} \hlkwb{<-} \hlkwd{diff}\hlstd{(t)}
+    \hlstd{M} \hlkwb{<-} \hlkwd{length}\hlstd{(Delta)}  \hlcom{## the number of "true" observations...?}
+
+    \hlcom{## Matrix prep:}
+    \hlstd{hx} \hlkwb{<-} \hlstd{hxhat} \hlkwb{<-} \hlstd{xxhat} \hlkwb{<-} \hlstd{xx} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{, N, M} \hlopt{+} \hlnum{1}\hlstd{))}
+
+    \hlcom{## Initialise:}
+    \hlstd{xx[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{x0}
+
+    \hlcom{## run the simulations}
+    \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{M) \{}
+        \hlstd{xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{fn}\hlstd{(xx[,,i], Delta[i],} \hlkwd{pw}\hlstd{(N))}
+        \hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood}\hlstd{(y[,i}\hlopt{+}\hlnum{1}\hlstd{], xi))}
+        \hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
+        \hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
+        \hlstd{xx[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{xxhat[,ii,i}\hlopt{+}\hlnum{1}\hlstd{]}
+
+        \hlstd{hxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{, h)}
+        \hlstd{hx[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{apply}\hlstd{(xx[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{, h)}
+    \hlstd{\}}
+
+    \hlstd{res} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{Xhat} \hlstd{= xxhat,}
+                \hlkwc{X} \hlstd{= xx,}
+                \hlkwc{HXhat} \hlstd{= hxhat,}
+                \hlkwc{HX} \hlstd{= hx,}
+                \hlkwc{y} \hlstd{= y,} \hlkwc{t} \hlstd{= t,} \hlkwc{M} \hlstd{= M,} \hlkwc{N} \hlstd{= N)}
+    \hlkwd{class}\hlstd{(res)} \hlkwb{<-} \hlstr{"pf.fit"}
+
+    \hlstd{res}
+\hlstd{\}}
+
+\hlstd{plot.pf.fit} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{shape.id}\hlstd{,} \hlkwc{obs} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{conn} \hlstd{= con) \{}
+    \hlkwd{plotShape}\hlstd{(sID, conn)}
+    \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{HXhat[}\hlnum{1}\hlstd{,,obs], x}\hlopt{$}\hlstd{HXhat[}\hlnum{2}\hlstd{,,obs],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{)}
+    \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{HX[}\hlnum{1}\hlstd{,,obs], x}\hlopt{$}\hlstd{HX[}\hlnum{2}\hlstd{,,obs],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
+    \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{y[}\hlnum{1}\hlstd{,obs], x}\hlopt{$}\hlstd{y[}\hlnum{2}\hlstd{,obs],} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{)}
+\hlstd{\}}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\subsection{Modelling the First Day}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## by manual inspection, filter only observations that occur on the route:}
+\hlstd{day1onroute} \hlkwb{<-} \hlstd{day1[}\hlnum{5}\hlopt{:}\hlnum{17}\hlstd{, ]}
+\hlstd{day1.results} \hlkwb{<-} \hlkwd{particleFilter}\hlstd{(day1onroute, tripShape)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{3}\hlstd{,} \hlnum{2}\hlstd{))}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{day1.results}\hlopt{$}\hlstd{M)}
+    \hlkwd{plot}\hlstd{(day1.results, sID, i}\hlopt{+}\hlnum{1}\hlstd{, mbta)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/plot_first_day-1} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=\maxwidth]{figure/plot_first_day-2} 
+
+}
+
+
+
+\end{knitrout}
+
+Clearly, the randomness isn't corrently being modelled---but this makes sense! We are using a
+Newtonian dynamics model, but that doesn't really apply to a bus that is stopping and starting at
+bus stops! We should be taking into account
+\begin{enumerate}
+\item the (typical) time taken to travel from stop $i$ to stop $i+k$, and
+\item the dwell time at stops $i,i+1,\ldots,i+k-1$.
+\end{enumerate}
 
 \end{document}

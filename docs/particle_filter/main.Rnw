@@ -27,7 +27,7 @@ library(RSQLite)
 \newcommand{\bfn}{\boldsymbol{f}}
 \newcommand{\bF}{\boldsymbol{F}}
 \newcommand{\bg}{\boldsymbol{g}}
-\newcommand{\bH}{\boldsymbol{H}}
+\newcommand{\bH}{\boldsymbol{2H}}
 \newcommand{\bK}{\boldsymbol{K}}
 \newcommand{\bQ}{\boldsymbol{Q}}
 \newcommand{\bR}{\boldsymbol{R}}
@@ -436,6 +436,7 @@ plotShape <- function(id, conn = con) {
                                    FROM shapes WHERE shape_id='%s'", id))
     plot(sh$lon, sh$lat, type = "l", asp = 1,
          xlab = "Longitude", ylab = "Latitude")
+    points(sh$lon[1], sh$lat[1], pch = 19)
     invisible(sh)
 }
 
@@ -892,16 +893,190 @@ points(dist, speed, pch = 3, cex = 0.5, col = "#00990070")
 
 \section{MBTA GTFS Realtime Feed}
 
-Thankfully, we can get some data! 
-
-<<>>=
+Thankfully, we can get some data! The connection to the database is:
+<<mbta_connection>>=
 mbta <- dbConnect(SQLite(), "mbta_gtfsrt.db")
+@ 
 
-hist <- dbGetQuery(mbta, "SELECT DISTINCT trip_id FROM vehicle_positions")
+And the historical data can be sorted through nicely:
+<<location_history,cache=TRUE>>=
+hist <- dbGetQuery(
+    mbta, "SELECT v.trip_id, t.shape_id, COUNT(v.trip_id) AS n
+           FROM vehicle_positions AS v, 
+                trips AS t, routes AS r
+           WHERE v.trip_id=t.trip_id
+             AND t.route_id=r.route_id
+             AND r.route_type=3
+           GROUP BY v.trip_id ORDER BY n DESC")
+head(hist)
+@ 
 
+So, trip \verb+\Sexpr{hist[1,1]}+ looks pretty popular. We'll get some useful information for that.
+<<trip_route_info>>=
+tID <- hist[1, "trip_id"]
+sID <- hist[1, "shape_id"]
+plotShape(sID, mbta)
 @ 
 
 
+\subsection{Data Sorting}
 
+We've first got to sort through the data. We will start at the beginning (the first trip) and work
+our way through---hopefully we will be able to start generating priors and stuff!
+
+<<data_sorting1,cache=TRUE>>=
+# Get all days
+all.dates <- dbGetQuery(
+    mbta,
+    sprintf("SELECT DISTINCT trip_start_date FROM vehicle_positions WHERE trip_id='%s'",
+            tID))
+(dates <- all.dates$trip_start_date)
+@ 
+
+We now need a function to obtain all of the necessary data for a trip on a given day:
+<<data_trip_day>>=
+getTripData <- function(date, id, conn = con) {
+    d <- dbGetQuery(conn,
+                    sprintf("SELECT position_latitude AS lat, position_longitude AS lon,
+                                    timestamp AS time
+                             FROM vehicle_positions
+                             WHERE trip_id='%s' AND trip_start_date='%s'
+                             ORDER BY timestamp", id, date))
+    attr(d, "date") <- date
+    attr(d, "trip_id") <- id
+    class(d) <- c("triphistory", class(d))
+    d
+}
+print.triphistory <- function(x, ...) {
+    print.data.frame(x)
+    cat("\n")
+    print(structure(c(attr(x, "date"), attr(x, "trip_id")), .Names = c("date", "trip_id")))
+}
+points.triphistory <- function(x, ...) {
+    points(x$lon, x$lat, col = "red", cex = 0.5, pch = 4)
+}
+@
+
+So, on the first day:
+<<first_day,cache=TRUE>>=
+day1 <- getTripData(dates[1], tID, mbta)
+head(day1)
+
+tripShape <- plotShape(sID, mbta)
+points(day1)
+@ 
+
+So, it's obvious that some points don't belong to the trip---they are of where the bus went
+before/after it started/finished (we won't worry about them for now).
+
+\subsection{A Particle Filter Modelling Function}
+
+Previously we've just copy+pasted the necessary code. Now we'll make a function to do it moreorless properly.
+<<PF_function>>=
+particleFilter <- function(data, shape,
+                           N = 200,
+                           x0 = rbind(0, rlnorm(N, 0, 2)),
+                           GPS.error = 20,
+                           sig.e = 0.03,
+                           ...) {
+    ## Sort out the shape information (using previously defined functions)
+    z <- t(shape)
+    di <- distanceFlat(z[, -ncol(z)], z[, -1])
+    shape$distance <- c(0, cumsum(di))
+    shape$length <- c(di, NA)
+    shape$bearing <- c(bearing(z[, -ncol(z)], z[, -1]), NA)
+    shape <- shape[shape$length > 0 | is.na(shape$length), ]
+    
+    ## Preparation (redefining all functions):
+    h <- function(x) {
+        if (x[1] <= 0) return(c(0, 0))
+        if (x[1] > max(shape$distance)) return(as.numeric(shape[nrow(shape), 1:2]))
+        j <- which.min(x[1] > shape$distance) - 1
+        sj <- shape[j, ]
+        Psi <- sj$bearing
+        d <- x[1] - sj$distance
+        
+        ## only do the calculations if we need to!
+        if (d == 0) return(as.numeric(sj[1:2]))
+        partialSegment(as.numeric(sj[1:2]), Psi, d)
+    }
+    ## The likelihood:
+    lhood <- function(y, x)
+        dnorm(distanceFlat(y, h(x)), 0, sd = GPS.error) *
+            ifelse(x[2] <= 0, 0.000001, 1)
+    ## The random component:
+    pw <- function(n)
+        rnorm(n, 0, sig.e)
+    
+    ## The formal model ... will definitely change!!!
+    A <- function(d) cbind(c(1, 0), c(d, 1))
+    G <- function(d) rbind(d^2/2, d)
+    fn <- function(x, u, w) ## x: [distance, velocity]; u: [delta]; w: [error]
+        structure(A(u) %*% x + G(u) %*% w, 
+                  .Dimnames = list(c("distance", "speed"), NULL))
+    
+    ## Data prep:
+    y <- rbind(data$lon, data$lat)
+    t <- data$time
+    Delta <- diff(t)
+    M <- length(Delta)  ## the number of "true" observations...?
+    
+    ## Matrix prep:
+    hx <- hxhat <- xxhat <- xx <- array(NA, c(2, N, M + 1))
+    
+    ## Initialise:
+    xx[,,1] <- x0
+    
+    ## run the simulations
+    for (i in 1:M) {
+        xxhat[,,i+1] <- fn(xx[,,i], Delta[i], pw(N))
+        weights <- apply(xxhat[,,i+1], 2, function(xi) lhood(y[,i+1], xi))
+        qi <- weights / sum(weights)
+        ii <- sample(N, N, TRUE, qi)
+        xx[,,i+1] <- xxhat[,ii,i+1]
+        
+        hxhat[,,i+1] <- apply(xxhat[,,i+1], 2, h)
+        hx[,,i+1] <- apply(xx[,,i+1], 2, h)
+    }
+    
+    res <- list(Xhat = xxhat, 
+                X = xx, 
+                HXhat = hxhat, 
+                HX = hx,
+                y = y, t = t, M = M, N = N)
+    class(res) <- "pf.fit"
+    
+    res
+}
+
+plot.pf.fit <- function(x, shape.id, obs = 1, conn = con) {
+    plotShape(sID, conn)
+    points(x$HXhat[1,,obs], x$HXhat[2,,obs], pch = 4, col = "#00009930")
+    points(x$HX[1,,obs], x$HX[2,,obs], pch = 4, cex = 0.5, col = "#00990070")
+    points(x$y[1,obs], x$y[2,obs], col = "red", pch = 19, cex = 0.4)
+}
+@ 
+
+\subsection{Modelling the First Day}
+
+<<first_day_model,cache=TRUE>>=
+## by manual inspection, filter only observations that occur on the route:
+day1onroute <- day1[5:17, ]
+day1.results <- particleFilter(day1onroute, tripShape)
+@ 
+
+<<plot_first_day,fig.width=9,fig.height=10>>=
+par(mfrow = c(3, 2))
+for (i in 1:day1.results$M)
+    plot(day1.results, sID, i+1, mbta)
+@ 
+
+Clearly, the randomness isn't corrently being modelled---but this makes sense! We are using a
+Newtonian dynamics model, but that doesn't really apply to a bus that is stopping and starting at
+bus stops! We should be taking into account
+\begin{enumerate}
+\item the (typical) time taken to travel from stop $i$ to stop $i+k$, and
+\item the dwell time at stops $i,i+1,\ldots,i+k-1$.
+\end{enumerate}
 
 \end{document}
