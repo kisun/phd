@@ -1467,6 +1467,9 @@ Previously we've just copy+pasted the necessary code. Now we'll make a function 
         \hlstd{xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{fn}\hlstd{(xx[,,i], Delta[i],} \hlkwd{pw}\hlstd{(N))}
         \hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood}\hlstd{(y[,i}\hlopt{+}\hlnum{1}\hlstd{], xi))}
         \hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
+        \hlkwa{if} \hlstd{(}\hlkwd{any}\hlstd{(}\hlkwd{is.na}\hlstd{(qi)))}
+            \hlstd{qi} \hlkwb{<-} \hlkwa{NULL}
+
         \hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
         \hlstd{xx[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{xxhat[,ii,i}\hlopt{+}\hlnum{1}\hlstd{]}
 
@@ -1537,5 +1540,188 @@ bus stops! We should be taking into account
 \item the (typical) time taken to travel from stop $i$ to stop $i+k$, and
 \item the dwell time at stops $i,i+1,\ldots,i+k-1$.
 \end{enumerate}
+
+
+\subsection{Remaining Days}
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{4}\hlstd{,} \hlnum{2}\hlstd{))}
+
+\hlstd{days} \hlkwb{<-} \hlkwd{lapply}\hlstd{(}\hlnum{2} \hlopt{:}\hlnum{9}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{)} \hlkwd{getTripData}\hlstd{(dates[i], tID, mbta))}
+\hlkwd{invisible}\hlstd{(}\hlkwd{lapply}\hlstd{(days,} \hlkwa{function}\hlstd{(}\hlkwc{day}\hlstd{) \{}
+    \hlkwd{plotShape}\hlstd{(sID, mbta)}
+    \hlkwd{points}\hlstd{(day)}
+\hlstd{\}))}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=0.8\textwidth]{figure/days_data-1} 
+
+}
+
+
+
+\end{knitrout}
+
+It looks like the ``trip ID'' being reported isn't updating correctly.
+The best way around this would be to instead of ``block ID'' and decide for ourselves which trip the
+bus is on.
+However, the current state of the Auckland GTFS doesn't suppy block IDs to routes, so its difficult
+(if not impossible) to obtain this information. 
+
+If we were, however, to break away from our Newtonian physics based model, and instead use some
+prior knowledge about speed at a given distance into a trip, we should be able to make use of the
+``half'' data sets.
+
+
+
+\section{Block and Trips}
+
+From the MBTA feed we can get block information, so:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{getShape} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{id}\hlstd{,} \hlkwc{conn}\hlstd{,} \hlkwc{include.id} \hlstd{=} \hlnum{FALSE}\hlstd{) \{}
+    \hlstd{sh} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(conn,}
+                     \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT shape_pt_lon AS lon, shape_pt_lat AS lat
+                              FROM shapes WHERE shape_id='%s'"}\hlstd{, id))}
+    \hlkwa{if} \hlstd{(include.id)}
+        \hlstd{sh}\hlopt{$}\hlstd{shape_id} \hlkwb{<-} \hlstd{id}
+
+    \hlkwd{class}\hlstd{(sh)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.shape"}\hlstd{,} \hlkwd{class}\hlstd{(sh))}
+    \hlstd{sh}
+\hlstd{\}}
+\hlstd{plot.gtfs.shape} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{add} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{...}\hlstd{) \{}
+    \hlkwa{if} \hlstd{(add)}
+        \hlkwd{lines}\hlstd{(x}\hlopt{$}\hlstd{lon, x}\hlopt{$}\hlstd{lat, ...)}
+    \hlkwa{else}
+        \hlkwd{plot}\hlstd{(x}\hlopt{$}\hlstd{lon, x}\hlopt{$}\hlstd{lat,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{,} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,}
+             \hlkwc{xlab} \hlstd{=} \hlstr{"Longitude"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Latitude"}\hlstd{, ...)}
+
+    \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{lon[}\hlnum{1}\hlstd{], x}\hlopt{$}\hlstd{lat[}\hlnum{1}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+\hlstd{\}}
+
+\hlstd{getBlock} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{id}\hlstd{,} \hlkwc{conn}\hlstd{) \{}
+    \hlstd{blockInfo} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
+        \hlstd{conn,}
+        \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT block_id, trip_id, route_id, shape_id
+                 FROM trips WHERE block_id='%s'"}\hlstd{, bID))}
+
+    \hlstd{blockShapes} \hlkwb{<-} \hlkwd{lapply}\hlstd{(}\hlkwd{unique}\hlstd{(blockInfo}\hlopt{$}\hlstd{shape_id),}
+                          \hlkwa{function}\hlstd{(}\hlkwc{id}\hlstd{)} \hlkwd{getShape}\hlstd{(id, conn,} \hlkwc{include.id} \hlstd{=} \hlnum{TRUE}\hlstd{))}
+    \hlkwd{names}\hlstd{(blockShapes)} \hlkwb{<-} \hlkwd{unique}\hlstd{(blockInfo}\hlopt{$}\hlstd{shape_id)}
+    \hlkwd{class}\hlstd{(blockShapes)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.block.shapes"}\hlstd{)}
+
+    \hlstd{fullPath} \hlkwb{<-} \hlkwd{do.call}\hlstd{(rbind, blockShapes[blockInfo}\hlopt{$}\hlstd{shape_id])}
+    \hlstd{blockPath} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{lon} \hlstd{= fullPath}\hlopt{$}\hlstd{lon,} \hlkwc{lat} \hlstd{= fullPath}\hlopt{$}\hlstd{lat)}
+    \hlkwd{class}\hlstd{(blockPath)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.shape"}\hlstd{,} \hlkwd{class}\hlstd{(blockPath))}
+
+    \hlstd{out} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{trips} \hlstd{= blockInfo,}
+                \hlkwc{shapes} \hlstd{= blockShapes,}
+                \hlkwc{path} \hlstd{= blockPath)}
+
+    \hlkwd{class}\hlstd{(out)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.block"}\hlstd{)}
+    \hlstd{out}
+\hlstd{\}}
+\hlstd{print.gtfs.block} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{...}\hlstd{) \{}
+    \hlkwd{print}\hlstd{(x}\hlopt{$}\hlstd{trips)}
+\hlstd{\}}
+\hlstd{head.gtfs.block} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{n} \hlstd{=} \hlnum{6}\hlstd{,} \hlkwc{...}\hlstd{)}
+    \hlkwd{head}\hlstd{(x}\hlopt{$}\hlstd{trips, n, ...)}
+\hlstd{plot.gtfs.block} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{...}\hlstd{)}
+    \hlkwd{plot}\hlstd{(x}\hlopt{$}\hlstd{shapes)}
+\hlstd{plot.gtfs.block.shapes} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{highlight}\hlstd{,}
+                                   \hlkwc{lty} \hlstd{=} \hlkwd{rep}\hlstd{(}\hlnum{3}\hlstd{,} \hlkwd{length}\hlstd{(x)),}
+                                   \hlkwc{...}\hlstd{) \{}
+    \hlcom{# plot ALL of the shapes...}
+    \hlstd{all} \hlkwb{<-} \hlkwd{do.call}\hlstd{(rbind, x)}
+
+    \hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,}
+         \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(all}\hlopt{$}\hlstd{lon),} \hlkwc{ylim} \hlstd{=} \hlkwd{range}\hlstd{(all}\hlopt{$}\hlstd{lat),}
+         \hlkwc{xlab} \hlstd{=} \hlstr{"Longitude"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Latitude"}\hlstd{)}
+
+    \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{missing}\hlstd{(highlight))}
+        \hlstd{lty[highlight]} \hlkwb{<-} \hlnum{1}
+
+    \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlkwd{length}\hlstd{(x))}
+        \hlkwd{plot}\hlstd{(x[[i]],} \hlkwc{add} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{lty} \hlstd{= lty[i])}
+\hlstd{\}}
+
+\hlstd{blockID} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(mbta,}
+                        \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT block_id
+                                 FROM trips WHERE trip_id='%s'"}\hlstd{, tID))}
+\hlstd{bID} \hlkwb{<-} \hlstd{blockID}\hlopt{$}\hlstd{block_id}
+\hlstd{block} \hlkwb{<-} \hlkwd{getBlock}\hlstd{(bID, mbta)}
+\hlkwd{head}\hlstd{(block)}
+\end{alltt}
+\begin{verbatim}
+##   block_id  trip_id route_id shape_id
+## 1  S742-84 26206576      742  7420014
+## 2  S742-84 26206570      742  7420014
+## 3  S742-84 26206574      742  7420014
+## 4  S742-84 26206578      742  7420014
+## 5  S742-84 26206580      742  7420014
+## 6  S742-84 26206582      742  7420014
+\end{verbatim}
+\begin{alltt}
+\hlkwd{plot}\hlstd{(block)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-4-1} 
+
+}
+
+
+
+\end{knitrout}
+
+We can see that a ``block'' consists of a lot of very similar routes (in this case, anyway).
+So, instead of obtaining data for the same \emph{trip}, we could just grab a days worth of data for
+a block, like this:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{getBlockData} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{date}\hlstd{,} \hlkwc{id}\hlstd{,} \hlkwc{conn}\hlstd{) \{}
+    \hlstd{b} \hlkwb{<-} \hlkwd{getBlock}\hlstd{(id, conn)}
+    \hlcom{#d <- lapply(b$trips$trip_id, function(ID) getTripData(date, ID, conn))}
+    \hlstd{d} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
+        \hlstd{conn,}
+        \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT position_latitude AS lat, position_longitude AS lon,
+                        timestamp AS time, trip_id
+                 FROM vehicle_positions
+                 WHERE trip_id IN (%s) AND trip_start_date='%s'
+                 ORDER BY timestamp"}\hlstd{,}
+                \hlkwd{paste0}\hlstd{(b}\hlopt{$}\hlstd{trips}\hlopt{$}\hlstd{trip_id,} \hlkwc{collapse} \hlstd{=} \hlstr{","}\hlstd{), date))}
+
+    \hlkwd{class}\hlstd{(d)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"blockhistory"}\hlstd{,} \hlstr{"triphistory"}\hlstd{,} \hlkwd{class}\hlstd{(d))}
+    \hlstd{d}
+\hlstd{\}}
+\hlstd{block.history} \hlkwb{<-} \hlkwd{getBlockData}\hlstd{(}\hlstr{"20150820"}\hlstd{, bID, mbta)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{plot}\hlstd{(block.history)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/block_fit_model-1} 
+
+}
+
+
+\begin{kframe}\begin{alltt}
+\hlstd{block.fit} \hlkwb{<-} \hlkwd{particleFilter}\hlstd{(block.history, block}\hlopt{$}\hlstd{path)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
 
 \end{document}

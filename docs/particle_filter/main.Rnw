@@ -1032,6 +1032,9 @@ particleFilter <- function(data, shape,
         xxhat[,,i+1] <- fn(xx[,,i], Delta[i], pw(N))
         weights <- apply(xxhat[,,i+1], 2, function(xi) lhood(y[,i+1], xi))
         qi <- weights / sum(weights)
+        if (any(is.na(qi)))
+            qi <- NULL
+            
         ii <- sample(N, N, TRUE, qi)
         xx[,,i+1] <- xxhat[,ii,i+1]
         
@@ -1078,5 +1081,147 @@ bus stops! We should be taking into account
 \item the (typical) time taken to travel from stop $i$ to stop $i+k$, and
 \item the dwell time at stops $i,i+1,\ldots,i+k-1$.
 \end{enumerate}
+
+
+\subsection{Remaining Days}
+
+
+<<days_data,cache=TRUE,fig.height=10,out.width="0.8\\textwidth">>=
+par(mfrow = c(4, 2))
+
+days <- lapply(2 :9, function(i) getTripData(dates[i], tID, mbta))
+invisible(lapply(days, function(day) {
+    plotShape(sID, mbta)
+    points(day)
+}))
+@ 
+
+It looks like the ``trip ID'' being reported isn't updating correctly.
+The best way around this would be to instead of ``block ID'' and decide for ourselves which trip the
+bus is on.
+However, the current state of the Auckland GTFS doesn't suppy block IDs to routes, so its difficult
+(if not impossible) to obtain this information. 
+
+If we were, however, to break away from our Newtonian physics based model, and instead use some
+prior knowledge about speed at a given distance into a trip, we should be able to make use of the
+``half'' data sets.
+
+
+
+\section{Block and Trips}
+
+From the MBTA feed we can get block information, so:
+<<>>=
+getShape <- function(id, conn, include.id = FALSE) {
+    sh <- dbGetQuery(conn, 
+                     sprintf("SELECT shape_pt_lon AS lon, shape_pt_lat AS lat
+                              FROM shapes WHERE shape_id='%s'", id))
+    if (include.id)
+        sh$shape_id <- id
+    
+    class(sh) <- c("gtfs.shape", class(sh))
+    sh
+}
+plot.gtfs.shape <- function(x, add = FALSE, ...) {
+    if (add)
+        lines(x$lon, x$lat, ...)
+    else
+        plot(x$lon, x$lat, type = "l", asp = 1,
+             xlab = "Longitude", ylab = "Latitude", ...)
+    
+    points(x$lon[1], x$lat[1], pch = 19)
+}
+
+getBlock <- function(id, conn) {
+    blockInfo <- dbGetQuery(
+        conn,
+        sprintf("SELECT block_id, trip_id, route_id, shape_id
+                 FROM trips WHERE block_id='%s'", bID))
+    
+    blockShapes <- lapply(unique(blockInfo$shape_id),
+                          function(id) getShape(id, conn, include.id = TRUE))
+    names(blockShapes) <- unique(blockInfo$shape_id)
+    class(blockShapes) <- c("gtfs.block.shapes")
+    
+    fullPath <- do.call(rbind, blockShapes[blockInfo$shape_id])
+    blockPath <- data.frame(lon = fullPath$lon, lat = fullPath$lat)
+    class(blockPath) <- c("gtfs.shape", class(blockPath))
+    
+    out <- list(trips = blockInfo,
+                shapes = blockShapes,
+                path = blockPath)
+    
+    class(out) <- c("gtfs.block")
+    out
+}
+print.gtfs.block <- function(x, ...) {
+    print(x$trips)
+}
+head.gtfs.block <- function(x, n = 6, ...)
+    head(x$trips, n, ...)
+plot.gtfs.block <- function(x, ...)
+    plot(x$shapes)
+plot.gtfs.block.shapes <- function(x, highlight, 
+                                   lty = rep(3, length(x)), 
+                                   ...) {
+    # plot ALL of the shapes...
+    all <- do.call(rbind, x)
+    
+    plot(NA, type = "n", asp = 1,
+         xlim = range(all$lon), ylim = range(all$lat),
+         xlab = "Longitude", ylab = "Latitude")
+    
+    if (!missing(highlight))
+        lty[highlight] <- 1
+    
+    for (i in 1:length(x)) 
+        plot(x[[i]], add = TRUE, lty = lty[i])
+}
+
+blockID <- dbGetQuery(mbta,
+                        sprintf("SELECT block_id
+                                 FROM trips WHERE trip_id='%s'", tID))
+bID <- blockID$block_id
+block <- getBlock(bID, mbta)
+head(block)
+plot(block)
+@ 
+
+We can see that a ``block'' consists of a lot of very similar routes (in this case, anyway).
+So, instead of obtaining data for the same \emph{trip}, we could just grab a days worth of data for
+a block, like this:
+<<day_block_data,cache=TRUE>>=
+getBlockData <- function(date, id, conn) {
+    b <- getBlock(id, conn)
+    #d <- lapply(b$trips$trip_id, function(ID) getTripData(date, ID, conn))
+    d <- dbGetQuery(
+        conn,
+        sprintf("SELECT position_latitude AS lat, position_longitude AS lon,
+                        timestamp AS time, trip_id
+                 FROM vehicle_positions
+                 WHERE trip_id IN (%s) AND trip_start_date='%s'
+                 ORDER BY timestamp",
+                paste0(b$trips$trip_id, collapse = ","), date))
+    
+    class(d) <- c("blockhistory", "triphistory", class(d))
+    d
+}
+block.history <- getBlockData("20150820", bID, mbta)
+@ 
+
+<<block_fit_model,cache=TRUE>>=
+plot.pf.blockfit <- function(x, obs = 1, conn = con) {
+    plot(block)
+    points(x$HXhat[1,,obs], x$HXhat[2,,obs], pch = 4, col = "#00009930")
+    points(x$HX[1,,obs], x$HX[2,,obs], pch = 4, cex = 0.5, col = "#00990070")
+    points(x$y[1,obs], x$y[2,obs], col = "red", pch = 19, cex = 0.4)
+}
+
+block.fit <- particleFilter(block.history, block$path)
+class(block.fit) <- c("pf.blockfit", class(block.fit))
+
+plot(block.fit, 49)
+@ 
+
 
 \end{document}
