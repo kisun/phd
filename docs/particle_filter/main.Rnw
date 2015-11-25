@@ -1216,12 +1216,10 @@ plot.pf.blockfit <- function(x, obs = 1, conn = con) {
     points(x$HX[1,,obs], x$HX[2,,obs], pch = 4, cex = 0.5, col = "#00990070")
     points(x$y[1,obs], x$y[2,obs], col = "red", pch = 19, cex = 0.4)
 }
-
-block.fit <- particleFilter(block.history, block$path)
-class(block.fit) <- c("pf.blockfit", class(block.fit))
-
-plot(block.fit, 49)
 @ 
+
+The trouble here is that the model doesn't actually know where it is, and gets completely and
+utterly lost, so we need some method for limiting where it can be.
 
 
 \end{document}
