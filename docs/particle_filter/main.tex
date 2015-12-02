@@ -56,7 +56,12 @@
 \usepackage{fullpage}
 \usepackage{parskip}
 
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Loading required package: DBI}}\end{kframe}
+\end{knitrout}
 
 
 \newcommand{\bx}{\boldsymbol{x}}
@@ -1004,7 +1009,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##    0.92    0.00    0.92
+##   1.334   0.000   1.335
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1193,7 +1198,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##   2.648   0.004   2.654
+##   3.932   0.008   3.943
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1214,6 +1219,10 @@ How about speed over  time?
 \hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(t),} \hlkwc{ylim} \hlstd{=} \hlkwd{range}\hlstd{(speed.hist, speedhat.hist),}
      \hlkwc{xlab} \hlstd{=} \hlstr{"Time (s)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Speed (m/s)"}\hlstd{)}
 \hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{M) \{}
+    \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i}\hlopt{+}\hlnum{1}\hlstd{], N), speedhat.hist[, i],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{)}
+    \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i}\hlopt{+}\hlnum{1}\hlstd{], N), speed.hist[, i],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
+\hlstd{\}}
 \end{alltt}
 \end{kframe}
 
@@ -1222,17 +1231,7 @@ How about speed over  time?
 }
 
 
-\begin{kframe}\begin{alltt}
-\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{M) \{}
-    \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i}\hlopt{+}\hlnum{1}\hlstd{], N), speedhat.hist[, i],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{)}
-    \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i}\hlopt{+}\hlnum{1}\hlstd{], N), speed.hist[, i],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
-\hlstd{\}}
-\end{alltt}
 
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in points(rep(t[i + 1], N), speedhat.hist[, i], pch = 4, col = "{}\#00009930"{}): internal error -3 in R\_decompress1}}
-
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in points(rep(t[i + 1], N), speedhat.hist[, i], pch = 4, col = "{}\#00009930"{}): lazy-load database '/home/tell029/Documents/uni/phd/docs/particle\_filter/cache/simulation\_init\_sched\_9b52d8c2c4c2996a54256ac971826a2a.rdb' is corrupt}}\end{kframe}
 \end{knitrout}
 
 From that, it looks like we need to put a positive-speed constraint on the proposal distribution;
@@ -1292,18 +1291,18 @@ And the historical data can be sorted through nicely:
 \hlkwd{head}\hlstd{(hist)}
 \end{alltt}
 \begin{verbatim}
-##    trip_id shape_id  n
-## 1 28244696   220103 20
-## 2 28244702   220103 20
-## 3 28244725   450048 20
-## 4 28244759   440064 20
-## 5 28244794   650025 20
-## 6 28244806   550024 20
+##    trip_id shape_id    n
+## 1 27638244  7420013 2399
+## 2 27638190  7420013 2205
+## 3 27508685  5530028 1393
+## 4 27936496  4490021 1275
+## 5 27937019  4590008 1211
+## 6 27501654   660056 1202
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
 
-So, trip \verb+28244696+ looks pretty popular. We'll get some useful information for that.
+So, trip \verb+27638244+ looks pretty popular. We'll get some useful information for that.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -1338,7 +1337,8 @@ our way through---hopefully we will be able to start generating priors and stuff
 \hlstd{(dates} \hlkwb{<-} \hlstd{all.dates}\hlopt{$}\hlstd{trip_start_date)}
 \end{alltt}
 \begin{verbatim}
-## [1] "20151201"
+## [1] "20150817" "20150820" "20150824" "20150825" "20150826" "20150827"
+## [7] "20150831" "20150901" "20150903"
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -1380,15 +1380,15 @@ So, on the first day:
 \end{alltt}
 \begin{verbatim}
 ##        lat       lon       time
-## 1 42.29300 -71.08129 1449014796
-## 2 42.29300 -71.08129 1449014796
-## 3 42.29300 -71.08129 1449014796
-## 4 42.29472 -71.08710 1449014877
-## 5 42.29472 -71.08710 1449014877
-## 6 42.29482 -71.08747 1449014938
+## 1 42.35349 -71.05190 1439817349
+## 2 42.35273 -71.05531 1439817410
+## 3 42.35183 -71.05594 1439817440
+## 4 42.35192 -71.05589 1439817501
+## 5 42.35261 -71.05546 1439817561
+## 6 42.35127 -71.04459 1439817719
 ## 
 ##       date    trip_id 
-## "20151201" "28244696"
+## "20150817" "27638244"
 \end{verbatim}
 \begin{alltt}
 \hlstd{tripShape} \hlkwb{<-} \hlkwd{plotShape}\hlstd{(sID, mbta)}
@@ -1664,12 +1664,12 @@ From the MBTA feed we can get block information, so:
 \end{alltt}
 \begin{verbatim}
 ##   block_id  trip_id route_id shape_id
-## 1  C22-161 28253208       15   150077
-## 2  C22-161 28260076       15   150077
-## 3  C22-161 28253206       15   150079
-## 4  C22-161 28252591       15   150079
-## 5  C22-161 27494985       15   150078
-## 6  C22-161 28262423       15   150078
+## 1  S742-84 26206576      742  7420014
+## 2  S742-84 26206570      742  7420014
+## 3  S742-84 26206574      742  7420014
+## 4  S742-84 26206578      742  7420014
+## 5  S742-84 26206580      742  7420014
+## 6  S742-84 26206582      742  7420014
 \end{verbatim}
 \begin{alltt}
 \hlkwd{plot}\hlstd{(block)}
@@ -1705,7 +1705,7 @@ a block, like this:
     \hlkwd{class}\hlstd{(d)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"blockhistory"}\hlstd{,} \hlstr{"triphistory"}\hlstd{,} \hlkwd{class}\hlstd{(d))}
     \hlstd{d}
 \hlstd{\}}
-\hlstd{block.history} \hlkwb{<-} \hlkwd{getBlockData}\hlstd{(}\hlstr{"20150820"}\hlstd{, bID, mbta)}
+\hlstd{block.history} \hlkwb{<-} \hlkwd{getBlockData}\hlstd{(}\hlstr{"20151202"}\hlstd{, bID, mbta)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}

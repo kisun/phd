@@ -1135,8 +1135,12 @@ plot.gtfs.shape <- function(x, add = FALSE, ...) {
 getBlock <- function(id, conn) {
     blockInfo <- dbGetQuery(
         conn,
-        sprintf("SELECT block_id, trip_id, route_id, shape_id
-                 FROM trips WHERE block_id='%s'", bID))
+        sprintf("SELECT t.block_id, t.trip_id, t.route_id, t.shape_id, s.departure_time
+                 FROM trips AS t, stop_times AS s 
+                 WHERE block_id='%s' 
+                   AND t.trip_id=s.trip_id AND s.stop_sequence=1
+                 ORDER BY s.departure_time", 
+                bID))
     
     blockShapes <- lapply(unique(blockInfo$shape_id),
                           function(id) getShape(id, conn, include.id = TRUE))
@@ -1147,9 +1151,22 @@ getBlock <- function(id, conn) {
     blockPath <- data.frame(lon = fullPath$lon, lat = fullPath$lat)
     class(blockPath) <- c("gtfs.shape", class(blockPath))
     
+    schedule <- dbGetQuery(
+        conn,
+        sprintf("SELECT trip_id, stop_id, stop_sequence,
+                        CASE WHEN arrival_time IS NULL 
+                          THEN departure_time 
+                          ELSE arrival_time END AS time,
+                        shape_dist_traveled
+                 FROM stop_times WHERE trip_id IN ('%s') 
+                 ORDER BY time, stop_sequence",
+                paste(blockInfo$trip_id, collapse = "','"))
+    )
+    
     out <- list(trips = blockInfo,
                 shapes = blockShapes,
-                path = blockPath)
+                path = blockPath,
+                schedule = schedule)
     
     class(out) <- c("gtfs.block")
     out
@@ -1224,7 +1241,8 @@ utterly lost, so we need some method for limiting where it can be---queue static
 
 \subsection{Static Schedule GTFS}
 
-
+It appears that the MBTA ``block_id'' is messed up; it's not giving a non-overlapping set of trips
+that a single bus could run (there are overlapping trips!).
 
 
 
