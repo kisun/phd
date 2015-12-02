@@ -1161,21 +1161,21 @@ head.gtfs.block <- function(x, n = 6, ...)
     head(x$trips, n, ...)
 plot.gtfs.block <- function(x, ...)
     plot(x$shapes)
-plot.gtfs.block.shapes <- function(x, highlight, 
-                                   lty = rep(3, length(x)), 
-                                   ...) {
+plot.gtfs.block.shapes <- function(x, highlight = 1, ...) {
     # plot ALL of the shapes...
     all <- do.call(rbind, x)
     
     plot(NA, type = "n", asp = 1,
          xlim = range(all$lon), ylim = range(all$lat),
-         xlab = "Longitude", ylab = "Latitude")
+         xlab = "Longitude", ylab = "Latitude",
+         main = paste("Highlighting route", highlight))
     
-    if (!missing(highlight))
-        lty[highlight] <- 1
-    
-    for (i in 1:length(x)) 
-        plot(x[[i]], add = TRUE, lty = lty[i])
+    for (i in 1:length(x)) {
+        if (highlight[1] == i)
+            plot(x[[i]], add = TRUE, col = "#ff000050", lwd = 3)
+        else
+            plot(x[[i]], add = TRUE, lty = 3)
+    }
 }
 
 blockID <- dbGetQuery(mbta,
@@ -1206,7 +1206,7 @@ getBlockData <- function(date, id, conn) {
     class(d) <- c("blockhistory", "triphistory", class(d))
     d
 }
-block.history <- getBlockData("20150820", bID, mbta)
+block.history <- getBlockData("20151202", bID, mbta)
 @ 
 
 <<block_fit_model,cache=TRUE>>=
