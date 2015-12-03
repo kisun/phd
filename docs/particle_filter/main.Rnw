@@ -1290,7 +1290,8 @@ getBlockAlt <- function(ids, date, conn) {
     class(blockShapes) <- c("gtfs.block.shapes")
     
     fullPath <- do.call(rbind, blockShapes[blockInfo$shape_id])
-    blockPath <- data.frame(lon = fullPath$lon, lat = fullPath$lat)
+    blockPath <- data.frame(lon = fullPath$lon, lat = fullPath$lat,
+                            trip_id = rep(blockInfo$trip_id, sapply(blockShapes, nrow)))
     class(blockPath) <- c("gtfs.shape", class(blockPath))
     
     schedule <- dbGetQuery(
@@ -1357,5 +1358,137 @@ plot(pfit, obs = 30, highlight = 2)
 
 Matching is wrong. Need to restrict distance by time.
 
+
+\subsection{Restricting Distance into Trip by Schedule Time}
+
+<<modified_pf_function,cache=TRUE>>=
+pf2 <- function(block,
+                N = 200,
+                zero.start = TRUE,
+                start.obs = 1,
+                x0 = if (zero.start) rbind(0, rlnorm(N, 0, 2)) 
+                     else rbind(runif(0, max(shape$distance), N),
+                                rlnorm(N, 0, 2)),
+                GPS.error = 20,
+                sig.e = 0.03,
+                progress = FALSE,
+                ...) {
+    shape <- block$path
+    data <- block$history[start.obs:nrow(block$history), ]
+    trips <- block$trips
+    trips$end_time <- hms(c(trips$departure_time[-1]), tz = "EST5EDT")
+    
+    ## Sort out the shape information (using previously defined functions)
+    z <- t(shape[,1:2])
+    di <- distanceFlat(z[, -ncol(z)], z[, -1])
+    shape$distance <- c(0, cumsum(di))
+    shape$length <- c(di, NA)
+    shape$bearing <- c(bearing(z[, -ncol(z)], z[, -1]), NA)
+    shape <- shape[shape$length > 0 | is.na(shape$length), ]
+        
+    ## Preparation (redefining all functions):
+    h <- function(x) {
+        if (x[1] <= 0) return(c(0, 0))
+        if (x[1] > max(shape$distance)) return(as.numeric(shape[nrow(shape), 1:2]))
+        j <- which.min(x[1] > shape$distance) - 1
+        sj <- shape[j, ]
+        Psi <- sj$bearing
+        d <- x[1] - sj$distance
+        
+        ## only do the calculations if we need to!
+        if (d == 0) return(as.numeric(sj[1:2]))
+        partialSegment(as.numeric(sj[1:2]), Psi, d)
+    }
+    ## ------------------------------------------------- The likelihood ##
+    lhood <- function(y, x) {
+        # y: GPS observation
+        # x: a distance-into-trip
+        dnorm(distanceFlat(y, h(x)), 0, sd = GPS.error) * 
+            ifelse(x[2] <= 0, 0.000001, 1)
+
+    }
+    ## The random component:
+    pw <- function(n)
+        rnorm(n, 0, sig.e)
+    
+    ## The formal model ...
+    ## Needs to account for schedule times.
+    ## For starters, just restrict to start of trip time.
+    ## ---------------------------------------------------------------- ##
+    A <- function(d) cbind(c(1, 0), c(d, 1))
+    G <- function(d) rbind(d^2/2, d)
+    fn <- function(x, u, t, w) { ## x: [distance, velocity]; u: [delta, time]; w: [error]
+        X <- structure(A(u) %*% x + G(u) %*% w, 
+                       .Dimnames = list(c("distance", "speed"), NULL))
+        
+        tid <- trips$trip_id[which(trips$end_time > t)[1]]
+        if (is.na(tid))
+            return(X)
+        Xmax <- max(shape[shape$trip_id == tid, "distance"])
+        X <- apply(X, 2, function(x) if (x[1] > Xmax) c(Xmax, 0) else x)
+        X[2, ] <- ifelse(X[2, ] < 0, 0, X[2, ])
+        
+        X
+    }
+    
+    ## Data prep:
+    y <- rbind(data$lon, data$lat)
+    t <- data$time
+    TIME <- lubridate::hms(format(as.POSIXct(data$time, origin="1970-01-01", tz="EST5EDT"), "%H:%M:%S"),
+                           tz = "EDT5EDT")
+    Delta <- diff(t)
+    M <- length(Delta)  ## the number of "true" observations...?
+    
+    ## Matrix prep:
+    hx <- hxhat <- xxhat <- xx <- array(NA, c(2, N, M + 1))
+    
+    ## Initialise:
+    xx[,,1] <- x0
+    
+    ## run the simulations
+    if (progress) {
+        suppressMessages({library(R.utils)})
+        pb <- txtProgressBar(min = 0, max = M, style = 3)
+    }
+    for (i in 1:M) {
+        xxhat[,,i+1] <- fn(xx[,,i], Delta[i], TIME[i+1], pw(N))
+        weights <- apply(xxhat[,,i+1], 2, function(xi) lhood(y[,i+1], xi))
+        qi <- weights / sum(weights)
+        if (any(is.na(qi)))
+            qi <- NULL
+            
+        ii <- sample(N, N, TRUE, qi)
+        xx[,,i+1] <- xxhat[,ii,i+1]
+        
+        hxhat[,,i+1] <- apply(xxhat[,,i+1], 2, h)
+        hx[,,i+1] <- apply(xx[,,i+1], 2, h)
+        if (progress) setTxtProgressBar(pb, i)
+    }
+    if (progress) close(pb)
+    
+    res <- list(Xhat = xxhat, 
+                X = xx, 
+                HXhat = hxhat, 
+                HX = hx,
+                y = y, t = t, M = M, N = N,
+                block = block)
+    class(res) <- "pf.blockfit"
+    
+    res
+}
+fit <- pf2(block, start.obs = 5)
+@ 
+
+<<plot_new_fit,fig.width=10,fig.height=14>>=
+par(mfrow = c(4, 2))
+for (i in c(2, 5, 20, 30, 65, 100, 190, 220))
+    plot(fit, i)
+@ 
+
+So, few issues. First, once the bus reaches the end of a trip, the speed is reset to 0, and so it's
+stuck and takes a while to get moving again---in the meantime, the particle get lagged behind the
+bus, so the speed goes way too fast and overshoots the bus.
+
+Second, the bus is stuck at the END of a route, not the beginning of the next one.
 
 \end{document}

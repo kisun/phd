@@ -1408,7 +1408,10 @@ Previously we've just copy+pasted the necessary code. Now we'll make a function 
 \begin{alltt}
 \hlstd{particleFilter} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{data}\hlstd{,} \hlkwc{shape}\hlstd{,}
                            \hlkwc{N} \hlstd{=} \hlnum{200}\hlstd{,}
-                           \hlkwc{x0} \hlstd{=} \hlkwd{rbind}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{rlnorm}\hlstd{(N,} \hlnum{0}\hlstd{,} \hlnum{2}\hlstd{)),}
+                           \hlkwc{zero.start} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                           \hlkwc{x0} \hlstd{=} \hlkwa{if} \hlstd{(zero.start)} \hlkwd{rbind}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{rlnorm}\hlstd{(N,} \hlnum{0}\hlstd{,} \hlnum{2}\hlstd{))}
+                                \hlkwa{else} \hlkwd{rbind}\hlstd{(}\hlkwd{runif}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{max}\hlstd{(shape}\hlopt{$}\hlstd{distance), N),}
+                                           \hlkwd{rlnorm}\hlstd{(N,} \hlnum{0}\hlstd{,} \hlnum{2}\hlstd{)),}
                            \hlkwc{GPS.error} \hlstd{=} \hlnum{20}\hlstd{,}
                            \hlkwc{sig.e} \hlstd{=} \hlnum{0.03}\hlstd{,}
                            \hlkwc{...}\hlstd{) \{}
@@ -1419,8 +1422,6 @@ Previously we've just copy+pasted the necessary code. Now we'll make a function 
     \hlstd{shape}\hlopt{$}\hlstd{length} \hlkwb{<-} \hlkwd{c}\hlstd{(di,} \hlnum{NA}\hlstd{)}
     \hlstd{shape}\hlopt{$}\hlstd{bearing} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{bearing}\hlstd{(z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)], z[,} \hlopt{-}\hlnum{1}\hlstd{]),} \hlnum{NA}\hlstd{)}
     \hlstd{shape} \hlkwb{<-} \hlstd{shape[shape}\hlopt{$}\hlstd{length} \hlopt{>} \hlnum{0} \hlopt{|} \hlkwd{is.na}\hlstd{(shape}\hlopt{$}\hlstd{length), ]}
-
-    \hlkwd{return}\hlstd{(shape)}
 
     \hlcom{## Preparation (redefining all functions):}
     \hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) \{}
@@ -1793,7 +1794,8 @@ We can get one day of data for a vehicle:
     \hlkwd{class}\hlstd{(blockShapes)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.block.shapes"}\hlstd{)}
 
     \hlstd{fullPath} \hlkwb{<-} \hlkwd{do.call}\hlstd{(rbind, blockShapes[blockInfo}\hlopt{$}\hlstd{shape_id])}
-    \hlstd{blockPath} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{lon} \hlstd{= fullPath}\hlopt{$}\hlstd{lon,} \hlkwc{lat} \hlstd{= fullPath}\hlopt{$}\hlstd{lat)}
+    \hlstd{blockPath} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{lon} \hlstd{= fullPath}\hlopt{$}\hlstd{lon,} \hlkwc{lat} \hlstd{= fullPath}\hlopt{$}\hlstd{lat,}
+                            \hlkwc{trip_id} \hlstd{=} \hlkwd{rep}\hlstd{(blockInfo}\hlopt{$}\hlstd{trip_id,} \hlkwd{sapply}\hlstd{(blockShapes, nrow)))}
     \hlkwd{class}\hlstd{(blockPath)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.shape"}\hlstd{,} \hlkwd{class}\hlstd{(blockPath))}
 
     \hlstd{schedule} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
@@ -1860,10 +1862,10 @@ Alright, so let's just cross our fingers and apply the particle filter!
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{blockPF} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{block}\hlstd{,} \hlkwc{...}\hlstd{) \{}
-    \hlstd{pf} \hlkwb{<-} \hlkwd{particleFilter}\hlstd{(block}\hlopt{$}\hlstd{history, block}\hlopt{$}\hlstd{path, ...)}
+\hlstd{blockPF} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{block}\hlstd{,} \hlkwc{zero.start} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{start.obs} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{...}\hlstd{) \{}
+    \hlstd{pf} \hlkwb{<-} \hlkwd{particleFilter}\hlstd{(block}\hlopt{$}\hlstd{history[start.obs}\hlopt{:}\hlkwd{nrow}\hlstd{(block}\hlopt{$}\hlstd{history), ],}
+                         \hlstd{block}\hlopt{$}\hlstd{path,} \hlkwc{zero.start} \hlstd{= zero.start, ...)}
     \hlstd{pf}\hlopt{$}\hlstd{block} \hlkwb{<-} \hlstd{block}
-
     \hlkwd{class}\hlstd{(pf)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"pf.blockfit"}\hlstd{)}
     \hlstd{pf}
 \hlstd{\}}
@@ -1873,15 +1875,17 @@ Alright, so let's just cross our fingers and apply the particle filter!
     \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{HX[}\hlnum{1}\hlstd{,,obs], x}\hlopt{$}\hlstd{HX[}\hlnum{2}\hlstd{,,obs],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
     \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{y[}\hlnum{1}\hlstd{,obs], x}\hlopt{$}\hlstd{y[}\hlnum{2}\hlstd{,obs],} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{)}
 \hlstd{\}}
-\hlcom{#pfit <- blockPF(block, x0 = rbind(}
+\hlstd{pfit} \hlkwb{<-} \hlkwd{blockPF}\hlstd{(block,} \hlkwc{start.obs} \hlstd{=} \hlnum{5}\hlstd{)}
 \end{alltt}
-\end{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in y[1, ] * pi: non-numeric argument to binary operator}}\end{kframe}
 \end{knitrout}
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlkwd{plot}\hlstd{(pfit,} \hlkwc{obs} \hlstd{=} \hlnum{8}\hlstd{,} \hlkwc{highlight} \hlstd{=} \hlnum{1}\hlstd{)}
+\hlkwd{plot}\hlstd{(pfit,} \hlkwc{obs} \hlstd{=} \hlnum{30}\hlstd{,} \hlkwc{highlight} \hlstd{=} \hlnum{2}\hlstd{)}
 \end{alltt}
 \end{kframe}
 
@@ -1893,7 +1897,154 @@ Alright, so let's just cross our fingers and apply the particle filter!
 
 \end{knitrout}
 
-Matching is wrong. 
+Matching is wrong. Need to restrict distance by time.
 
+
+\subsection{Restricting Distance into Trip by Schedule Time}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{pf2} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{block}\hlstd{,}
+                \hlkwc{N} \hlstd{=} \hlnum{200}\hlstd{,}
+                \hlkwc{zero.start} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                \hlkwc{start.obs} \hlstd{=} \hlnum{1}\hlstd{,}
+                \hlkwc{x0} \hlstd{=} \hlkwa{if} \hlstd{(zero.start)} \hlkwd{rbind}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{rlnorm}\hlstd{(N,} \hlnum{0}\hlstd{,} \hlnum{2}\hlstd{))}
+                     \hlkwa{else} \hlkwd{rbind}\hlstd{(}\hlkwd{runif}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{max}\hlstd{(shape}\hlopt{$}\hlstd{distance), N),}
+                                \hlkwd{rlnorm}\hlstd{(N,} \hlnum{0}\hlstd{,} \hlnum{2}\hlstd{)),}
+                \hlkwc{GPS.error} \hlstd{=} \hlnum{20}\hlstd{,}
+                \hlkwc{sig.e} \hlstd{=} \hlnum{0.03}\hlstd{,}
+                \hlkwc{progress} \hlstd{=} \hlnum{FALSE}\hlstd{,}
+                \hlkwc{...}\hlstd{) \{}
+    \hlstd{shape} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{path}
+    \hlstd{data} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{history[start.obs}\hlopt{:}\hlkwd{nrow}\hlstd{(block}\hlopt{$}\hlstd{history), ]}
+    \hlstd{trips} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{trips}
+    \hlstd{trips}\hlopt{$}\hlstd{end_time} \hlkwb{<-} \hlkwd{hms}\hlstd{(}\hlkwd{c}\hlstd{(trips}\hlopt{$}\hlstd{departure_time[}\hlopt{-}\hlnum{1}\hlstd{]),} \hlkwc{tz} \hlstd{=} \hlstr{"EST5EDT"}\hlstd{)}
+
+    \hlcom{## Sort out the shape information (using previously defined functions)}
+    \hlstd{z} \hlkwb{<-} \hlkwd{t}\hlstd{(shape[,}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{])}
+    \hlstd{di} \hlkwb{<-} \hlkwd{distanceFlat}\hlstd{(z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)], z[,} \hlopt{-}\hlnum{1}\hlstd{])}
+    \hlstd{shape}\hlopt{$}\hlstd{distance} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{cumsum}\hlstd{(di))}
+    \hlstd{shape}\hlopt{$}\hlstd{length} \hlkwb{<-} \hlkwd{c}\hlstd{(di,} \hlnum{NA}\hlstd{)}
+    \hlstd{shape}\hlopt{$}\hlstd{bearing} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{bearing}\hlstd{(z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)], z[,} \hlopt{-}\hlnum{1}\hlstd{]),} \hlnum{NA}\hlstd{)}
+    \hlstd{shape} \hlkwb{<-} \hlstd{shape[shape}\hlopt{$}\hlstd{length} \hlopt{>} \hlnum{0} \hlopt{|} \hlkwd{is.na}\hlstd{(shape}\hlopt{$}\hlstd{length), ]}
+
+    \hlcom{## Preparation (redefining all functions):}
+    \hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) \{}
+        \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{<=} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{))}
+        \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlkwd{max}\hlstd{(shape}\hlopt{$}\hlstd{distance))} \hlkwd{return}\hlstd{(}\hlkwd{as.numeric}\hlstd{(shape[}\hlkwd{nrow}\hlstd{(shape),} \hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]))}
+        \hlstd{j} \hlkwb{<-} \hlkwd{which.min}\hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlstd{shape}\hlopt{$}\hlstd{distance)} \hlopt{-} \hlnum{1}
+        \hlstd{sj} \hlkwb{<-} \hlstd{shape[j, ]}
+        \hlstd{Psi} \hlkwb{<-} \hlstd{sj}\hlopt{$}\hlstd{bearing}
+        \hlstd{d} \hlkwb{<-} \hlstd{x[}\hlnum{1}\hlstd{]} \hlopt{-} \hlstd{sj}\hlopt{$}\hlstd{distance}
+
+        \hlcom{## only do the calculations if we need to!}
+        \hlkwa{if} \hlstd{(d} \hlopt{==} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(}\hlkwd{as.numeric}\hlstd{(sj[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]))}
+        \hlkwd{partialSegment}\hlstd{(}\hlkwd{as.numeric}\hlstd{(sj[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]), Psi, d)}
+    \hlstd{\}}
+    \hlcom{## ------------------------------------------------- The likelihood ##}
+    \hlstd{lhood} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{x}\hlstd{) \{}
+        \hlcom{# y: GPS observation}
+        \hlcom{# x: a distance-into-trip}
+        \hlkwd{dnorm}\hlstd{(}\hlkwd{distanceFlat}\hlstd{(y,} \hlkwd{h}\hlstd{(x)),} \hlnum{0}\hlstd{,} \hlkwc{sd} \hlstd{= GPS.error)} \hlopt{*}
+            \hlkwd{ifelse}\hlstd{(x[}\hlnum{2}\hlstd{]} \hlopt{<=} \hlnum{0}\hlstd{,} \hlnum{0.000001}\hlstd{,} \hlnum{1}\hlstd{)}
+
+    \hlstd{\}}
+    \hlcom{## The random component:}
+    \hlstd{pw} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{n}\hlstd{)}
+        \hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{, sig.e)}
+
+    \hlcom{## The formal model ...}
+    \hlcom{## Needs to account for schedule times.}
+    \hlcom{## For starters, just restrict to start of trip time.}
+    \hlcom{## ---------------------------------------------------------------- ##}
+    \hlstd{A} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{)} \hlkwd{cbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(d,} \hlnum{1}\hlstd{))}
+    \hlstd{G} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{)} \hlkwd{rbind}\hlstd{(d}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, d)}
+    \hlstd{fn} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{u}\hlstd{,} \hlkwc{t}\hlstd{,} \hlkwc{w}\hlstd{) \{} \hlcom{## x: [distance, velocity]; u: [delta, time]; w: [error]}
+        \hlstd{X} \hlkwb{<-} \hlkwd{structure}\hlstd{(}\hlkwd{A}\hlstd{(u)} \hlopt{%*%} \hlstd{x} \hlopt{+} \hlkwd{G}\hlstd{(u)} \hlopt{%*%} \hlstd{w,}
+                       \hlkwc{.Dimnames} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"distance"}\hlstd{,} \hlstr{"speed"}\hlstd{),} \hlkwa{NULL}\hlstd{))}
+
+        \hlstd{tid} \hlkwb{<-} \hlstd{trips}\hlopt{$}\hlstd{trip_id[}\hlkwd{which}\hlstd{(trips}\hlopt{$}\hlstd{end_time} \hlopt{>} \hlstd{t)[}\hlnum{1}\hlstd{]]}
+        \hlkwa{if} \hlstd{(}\hlkwd{is.na}\hlstd{(tid))}
+            \hlkwd{return}\hlstd{(X)}
+        \hlstd{Xmax} \hlkwb{<-} \hlkwd{max}\hlstd{(shape[shape}\hlopt{$}\hlstd{trip_id} \hlopt{==} \hlstd{tid,} \hlstr{"distance"}\hlstd{])}
+        \hlstd{X} \hlkwb{<-} \hlkwd{apply}\hlstd{(X,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{)} \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlstd{Xmax)} \hlkwd{c}\hlstd{(Xmax,} \hlnum{0}\hlstd{)} \hlkwa{else} \hlstd{x)}
+        \hlstd{X[}\hlnum{2}\hlstd{, ]} \hlkwb{<-} \hlkwd{ifelse}\hlstd{(X[}\hlnum{2}\hlstd{, ]} \hlopt{<} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{, X[}\hlnum{2}\hlstd{, ])}
+
+        \hlstd{X}
+    \hlstd{\}}
+
+    \hlcom{## Data prep:}
+    \hlstd{y} \hlkwb{<-} \hlkwd{rbind}\hlstd{(data}\hlopt{$}\hlstd{lon, data}\hlopt{$}\hlstd{lat)}
+    \hlstd{t} \hlkwb{<-} \hlstd{data}\hlopt{$}\hlstd{time}
+    \hlstd{TIME} \hlkwb{<-} \hlstd{lubridate}\hlopt{::}\hlkwd{hms}\hlstd{(}\hlkwd{format}\hlstd{(}\hlkwd{as.POSIXct}\hlstd{(data}\hlopt{$}\hlstd{time,} \hlkwc{origin}\hlstd{=}\hlstr{"1970-01-01"}\hlstd{,} \hlkwc{tz}\hlstd{=}\hlstr{"EST5EDT"}\hlstd{),} \hlstr{"%H:%M:%S"}\hlstd{),}
+                           \hlkwc{tz} \hlstd{=} \hlstr{"EDT5EDT"}\hlstd{)}
+    \hlstd{Delta} \hlkwb{<-} \hlkwd{diff}\hlstd{(t)}
+    \hlstd{M} \hlkwb{<-} \hlkwd{length}\hlstd{(Delta)}  \hlcom{## the number of "true" observations...?}
+
+    \hlcom{## Matrix prep:}
+    \hlstd{hx} \hlkwb{<-} \hlstd{hxhat} \hlkwb{<-} \hlstd{xxhat} \hlkwb{<-} \hlstd{xx} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{, N, M} \hlopt{+} \hlnum{1}\hlstd{))}
+
+    \hlcom{## Initialise:}
+    \hlstd{xx[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{x0}
+
+    \hlcom{## run the simulations}
+    \hlkwa{if} \hlstd{(progress) \{}
+        \hlkwd{suppressMessages}\hlstd{(\{}\hlkwd{library}\hlstd{(R.utils)\})}
+        \hlstd{pb} \hlkwb{<-} \hlkwd{txtProgressBar}\hlstd{(}\hlkwc{min} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{max} \hlstd{= M,} \hlkwc{style} \hlstd{=} \hlnum{3}\hlstd{)}
+    \hlstd{\}}
+    \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{M) \{}
+        \hlstd{xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{fn}\hlstd{(xx[,,i], Delta[i], TIME[i}\hlopt{+}\hlnum{1}\hlstd{],} \hlkwd{pw}\hlstd{(N))}
+        \hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood}\hlstd{(y[,i}\hlopt{+}\hlnum{1}\hlstd{], xi))}
+        \hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
+        \hlkwa{if} \hlstd{(}\hlkwd{any}\hlstd{(}\hlkwd{is.na}\hlstd{(qi)))}
+            \hlstd{qi} \hlkwb{<-} \hlkwa{NULL}
+
+        \hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
+        \hlstd{xx[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{xxhat[,ii,i}\hlopt{+}\hlnum{1}\hlstd{]}
+
+        \hlstd{hxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{, h)}
+        \hlstd{hx[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{apply}\hlstd{(xx[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{, h)}
+        \hlkwa{if} \hlstd{(progress)} \hlkwd{setTxtProgressBar}\hlstd{(pb, i)}
+    \hlstd{\}}
+    \hlkwa{if} \hlstd{(progress)} \hlkwd{close}\hlstd{(pb)}
+
+    \hlstd{res} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{Xhat} \hlstd{= xxhat,}
+                \hlkwc{X} \hlstd{= xx,}
+                \hlkwc{HXhat} \hlstd{= hxhat,}
+                \hlkwc{HX} \hlstd{= hx,}
+                \hlkwc{y} \hlstd{= y,} \hlkwc{t} \hlstd{= t,} \hlkwc{M} \hlstd{= M,} \hlkwc{N} \hlstd{= N,}
+                \hlkwc{block} \hlstd{= block)}
+    \hlkwd{class}\hlstd{(res)} \hlkwb{<-} \hlstr{"pf.blockfit"}
+
+    \hlstd{res}
+\hlstd{\}}
+\hlstd{fit} \hlkwb{<-} \hlkwd{pf2}\hlstd{(block,} \hlkwc{start.obs} \hlstd{=} \hlnum{5}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{4}\hlstd{,} \hlnum{2}\hlstd{))}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlnum{5}\hlstd{,} \hlnum{20}\hlstd{,} \hlnum{30}\hlstd{,} \hlnum{65}\hlstd{,} \hlnum{100}\hlstd{,} \hlnum{190}\hlstd{,} \hlnum{220}\hlstd{))}
+    \hlkwd{plot}\hlstd{(fit, i)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/plot_new_fit-1} 
+
+}
+
+
+
+\end{knitrout}
+
+So, few issues. First, once the bus reaches the end of a trip, the speed is reset to 0, and so it's
+stuck and takes a while to get moving again---in the meantime, the particle get lagged behind the
+bus, so the speed goes way too fast and overshoots the bus.
+
+Second, the bus is stuck at the END of a route, not the beginning of the next one.
 
 \end{document}
