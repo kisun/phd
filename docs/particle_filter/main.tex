@@ -56,12 +56,7 @@
 \usepackage{fullpage}
 \usepackage{parskip}
 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 
-
-{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Loading required package: DBI}}\end{kframe}
-\end{knitrout}
 
 
 \newcommand{\bx}{\boldsymbol{x}}
@@ -1361,8 +1356,6 @@ We now need a function to obtain all of the necessary data for a trip on a given
 \hlstd{\}}
 \hlstd{print.triphistory} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{...}\hlstd{) \{}
     \hlkwd{print.data.frame}\hlstd{(x)}
-    \hlkwd{cat}\hlstd{(}\hlstr{"\textbackslash{}n"}\hlstd{)}
-    \hlkwd{print}\hlstd{(}\hlkwd{structure}\hlstd{(}\hlkwd{c}\hlstd{(}\hlkwd{attr}\hlstd{(x,} \hlstr{"date"}\hlstd{),} \hlkwd{attr}\hlstd{(x,} \hlstr{"trip_id"}\hlstd{)),} \hlkwc{.Names} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"date"}\hlstd{,} \hlstr{"trip_id"}\hlstd{)))}
 \hlstd{\}}
 \hlstd{points.triphistory} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{...}\hlstd{) \{}
     \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{lon, x}\hlopt{$}\hlstd{lat,} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{)}
@@ -1426,6 +1419,8 @@ Previously we've just copy+pasted the necessary code. Now we'll make a function 
     \hlstd{shape}\hlopt{$}\hlstd{length} \hlkwb{<-} \hlkwd{c}\hlstd{(di,} \hlnum{NA}\hlstd{)}
     \hlstd{shape}\hlopt{$}\hlstd{bearing} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{bearing}\hlstd{(z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)], z[,} \hlopt{-}\hlnum{1}\hlstd{]),} \hlnum{NA}\hlstd{)}
     \hlstd{shape} \hlkwb{<-} \hlstd{shape[shape}\hlopt{$}\hlstd{length} \hlopt{>} \hlnum{0} \hlopt{|} \hlkwd{is.na}\hlstd{(shape}\hlopt{$}\hlstd{length), ]}
+
+    \hlkwd{return}\hlstd{(shape)}
 
     \hlcom{## Preparation (redefining all functions):}
     \hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) \{}
@@ -1606,14 +1601,18 @@ From the MBTA feed we can get block information, so:
         \hlkwd{plot}\hlstd{(x}\hlopt{$}\hlstd{lon, x}\hlopt{$}\hlstd{lat,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{,} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,}
              \hlkwc{xlab} \hlstd{=} \hlstr{"Longitude"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Latitude"}\hlstd{, ...)}
 
-    \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{lon[}\hlnum{1}\hlstd{], x}\hlopt{$}\hlstd{lat[}\hlnum{1}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
+    \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{lon[}\hlnum{1}\hlstd{], x}\hlopt{$}\hlstd{lat[}\hlnum{1}\hlstd{],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{, ...)}
 \hlstd{\}}
 
 \hlstd{getBlock} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{id}\hlstd{,} \hlkwc{conn}\hlstd{) \{}
     \hlstd{blockInfo} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
         \hlstd{conn,}
-        \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT block_id, trip_id, route_id, shape_id
-                 FROM trips WHERE block_id='%s'"}\hlstd{, bID))}
+        \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT t.block_id, t.trip_id, t.route_id, t.shape_id, s.departure_time
+                 FROM trips AS t, stop_times AS s 
+                 WHERE block_id='%s' 
+                   AND t.trip_id=s.trip_id AND s.stop_sequence=1
+                 ORDER BY s.departure_time"}\hlstd{,}
+                \hlstd{bID))}
 
     \hlstd{blockShapes} \hlkwb{<-} \hlkwd{lapply}\hlstd{(}\hlkwd{unique}\hlstd{(blockInfo}\hlopt{$}\hlstd{shape_id),}
                           \hlkwa{function}\hlstd{(}\hlkwc{id}\hlstd{)} \hlkwd{getShape}\hlstd{(id, conn,} \hlkwc{include.id} \hlstd{=} \hlnum{TRUE}\hlstd{))}
@@ -1624,9 +1623,22 @@ From the MBTA feed we can get block information, so:
     \hlstd{blockPath} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{lon} \hlstd{= fullPath}\hlopt{$}\hlstd{lon,} \hlkwc{lat} \hlstd{= fullPath}\hlopt{$}\hlstd{lat)}
     \hlkwd{class}\hlstd{(blockPath)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.shape"}\hlstd{,} \hlkwd{class}\hlstd{(blockPath))}
 
+    \hlstd{schedule} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
+        \hlstd{conn,}
+        \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT trip_id, stop_id, stop_sequence,
+                        CASE WHEN arrival_time IS NULL 
+                          THEN departure_time 
+                          ELSE arrival_time END AS time,
+                        shape_dist_traveled
+                 FROM stop_times WHERE trip_id IN ('%s') 
+                 ORDER BY time, stop_sequence"}\hlstd{,}
+                \hlkwd{paste}\hlstd{(blockInfo}\hlopt{$}\hlstd{trip_id,} \hlkwc{collapse} \hlstd{=} \hlstr{"','"}\hlstd{))}
+    \hlstd{)}
+
     \hlstd{out} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{trips} \hlstd{= blockInfo,}
                 \hlkwc{shapes} \hlstd{= blockShapes,}
-                \hlkwc{path} \hlstd{= blockPath)}
+                \hlkwc{path} \hlstd{= blockPath,}
+                \hlkwc{schedule} \hlstd{= schedule)}
 
     \hlkwd{class}\hlstd{(out)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.block"}\hlstd{)}
     \hlstd{out}
@@ -1636,8 +1648,8 @@ From the MBTA feed we can get block information, so:
 \hlstd{\}}
 \hlstd{head.gtfs.block} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{n} \hlstd{=} \hlnum{6}\hlstd{,} \hlkwc{...}\hlstd{)}
     \hlkwd{head}\hlstd{(x}\hlopt{$}\hlstd{trips, n, ...)}
-\hlstd{plot.gtfs.block} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{...}\hlstd{)}
-    \hlkwd{plot}\hlstd{(x}\hlopt{$}\hlstd{shapes)}
+\hlstd{plot.gtfs.block} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{highlight} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{...}\hlstd{)}
+    \hlkwd{plot}\hlstd{(x}\hlopt{$}\hlstd{shapes,} \hlkwc{highlight} \hlstd{= highlight, ...)}
 \hlstd{plot.gtfs.block.shapes} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{highlight} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{...}\hlstd{) \{}
     \hlcom{# plot ALL of the shapes...}
     \hlstd{all} \hlkwb{<-} \hlkwd{do.call}\hlstd{(rbind, x)}
@@ -1651,7 +1663,7 @@ From the MBTA feed we can get block information, so:
         \hlkwa{if} \hlstd{(highlight[}\hlnum{1}\hlstd{]} \hlopt{==} \hlstd{i)}
             \hlkwd{plot}\hlstd{(x[[i]],} \hlkwc{add} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#ff000050"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{3}\hlstd{)}
         \hlkwa{else}
-            \hlkwd{plot}\hlstd{(x[[i]],} \hlkwc{add} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+            \hlkwd{plot}\hlstd{(x[[i]],} \hlkwc{add} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.6}\hlstd{)}
     \hlstd{\}}
 \hlstd{\}}
 
@@ -1663,20 +1675,20 @@ From the MBTA feed we can get block information, so:
 \hlkwd{head}\hlstd{(block)}
 \end{alltt}
 \begin{verbatim}
-##   block_id  trip_id route_id shape_id
-## 1  S742-84 26206576      742  7420014
-## 2  S742-84 26206570      742  7420014
-## 3  S742-84 26206574      742  7420014
-## 4  S742-84 26206578      742  7420014
-## 5  S742-84 26206580      742  7420014
-## 6  S742-84 26206582      742  7420014
+##   block_id  trip_id route_id shape_id departure_time
+## 1  S742-84 27638243      746  7460006       06:04:00
+## 2  S742-84 27638234      742  7420013       06:11:00
+## 3  S742-84 26206548      746  7460006       06:31:00
+## 4  S742-84 27647452      746  7460006       06:31:00
+## 5  S742-84 27638233      742  7420015       06:32:00
+## 6  S742-84 26206544      742  7420013       06:38:00
 \end{verbatim}
 \begin{alltt}
 \hlkwd{plot}\hlstd{(block)}
 \end{alltt}
 \end{kframe}
 
-{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-4-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/block_day_functions-1} 
 
 }
 
@@ -1690,38 +1702,37 @@ a block, like this:
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{getBlockData} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{date}\hlstd{,} \hlkwc{id}\hlstd{,} \hlkwc{conn}\hlstd{) \{}
-    \hlstd{b} \hlkwb{<-} \hlkwd{getBlock}\hlstd{(id, conn)}
-    \hlcom{#d <- lapply(b$trips$trip_id, function(ID) getTripData(date, ID, conn))}
+\hlstd{getBlockData} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{date}\hlstd{,} \hlkwc{id}\hlstd{,} \hlkwc{block}\hlstd{,} \hlkwc{conn}\hlstd{) \{}
+    \hlkwa{if} \hlstd{(}\hlkwd{missing}\hlstd{(block))}
+        \hlstd{block} \hlkwb{<-} \hlkwd{getBlock}\hlstd{(id, conn)}
+
     \hlstd{d} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
         \hlstd{conn,}
         \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT position_latitude AS lat, position_longitude AS lon,
                         timestamp AS time, trip_id
                  FROM vehicle_positions
-                 WHERE trip_id IN (%s) AND trip_start_date='%s'
+                 WHERE trip_id IN ('%s') AND trip_start_date='%s'
                  ORDER BY timestamp"}\hlstd{,}
-                \hlkwd{paste0}\hlstd{(b}\hlopt{$}\hlstd{trips}\hlopt{$}\hlstd{trip_id,} \hlkwc{collapse} \hlstd{=} \hlstr{","}\hlstd{), date))}
+                \hlkwd{paste0}\hlstd{(block}\hlopt{$}\hlstd{trips}\hlopt{$}\hlstd{trip_id,} \hlkwc{collapse} \hlstd{=} \hlstr{"','"}\hlstd{), date))}
+
+    \hlkwd{attr}\hlstd{(d,} \hlstr{"date"}\hlstd{)} \hlkwb{<-} \hlstd{date}
+    \hlkwd{attr}\hlstd{(d,} \hlstr{"trip_id"}\hlstd{)} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{trips}\hlopt{$}\hlstd{trip_id}
 
     \hlkwd{class}\hlstd{(d)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"blockhistory"}\hlstd{,} \hlstr{"triphistory"}\hlstd{,} \hlkwd{class}\hlstd{(d))}
-    \hlstd{d}
+
+    \hlkwa{if} \hlstd{(}\hlkwd{missing}\hlstd{(block))}
+        \hlkwd{return}\hlstd{(d)}
+    \hlkwa{else} \hlstd{\{}
+        \hlstd{block}\hlopt{$}\hlstd{history} \hlkwb{<-} \hlstd{d}
+        \hlkwd{return}\hlstd{(block)}
+    \hlstd{\}}
 \hlstd{\}}
-\hlstd{block.history} \hlkwb{<-} \hlkwd{getBlockData}\hlstd{(}\hlstr{"20151202"}\hlstd{, bID, mbta)}
+\hlstd{block.history} \hlkwb{<-} \hlkwd{getBlockData}\hlstd{(}\hlstr{"20151202"}\hlstd{, bID,} \hlkwc{conn} \hlstd{= mbta)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{plot.pf.blockfit} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{obs} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{conn} \hlstd{= con) \{}
-    \hlkwd{plot}\hlstd{(block)}
-    \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{HXhat[}\hlnum{1}\hlstd{,,obs], x}\hlopt{$}\hlstd{HXhat[}\hlnum{2}\hlstd{,,obs],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{)}
-    \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{HX[}\hlnum{1}\hlstd{,,obs], x}\hlopt{$}\hlstd{HX[}\hlnum{2}\hlstd{,,obs],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
-    \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{y[}\hlnum{1}\hlstd{,obs], x}\hlopt{$}\hlstd{y[}\hlnum{2}\hlstd{,obs],} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{)}
-\hlstd{\}}
-\end{alltt}
-\end{kframe}
-\end{knitrout}
+
 
 The trouble here is that the model doesn't actually know where it is, and gets completely and
 utterly lost, so we need some method for limiting where it can be---queue static timetable in GTFS.
@@ -1729,8 +1740,160 @@ utterly lost, so we need some method for limiting where it can be---queue static
 
 \subsection{Static Schedule GTFS}
 
+It appears that the MBTA ``block\_id'' is messed up; it's not giving a non-overlapping set of trips
+that a single bus could run (there are overlapping trips!).
+To get around this problem, we will explore historical data for patterns.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{history} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
+    \hlstd{mbta,}
+    \hlkwd{paste0}\hlstd{(}\hlstr{"SELECT DISTINCT vp.trip_id, vp.vehicle_id, vp.trip_start_date, 
+                            st.departure_time AS trip_start_time
+            FROM vehicle_positions AS vp, stop_times AS st, trips AS tr, routes AS rt
+            WHERE vp.trip_id=st.trip_id AND st.stop_sequence=1 
+              AND vp.trip_id=tr.trip_id AND tr.route_id=rt.route_id AND rt.route_type=3
+            ORDER BY vp.trip_start_date, vp.vehicle_id, trip_start_time"}\hlstd{)}
+\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{hist.dates} \hlkwb{<-} \hlkwd{tapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(history), history}\hlopt{$}\hlstd{trip_start_date,}
+                     \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{) history[i, ])}
+
+\hlstd{hist.blocks} \hlkwb{<-} \hlkwd{lapply}\hlstd{(hist.dates,} \hlkwa{function}\hlstd{(}\hlkwc{h}\hlstd{) \{}
+    \hlkwd{tapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(h), h}\hlopt{$}\hlstd{vehicle_id,} \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{) h[i, ])}
+\hlstd{\})}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
 
 
+We can get one day of data for a vehicle:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{blockA} \hlkwb{<-} \hlstd{hist.blocks[[}\hlnum{2}\hlstd{]][[}\hlnum{2}\hlstd{]]}
+\hlstd{getBlockAlt} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{ids}\hlstd{,} \hlkwc{date}\hlstd{,} \hlkwc{conn}\hlstd{) \{}
+    \hlstd{blockInfo} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
+        \hlstd{conn,}
+        \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT t.trip_id, t.route_id, t.shape_id, s.departure_time
+                 FROM trips AS t, stop_times AS s 
+                 WHERE t.trip_id IN ('%s')
+                   AND t.trip_id=s.trip_id AND s.stop_sequence=1
+                 ORDER BY s.departure_time"}\hlstd{,}
+                \hlkwd{paste0}\hlstd{(ids,} \hlkwc{collapse} \hlstd{=} \hlstr{"','"}\hlstd{)))}
+
+    \hlstd{blockShapes} \hlkwb{<-} \hlkwd{lapply}\hlstd{(}\hlkwd{unique}\hlstd{(blockInfo}\hlopt{$}\hlstd{shape_id),}
+                          \hlkwa{function}\hlstd{(}\hlkwc{id}\hlstd{)} \hlkwd{getShape}\hlstd{(id, conn,} \hlkwc{include.id} \hlstd{=} \hlnum{TRUE}\hlstd{))}
+    \hlkwd{names}\hlstd{(blockShapes)} \hlkwb{<-} \hlkwd{unique}\hlstd{(blockInfo}\hlopt{$}\hlstd{shape_id)}
+    \hlkwd{class}\hlstd{(blockShapes)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.block.shapes"}\hlstd{)}
+
+    \hlstd{fullPath} \hlkwb{<-} \hlkwd{do.call}\hlstd{(rbind, blockShapes[blockInfo}\hlopt{$}\hlstd{shape_id])}
+    \hlstd{blockPath} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{lon} \hlstd{= fullPath}\hlopt{$}\hlstd{lon,} \hlkwc{lat} \hlstd{= fullPath}\hlopt{$}\hlstd{lat)}
+    \hlkwd{class}\hlstd{(blockPath)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.shape"}\hlstd{,} \hlkwd{class}\hlstd{(blockPath))}
+
+    \hlstd{schedule} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
+        \hlstd{conn,}
+        \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT trip_id, stop_id, stop_sequence,
+                        CASE WHEN arrival_time IS NULL 
+                          THEN departure_time 
+                          ELSE arrival_time END AS time,
+                        shape_dist_traveled
+                 FROM stop_times WHERE trip_id IN ('%s') 
+                 ORDER BY time, stop_sequence"}\hlstd{,}
+                \hlkwd{paste}\hlstd{(blockInfo}\hlopt{$}\hlstd{trip_id,} \hlkwc{collapse} \hlstd{=} \hlstr{"','"}\hlstd{))}
+    \hlstd{)}
+
+    \hlstd{out} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{trips} \hlstd{= blockInfo,}
+                \hlkwc{shapes} \hlstd{= blockShapes,}
+                \hlkwc{path} \hlstd{= blockPath,}
+                \hlkwc{schedule} \hlstd{= schedule,}
+                \hlkwc{date} \hlstd{= date)}
+
+    \hlkwd{class}\hlstd{(out)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.block"}\hlstd{)}
+    \hlstd{out}
+\hlstd{\}}
+
+\hlstd{block} \hlkwb{<-} \hlkwd{getBlockAlt}\hlstd{(blockA}\hlopt{$}\hlstd{trip_id, blockA}\hlopt{$}\hlstd{trip_start_date[}\hlnum{1}\hlstd{], mbta)}
+\hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{4}\hlstd{,} \hlnum{2}\hlstd{))}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(block}\hlopt{$}\hlstd{trips))}
+    \hlkwd{plot}\hlstd{(block, i)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=0.8\textwidth]{figure/manual_blocking-1} 
+
+}
+
+
+
+\end{knitrout}
+
+Now THAT looks much better! Let's get the data:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{points.gtfs.block} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{block}\hlstd{,} \hlkwc{...}\hlstd{)}
+    \hlkwd{with}\hlstd{(block}\hlopt{$}\hlstd{history,} \hlkwd{points}\hlstd{(lon, lat,} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#ff000070"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.6}\hlstd{))}
+\hlstd{block} \hlkwb{<-} \hlkwd{getBlockData}\hlstd{(block}\hlopt{$}\hlstd{date,} \hlkwc{block} \hlstd{= block,} \hlkwc{conn} \hlstd{= mbta)}
+\hlkwd{plot}\hlstd{(block,} \hlkwc{highlight} \hlstd{=} \hlnum{FALSE}\hlstd{)}
+\hlkwd{points}\hlstd{(block)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/manual_block_data-1} 
+
+}
+
+
+
+\end{knitrout}
+
+
+Alright, so let's just cross our fingers and apply the particle filter!
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{blockPF} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{block}\hlstd{,} \hlkwc{...}\hlstd{) \{}
+    \hlstd{pf} \hlkwb{<-} \hlkwd{particleFilter}\hlstd{(block}\hlopt{$}\hlstd{history, block}\hlopt{$}\hlstd{path, ...)}
+    \hlstd{pf}\hlopt{$}\hlstd{block} \hlkwb{<-} \hlstd{block}
+
+    \hlkwd{class}\hlstd{(pf)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"pf.blockfit"}\hlstd{)}
+    \hlstd{pf}
+\hlstd{\}}
+\hlstd{plot.pf.blockfit} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{obs} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{highlight} \hlstd{=} \hlnum{FALSE}\hlstd{) \{}
+    \hlkwd{plot}\hlstd{(x}\hlopt{$}\hlstd{block,} \hlkwc{highlight} \hlstd{= highlight)}
+    \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{HXhat[}\hlnum{1}\hlstd{,,obs], x}\hlopt{$}\hlstd{HXhat[}\hlnum{2}\hlstd{,,obs],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{)}
+    \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{HX[}\hlnum{1}\hlstd{,,obs], x}\hlopt{$}\hlstd{HX[}\hlnum{2}\hlstd{,,obs],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
+    \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{y[}\hlnum{1}\hlstd{,obs], x}\hlopt{$}\hlstd{y[}\hlnum{2}\hlstd{,obs],} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{)}
+\hlstd{\}}
+\hlcom{#pfit <- blockPF(block, x0 = rbind(}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{plot}\hlstd{(pfit,} \hlkwc{obs} \hlstd{=} \hlnum{8}\hlstd{,} \hlkwc{highlight} \hlstd{=} \hlnum{1}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/manual_fit_explore-1} 
+
+}
+
+
+
+\end{knitrout}
+
+Matching is wrong. 
 
 
 \end{document}

@@ -949,8 +949,6 @@ getTripData <- function(date, id, conn = con) {
 }
 print.triphistory <- function(x, ...) {
     print.data.frame(x)
-    cat("\n")
-    print(structure(c(attr(x, "date"), attr(x, "trip_id")), .Names = c("date", "trip_id")))
 }
 points.triphistory <- function(x, ...) {
     points(x$lon, x$lat, col = "red", cex = 0.5, pch = 4)
@@ -975,7 +973,10 @@ Previously we've just copy+pasted the necessary code. Now we'll make a function 
 <<PF_function>>=
 particleFilter <- function(data, shape,
                            N = 200,
-                           x0 = rbind(0, rlnorm(N, 0, 2)),
+                           zero.start = TRUE,
+                           x0 = if (zero.start) rbind(0, rlnorm(N, 0, 2)) 
+                                else rbind(runif(0, max(shape$distance), N),
+                                           rlnorm(N, 0, 2)),
                            GPS.error = 20,
                            sig.e = 0.03,
                            ...) {
@@ -986,7 +987,7 @@ particleFilter <- function(data, shape,
     shape$length <- c(di, NA)
     shape$bearing <- c(bearing(z[, -ncol(z)], z[, -1]), NA)
     shape <- shape[shape$length > 0 | is.na(shape$length), ]
-    
+        
     ## Preparation (redefining all functions):
     h <- function(x) {
         if (x[1] <= 0) return(c(0, 0))
@@ -1111,7 +1112,7 @@ prior knowledge about speed at a given distance into a trip, we should be able t
 \section{Block and Trips}
 
 From the MBTA feed we can get block information, so:
-<<>>=
+<<block_day_functions,cache=TRUE>>=
 getShape <- function(id, conn, include.id = FALSE) {
     sh <- dbGetQuery(conn, 
                      sprintf("SELECT shape_pt_lon AS lon, shape_pt_lat AS lat
@@ -1129,7 +1130,7 @@ plot.gtfs.shape <- function(x, add = FALSE, ...) {
         plot(x$lon, x$lat, type = "l", asp = 1,
              xlab = "Longitude", ylab = "Latitude", ...)
     
-    points(x$lon[1], x$lat[1], pch = 19)
+    points(x$lon[1], x$lat[1], pch = 19, ...)
 }
 
 getBlock <- function(id, conn) {
@@ -1176,8 +1177,8 @@ print.gtfs.block <- function(x, ...) {
 }
 head.gtfs.block <- function(x, n = 6, ...)
     head(x$trips, n, ...)
-plot.gtfs.block <- function(x, ...)
-    plot(x$shapes)
+plot.gtfs.block <- function(x, highlight = 1, ...)
+    plot(x$shapes, highlight = highlight, ...)
 plot.gtfs.block.shapes <- function(x, highlight = 1, ...) {
     # plot ALL of the shapes...
     all <- do.call(rbind, x)
@@ -1191,7 +1192,7 @@ plot.gtfs.block.shapes <- function(x, highlight = 1, ...) {
         if (highlight[1] == i)
             plot(x[[i]], add = TRUE, col = "#ff000050", lwd = 3)
         else
-            plot(x[[i]], add = TRUE, lty = 3)
+            plot(x[[i]], add = TRUE, lty = 3, cex = 0.6)
     }
 }
 
@@ -1208,31 +1209,36 @@ We can see that a ``block'' consists of a lot of very similar routes (in this ca
 So, instead of obtaining data for the same \emph{trip}, we could just grab a days worth of data for
 a block, like this:
 <<day_block_data,cache=TRUE>>=
-getBlockData <- function(date, id, conn) {
-    b <- getBlock(id, conn)
-    #d <- lapply(b$trips$trip_id, function(ID) getTripData(date, ID, conn))
+getBlockData <- function(date, id, block, conn) {
+    if (missing(block))
+        block <- getBlock(id, conn)
+    
     d <- dbGetQuery(
         conn,
         sprintf("SELECT position_latitude AS lat, position_longitude AS lon,
                         timestamp AS time, trip_id
                  FROM vehicle_positions
-                 WHERE trip_id IN (%s) AND trip_start_date='%s'
+                 WHERE trip_id IN ('%s') AND trip_start_date='%s'
                  ORDER BY timestamp",
-                paste0(b$trips$trip_id, collapse = ","), date))
+                paste0(block$trips$trip_id, collapse = "','"), date))
+    
+    attr(d, "date") <- date
+    attr(d, "trip_id") <- block$trips$trip_id
     
     class(d) <- c("blockhistory", "triphistory", class(d))
-    d
+    
+    if (missing(block))
+        return(d)
+    else {
+        block$history <- d
+        return(block)
+    }
 }
-block.history <- getBlockData("20151202", bID, mbta)
+block.history <- getBlockData("20151202", bID, conn = mbta)
 @ 
 
 <<block_fit_model,cache=TRUE>>=
-plot.pf.blockfit <- function(x, obs = 1, conn = con) {
-    plot(block)
-    points(x$HXhat[1,,obs], x$HXhat[2,,obs], pch = 4, col = "#00009930")
-    points(x$HX[1,,obs], x$HX[2,,obs], pch = 4, cex = 0.5, col = "#00990070")
-    points(x$y[1,obs], x$y[2,obs], col = "red", pch = 19, cex = 0.4)
-}
+
 @ 
 
 The trouble here is that the model doesn't actually know where it is, and gets completely and
@@ -1241,9 +1247,115 @@ utterly lost, so we need some method for limiting where it can be---queue static
 
 \subsection{Static Schedule GTFS}
 
-It appears that the MBTA ``block_id'' is messed up; it's not giving a non-overlapping set of trips
+It appears that the MBTA ``block\_id'' is messed up; it's not giving a non-overlapping set of trips
 that a single bus could run (there are overlapping trips!).
+To get around this problem, we will explore historical data for patterns.
+<<historical_getexplore,cache=TRUE>>=
+history <- dbGetQuery(
+    mbta,
+    paste0("SELECT DISTINCT vp.trip_id, vp.vehicle_id, vp.trip_start_date, 
+                            st.departure_time AS trip_start_time
+            FROM vehicle_positions AS vp, stop_times AS st, trips AS tr, routes AS rt
+            WHERE vp.trip_id=st.trip_id AND st.stop_sequence=1 
+              AND vp.trip_id=tr.trip_id AND tr.route_id=rt.route_id AND rt.route_type=3
+            ORDER BY vp.trip_start_date, vp.vehicle_id, trip_start_time")
+)
+@
+<<historical_explore>>=
+hist.dates <- tapply(1:nrow(history), history$trip_start_date,
+                     function(i) history[i, ])
 
+hist.blocks <- lapply(hist.dates, function(h) {
+    tapply(1:nrow(h), h$vehicle_id, function(i) h[i, ])
+})
+@ 
+
+
+We can get one day of data for a vehicle:
+<<manual_blocking,fig.width=10,fig.height=12,out.width="0.8\\textwidth">>=
+blockA <- hist.blocks[[2]][[2]]
+getBlockAlt <- function(ids, date, conn) {
+    blockInfo <- dbGetQuery(
+        conn,
+        sprintf("SELECT t.trip_id, t.route_id, t.shape_id, s.departure_time
+                 FROM trips AS t, stop_times AS s 
+                 WHERE t.trip_id IN ('%s')
+                   AND t.trip_id=s.trip_id AND s.stop_sequence=1
+                 ORDER BY s.departure_time", 
+                paste0(ids, collapse = "','")))
+    
+    blockShapes <- lapply(unique(blockInfo$shape_id),
+                          function(id) getShape(id, conn, include.id = TRUE))
+    names(blockShapes) <- unique(blockInfo$shape_id)
+    class(blockShapes) <- c("gtfs.block.shapes")
+    
+    fullPath <- do.call(rbind, blockShapes[blockInfo$shape_id])
+    blockPath <- data.frame(lon = fullPath$lon, lat = fullPath$lat)
+    class(blockPath) <- c("gtfs.shape", class(blockPath))
+    
+    schedule <- dbGetQuery(
+        conn,
+        sprintf("SELECT trip_id, stop_id, stop_sequence,
+                        CASE WHEN arrival_time IS NULL 
+                          THEN departure_time 
+                          ELSE arrival_time END AS time,
+                        shape_dist_traveled
+                 FROM stop_times WHERE trip_id IN ('%s') 
+                 ORDER BY time, stop_sequence",
+                paste(blockInfo$trip_id, collapse = "','"))
+    )
+    
+    out <- list(trips = blockInfo,
+                shapes = blockShapes,
+                path = blockPath,
+                schedule = schedule, 
+                date = date)
+    
+    class(out) <- c("gtfs.block")
+    out
+}
+
+block <- getBlockAlt(blockA$trip_id, blockA$trip_start_date[1], mbta)
+par(mfrow = c(4, 2))
+for (i in 1:nrow(block$trips))
+    plot(block, i)
+@ 
+
+Now THAT looks much better! Let's get the data:
+
+<<manual_block_data>>=
+points.gtfs.block <- function(block, ...)
+    with(block$history, points(lon, lat, pch = 4, col = "#ff000070", cex = 0.6))
+block <- getBlockData(block$date, block = block, conn = mbta)
+plot(block, highlight = FALSE)
+points(block)
+@ 
+
+
+Alright, so let's just cross our fingers and apply the particle filter!
+
+<<manual_block_particleFilter>>=
+blockPF <- function(block, zero.start = TRUE, start.obs = 1, ...) {
+    pf <- particleFilter(block$history[start.obs:nrow(block$history), ], 
+                         block$path, zero.start = zero.start, ...)
+    pf$block <- block    
+    class(pf) <- c("pf.blockfit")
+    pf
+}
+plot.pf.blockfit <- function(x, obs = 1, highlight = FALSE) {
+    plot(x$block, highlight = highlight)
+    points(x$HXhat[1,,obs], x$HXhat[2,,obs], pch = 4, col = "#00009930")
+    points(x$HX[1,,obs], x$HX[2,,obs], pch = 4, cex = 0.5, col = "#00990070")
+    points(x$y[1,obs], x$y[2,obs], col = "red", pch = 19, cex = 0.4)
+}
+pfit <- blockPF(block, start.obs = 5)
+@ 
+
+<<manual_fit_explore>>=
+plot(pfit, obs = 30, highlight = 2)
+@ 
+
+Matching is wrong. Need to restrict distance by time.
 
 
 \end{document}
