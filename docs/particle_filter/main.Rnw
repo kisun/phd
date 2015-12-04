@@ -981,7 +981,7 @@ particleFilter <- function(data, shape,
                            sig.e = 0.03,
                            ...) {
     ## Sort out the shape information (using previously defined functions)
-    z <- t(shape)
+    z <- t(shape[, 1:2])
     di <- distanceFlat(z[, -ncol(z)], z[, -1])
     shape$distance <- c(0, cumsum(di))
     shape$length <- c(di, NA)
@@ -1112,7 +1112,7 @@ prior knowledge about speed at a given distance into a trip, we should be able t
 \section{Block and Trips}
 
 From the MBTA feed we can get block information, so:
-<<block_day_functions,cache=TRUE>>=
+<<block_day_functions>>=
 getShape <- function(id, conn, include.id = FALSE) {
     sh <- dbGetQuery(conn, 
                      sprintf("SELECT shape_pt_lon AS lon, shape_pt_lat AS lat
@@ -1195,7 +1195,9 @@ plot.gtfs.block.shapes <- function(x, highlight = 1, ...) {
             plot(x[[i]], add = TRUE, lty = 3, cex = 0.6)
     }
 }
+@ 
 
+<<block_dat_example,cache=TRUE>>=
 blockID <- dbGetQuery(mbta,
                         sprintf("SELECT block_id
                                  FROM trips WHERE trip_id='%s'", tID))
@@ -1237,10 +1239,6 @@ getBlockData <- function(date, id, block, conn) {
 block.history <- getBlockData("20151202", bID, conn = mbta)
 @ 
 
-<<block_fit_model,cache=TRUE>>=
-
-@ 
-
 The trouble here is that the model doesn't actually know where it is, and gets completely and
 utterly lost, so we need some method for limiting where it can be---queue static timetable in GTFS.
 
@@ -1261,7 +1259,7 @@ history <- dbGetQuery(
             ORDER BY vp.trip_start_date, vp.vehicle_id, trip_start_time")
 )
 @
-<<historical_explore>>=
+<<historical_explore,cache=TRUE>>=
 hist.dates <- tapply(1:nrow(history), history$trip_start_date,
                      function(i) history[i, ])
 
@@ -1324,7 +1322,7 @@ for (i in 1:nrow(block$trips))
 
 Now THAT looks much better! Let's get the data:
 
-<<manual_block_data>>=
+<<manual_block_data,cache=TRUE>>=
 points.gtfs.block <- function(block, ...)
     with(block$history, points(lon, lat, pch = 4, col = "#ff000070", cex = 0.6))
 block <- getBlockData(block$date, block = block, conn = mbta)
@@ -1335,7 +1333,7 @@ points(block)
 
 Alright, so let's just cross our fingers and apply the particle filter!
 
-<<manual_block_particleFilter>>=
+<<manual_block_particleFilter,cache=TRUE>>=
 blockPF <- function(block, zero.start = TRUE, start.obs = 1, ...) {
     pf <- particleFilter(block$history[start.obs:nrow(block$history), ], 
                          block$path, zero.start = zero.start, ...)
@@ -1349,6 +1347,7 @@ plot.pf.blockfit <- function(x, obs = 1, highlight = FALSE) {
     points(x$HX[1,,obs], x$HX[2,,obs], pch = 4, cex = 0.5, col = "#00990070")
     points(x$y[1,obs], x$y[2,obs], col = "red", pch = 19, cex = 0.4)
 }
+
 pfit <- blockPF(block, start.obs = 5)
 @ 
 
@@ -1479,7 +1478,7 @@ pf2 <- function(block,
 fit <- pf2(block, start.obs = 5)
 @ 
 
-<<plot_new_fit,fig.width=10,fig.height=14>>=
+<<plot_new_fit,fig.width=10,fig.height=12,out.width="0.8\\textwidth">>=
 par(mfrow = c(4, 2))
 for (i in c(2, 5, 20, 30, 65, 100, 190, 220))
     plot(fit, i)
@@ -1488,7 +1487,103 @@ for (i in c(2, 5, 20, 30, 65, 100, 190, 220))
 So, few issues. First, once the bus reaches the end of a trip, the speed is reset to 0, and so it's
 stuck and takes a while to get moving again---in the meantime, the particle get lagged behind the
 bus, so the speed goes way too fast and overshoots the bus.
-
 Second, the bus is stuck at the END of a route, not the beginning of the next one.
+
+
+\subsection{Using Schedule as Speed Function}
+
+We have so far been using a very primitive Newtonian physics model for the state $X$ model.
+However, this breaks down when the bus ``stops'' at the end/beginning of a route waiting for the
+scheduled departure time.
+Overall, we want to move away from this type of model, and instead use real data to model the speed
+along segments.
+The first step will be to work on a ``prior'' speed model, which we will for now base on the
+scheduled arrival and departure times at the stops along the route.
+
+The speed function will be computed by a smooth polynomial spline fitted through the scheduled
+arrival times.
+For this, we need to know the distance-into-trip of the stops in a trip.
+Using the previous example, we can use the first trip's schedule to demonstrate:
+
+<<shape_of_first_trip>>=
+getShapeDist <- function(sched, sh) {
+    ## DRY - need a function for this ... or just to it in getBlock ...
+    z <- t(sh[,1:2])
+    di <- distanceFlat(z[, -ncol(z)], z[, -1])
+    sh$distance <- c(0, cumsum(di))
+    sh$length <- c(di, NA)
+    sh$bearing <- c(bearing(z[, -ncol(z)], z[, -1]), NA)
+    sh <- sh[sh$length > 0 | is.na(sh$length), ]
+    
+    d <- 0
+    J <- 1
+    for (i in 1:(nrow(sched)-1)) {
+        p <- sched[i, c("stop_lon", "stop_lat")]
+        for (j in J:nrow(sh)) {
+            q1 <- sh[j, c("lon", "lat")]
+            q2 <- sh[j+1, c("lon", "lat")]
+            v <- q2 - q1
+            w <- p - q1
+            
+        }
+    }
+}
+
+getBlock <- function(ids, date, conn) {
+    blockInfo <- dbGetQuery(
+        conn,
+        sprintf("SELECT t.trip_id, t.route_id, t.shape_id, s.departure_time
+                 FROM trips AS t, stop_times AS s 
+                 WHERE t.trip_id IN ('%s')
+                   AND t.trip_id=s.trip_id AND s.stop_sequence=1
+                 ORDER BY s.departure_time", 
+                paste0(ids, collapse = "','")))
+    
+    blockShapes <- lapply(unique(blockInfo$shape_id),
+                          function(id) getShape(id, conn, include.id = TRUE))
+    names(blockShapes) <- unique(blockInfo$shape_id)
+    class(blockShapes) <- c("gtfs.block.shapes")
+    
+    fullPath <- do.call(rbind, blockShapes[blockInfo$shape_id])
+    blockPath <- data.frame(lon = fullPath$lon, lat = fullPath$lat,
+                            trip_id = rep(blockInfo$trip_id, sapply(blockShapes, nrow)))
+    class(blockPath) <- c("gtfs.shape", class(blockPath))
+    
+    ## Get the position of the stops
+    schedule <- dbGetQuery(
+        conn,
+        sprintf("SELECT st.trip_id, st.stop_id, st.stop_sequence,
+                        s.stop_lat, s.stop_lon,
+                        CASE WHEN st.arrival_time IS NULL 
+                          THEN st.departure_time 
+                          ELSE st.arrival_time END AS time,
+                        st.shape_dist_traveled
+                 FROM stop_times AS st, stops AS s
+                 WHERE st.stop_id=s.stop_id AND trip_id IN ('%s') 
+                 ORDER BY time, stop_sequence",
+                paste(blockInfo$trip_id, collapse = "','"))
+    )
+    
+    ## Compute distance into trip:
+    if (any(is.na(schedule$shape_dist_traveled))) {
+        sdt <- lapply(unique(schedule$trip_id), function(id)
+            getShapeDist(schedule[schedule$trip_id == id, ],
+                         blockShapes[[blockInfo[blockInfo$trip_id == id, "shape_id"]]]))
+        schedule$shape_dist_traveled <- do.call(c, sdt)
+    }
+        
+    out <- list(trips = blockInfo,
+                shapes = blockShapes,
+                path = blockPath,
+                schedule = schedule, 
+                date = date)
+    
+    class(out) <- c("gtfs.block")
+    out
+}
+
+getBlock(blockA$trip_id, blockA$trip_start_date[1], mbta) -> DD
+@ 
+
 
 \end{document}
