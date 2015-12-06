@@ -56,6 +56,8 @@
 \usepackage{fullpage}
 \usepackage{parskip}
 
+\usepackage[keepaspectratio]{animate}
+
 
 
 
@@ -104,7 +106,7 @@
 \maketitle
 
 
-\section{Trajectory Constrained tos ``Road''}
+\section{Trajectory Constrained to ``Road''}
 
 
 We propose a two-stage algorithm that involves several different aspects:
@@ -342,15 +344,6 @@ Now for the rest of them \ldots
 \begin{alltt}
 \hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(xxhat.hist[}\hlnum{1}\hlstd{,,]),} \hlkwc{ylim} \hlstd{=} \hlkwd{range}\hlstd{(xxhat.hist[}\hlnum{2}\hlstd{,,]),}
      \hlkwc{xlab} \hlstd{=} \hlstr{"Distance (m)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Speed (m/s)"}\hlstd{)}
-\end{alltt}
-\end{kframe}
-
-{\centering \includegraphics[width=\maxwidth]{figure/dist_speed_plots-1} 
-
-}
-
-
-\begin{kframe}\begin{alltt}
 \hlstd{cols} \hlkwb{<-} \hlkwd{rainbow}\hlstd{(M)}
 \hlstd{colsa} \hlkwb{<-} \hlkwd{rainbow}\hlstd{(M,} \hlkwc{alpha} \hlstd{=} \hlnum{0.1}\hlstd{)}
 \hlkwd{invisible}\hlstd{(}
@@ -360,11 +353,14 @@ Now for the rest of them \ldots
            \hlstd{\})}
     \hlstd{)}
 \end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/dist_speed_plots-1} 
+
+}
 
 
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in lapply(X = X, FUN = FUN, ...): internal error -3 in R\_decompress1}}
 
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in lapply(X = X, FUN = FUN, ...): lazy-load database '/home/tom/Documents/uni/phd/docs/particle\_filter/cache/true\_positions\_8e477dc42fd5f5075ae5f49c718f3956.rdb' is corrupt}}\end{kframe}
 \end{knitrout}
 
 
@@ -663,19 +659,13 @@ This can of course be vectorised fairly easily:
 \hlstd{\}}
 \hlstd{y} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{174.78525}\hlstd{,} \hlopt{-}\hlnum{36.84914}\hlstd{)}
 \hlstd{z} \hlkwb{<-} \hlkwd{t}\hlstd{(shape1)}
-\end{alltt}
-
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning: restarting interrupted promise evaluation}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning: internal error -3 in R\_decompress1}}
-
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in eval(expr, envir, enclos): lazy-load database '/home/tom/Documents/uni/phd/docs/particle\_filter/cache/true\_positions\_8e477dc42fd5f5075ae5f49c718f3956.rdb' is corrupt}}\begin{alltt}
 \hlkwd{distanceFlat}\hlstd{(y, z)}
 \end{alltt}
 \begin{verbatim}
-##        y 
-## 1653.856
+##  [1] 4149.9430 3773.1680 3672.3494 3561.8636 3377.5161 3190.9290 3044.6800
+##  [8] 2750.7017 2535.6988 2240.4274 2008.4752 1878.3004 1771.6265 1404.8933
+## [15] 1196.1452 1012.4265  809.3050  604.4278  512.1066  367.1038  163.3630
+## [22]  106.1185  340.3363 1066.4919 1653.8565
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -692,36 +682,20 @@ We will compute bearings in the next part.
 \begin{alltt}
 \hlcom{# "from" 1->2, 2->3, 3->4, ..., (n-1)->n}
 \hlstd{y} \hlkwb{<-} \hlstd{z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)]}
-\end{alltt}
-
-
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in -ncol(z): invalid argument to unary operator}}\begin{alltt}
 \hlstd{z} \hlkwb{<-} \hlstd{z[,} \hlopt{-}\hlnum{1}\hlstd{]}
-\end{alltt}
-
-
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in z[, -1]: incorrect number of dimensions}}\begin{alltt}
 \hlstd{di} \hlkwb{<-} \hlkwd{distanceFlat}\hlstd{(y, z)}
 \hlstd{shape1}\hlopt{$}\hlstd{distance} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{cumsum}\hlstd{(di))}
-\end{alltt}
-
-
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in `\$<-.data.frame`(`*tmp*`, "{}distance"{}, value = structure(c(0, : replacement has 2 rows, data has 25}}\begin{alltt}
 \hlstd{shape1}\hlopt{$}\hlstd{length} \hlkwb{<-} \hlkwd{c}\hlstd{(di,} \hlnum{NA}\hlstd{)}
-\end{alltt}
-
-
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in `\$<-.data.frame`(`*tmp*`, "{}length"{}, value = structure(c(1653.8564672522, : replacement has 2 rows, data has 25}}\begin{alltt}
 \hlstd{shape1[}\hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{3}\hlstd{,} \hlnum{23}\hlopt{:}\hlnum{25}\hlstd{), ]}
 \end{alltt}
 \begin{verbatim}
-##         lon       lat
-## 1  174.7985 -36.88493
-## 2  174.7973 -36.88168
-## 3  174.7972 -36.88074
-## 23 174.7818 -36.84780
-## 24 174.7742 -36.84535
-## 25 174.7678 -36.84393
+##         lon       lat  distance   length
+## 1  174.7985 -36.88493    0.0000 376.7768
+## 2  174.7973 -36.88168  376.7768 104.2504
+## 3  174.7972 -36.88074  481.0271 263.5338
+## 23 174.7818 -36.84780 5801.5484 726.6895
+## 24 174.7742 -36.84535 6528.2379 590.9006
+## 25 174.7678 -36.84393 7119.1384       NA
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -768,20 +742,16 @@ Also, $\Delta\lambda = \lambda_b - \lambda_a$.
     \hlstd{(th.rad} \hlopt{*} \hlnum{180} \hlopt{/} \hlstd{pi)} \hlopt{%%} \hlnum{360}
 \hlstd{\}}
 \hlstd{shape1}\hlopt{$}\hlstd{bearing} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{bearing}\hlstd{(y, z),} \hlnum{NA}\hlstd{)}
-\end{alltt}
-
-
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in if (ncol(a) != ncol(b) \& ncol(a) > 1 \& ncol(b) > 1) stop("{}Incorrent dimensions"{}): argument is of length zero}}\begin{alltt}
 \hlkwd{head}\hlstd{(shape1)}
 \end{alltt}
 \begin{verbatim}
-##        lon       lat
-## 1 174.7985 -36.88493
-## 2 174.7973 -36.88168
-## 3 174.7972 -36.88074
-## 4 174.7943 -36.88034
-## 5 174.7920 -36.87902
-## 6 174.7931 -36.87714
+##        lon       lat  distance   length   bearing
+## 1 174.7985 -36.88493    0.0000 376.7768 343.68534
+## 2 174.7973 -36.88168  376.7768 104.2504 358.04430
+## 3 174.7972 -36.88074  481.0271 263.5338 279.76479
+## 4 174.7943 -36.88034  744.5610 250.6042 305.63207
+## 5 174.7920 -36.87902  995.1652 229.7301  24.23082
+## 6 174.7931 -36.87714 1224.8952 165.5958  14.62306
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -844,10 +814,6 @@ Looks simple enough, let's use it. Let's say we are 3000~m into the trip:
 \hlstd{\}}
 \hlstd{x} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{3000}\hlstd{,} \hlnum{NA}\hlstd{)}
 \hlstd{z} \hlkwb{<-} \hlkwd{h}\hlstd{(x, shape1)}
-\end{alltt}
-
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}\begin{alltt}
 \hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{], con)}
 \hlkwd{points}\hlstd{(shape1}\hlopt{$}\hlstd{lon, shape1}\hlopt{$}\hlstd{lat,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
 \hlkwd{points}\hlstd{(z[}\hlnum{1}\hlstd{], z[}\hlnum{2}\hlstd{],} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.6}\hlstd{)}
@@ -925,28 +891,7 @@ Let's create some mock data:
 
 \hlstd{Xtrue} \hlkwb{<-} \hlkwd{rbind}\hlstd{(t} \hlopt{*} \hlnum{11}\hlstd{,} \hlnum{11}\hlstd{)}
 \hlstd{Ytrue} \hlkwb{<-} \hlkwd{apply}\hlstd{(Xtrue,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape1)}
-\end{alltt}
 
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}\begin{alltt}
 \hlstd{v} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{50}\hlstd{),} \hlkwd{runif}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{180}\hlstd{))}
 \hlstd{y} \hlkwb{<-} \hlkwd{sapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlstd{n,} \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{)} \hlkwd{partialSegment}\hlstd{(Ytrue[, i], v[}\hlnum{2}\hlstd{, i], v[}\hlnum{1}\hlstd{, i]))}
 
@@ -1061,7 +1006,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##   1.429   0.005   1.435
+##   0.968   0.000   0.973
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1250,7 +1195,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##   4.060   0.000   4.057
+##   2.628   0.000   2.627
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1271,6 +1216,10 @@ How about speed over  time?
 \hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(t),} \hlkwc{ylim} \hlstd{=} \hlkwd{range}\hlstd{(speed.hist, speedhat.hist),}
      \hlkwc{xlab} \hlstd{=} \hlstr{"Time (s)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Speed (m/s)"}\hlstd{)}
 \hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{M) \{}
+    \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i}\hlopt{+}\hlnum{1}\hlstd{], N), speedhat.hist[, i],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{)}
+    \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i}\hlopt{+}\hlnum{1}\hlstd{], N), speed.hist[, i],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
+\hlstd{\}}
 \end{alltt}
 \end{kframe}
 
@@ -1279,17 +1228,7 @@ How about speed over  time?
 }
 
 
-\begin{kframe}\begin{alltt}
-\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{M) \{}
-    \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i}\hlopt{+}\hlnum{1}\hlstd{], N), speedhat.hist[, i],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{)}
-    \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i}\hlopt{+}\hlnum{1}\hlstd{], N), speed.hist[, i],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
-\hlstd{\}}
-\end{alltt}
 
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in points(rep(t[i + 1], N), speedhat.hist[, i], pch = 4, col = "{}\#00009930"{}): internal error -3 in R\_decompress1}}
-
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in points(rep(t[i + 1], N), speedhat.hist[, i], pch = 4, col = "{}\#00009930"{}): lazy-load database '/home/tom/Documents/uni/phd/docs/particle\_filter/cache/simulation\_init\_sched\_9b52d8c2c4c2996a54256ac971826a2a.rdb' is corrupt}}\end{kframe}
 \end{knitrout}
 
 From that, it looks like we need to put a positive-speed constraint on the proposal distribution;
@@ -1349,18 +1288,18 @@ And the historical data can be sorted through nicely:
 \hlkwd{head}\hlstd{(hist)}
 \end{alltt}
 \begin{verbatim}
-##    trip_id shape_id    n
-## 1 27638244  7420013 2399
-## 2 27638190  7420013 2205
-## 3 27508685  5530028 1393
-## 4 27936496  4490021 1275
-## 5 27937019  4590008 1211
-## 6 27501654   660056 1202
+##    trip_id shape_id   n
+## 1 28879365  4590010 527
+## 2 28879378  4590011 516
+## 3 28878584  4550078 489
+## 4 28245353   080070 473
+## 5 28878623  4350043 473
+## 6 28878719  4490019 463
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
 
-So, trip \verb+27638244+ looks pretty popular. We'll get some useful information for that.
+So, trip \verb+28879365+ looks pretty popular. We'll get some useful information for that.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -1395,8 +1334,7 @@ our way through---hopefully we will be able to start generating priors and stuff
 \hlstd{(dates} \hlkwb{<-} \hlstd{all.dates}\hlopt{$}\hlstd{trip_start_date)}
 \end{alltt}
 \begin{verbatim}
-## [1] "20150817" "20150820" "20150824" "20150825" "20150826" "20150827"
-## [7] "20150831" "20150901" "20150903"
+## [1] "20151201" "20151202" "20151203"
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -1436,12 +1374,12 @@ So, on the first day:
 \end{alltt}
 \begin{verbatim}
 ##        lat       lon       time
-## 1 42.35349 -71.05190 1439817349
-## 2 42.35273 -71.05531 1439817410
-## 3 42.35183 -71.05594 1439817440
-## 4 42.35192 -71.05589 1439817501
-## 5 42.35261 -71.05546 1439817561
-## 6 42.35127 -71.04459 1439817719
+## 1 42.35458 -71.05811 1449014852
+## 2 42.35458 -71.05811 1449014852
+## 3 42.35458 -71.05811 1449014852
+## 4 42.35458 -71.05811 1449014852
+## 5 42.35458 -71.05811 1449014852
+## 6 42.35458 -71.05811 1449014852
 \end{verbatim}
 \begin{alltt}
 \hlstd{tripShape} \hlkwb{<-} \hlkwd{plotShape}\hlstd{(sID, mbta)}
@@ -1710,7 +1648,7 @@ From the MBTA feed we can get block information, so:
 \hlstd{head.gtfs.block} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{n} \hlstd{=} \hlnum{6}\hlstd{,} \hlkwc{...}\hlstd{)}
     \hlkwd{head}\hlstd{(x}\hlopt{$}\hlstd{trips, n, ...)}
 \hlstd{plot.gtfs.block} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{highlight} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{...}\hlstd{)}
-    \hlkwd{plot}\hlstd{(x}\hlopt{$}\hlstd{shapes,} \hlkwc{highlight} \hlstd{= highlight, ...)}
+    \hlkwd{plot.gtfs.block.shapes}\hlstd{(x}\hlopt{$}\hlstd{shapes[x}\hlopt{$}\hlstd{trips}\hlopt{$}\hlstd{shape_id],} \hlkwc{highlight} \hlstd{= highlight, ...)}
 \hlstd{plot.gtfs.block.shapes} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{highlight} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{...}\hlstd{) \{}
     \hlcom{# plot ALL of the shapes...}
     \hlstd{all} \hlkwb{<-} \hlkwd{do.call}\hlstd{(rbind, x)}
@@ -1743,12 +1681,12 @@ From the MBTA feed we can get block information, so:
 \end{alltt}
 \begin{verbatim}
 ##   block_id  trip_id route_id shape_id departure_time
-## 1  S742-84 27638243      746  7460006       06:04:00
-## 2  S742-84 27638234      742  7420013       06:11:00
-## 3  S742-84 26206548      746  7460006       06:31:00
-## 4  S742-84 27647452      746  7460006       06:31:00
-## 5  S742-84 27638233      742  7420015       06:32:00
-## 6  S742-84 26206544      742  7420013       06:38:00
+## 1 L459-133 28882062      439  4390024       07:10:00
+## 2 L459-133 28882175      439  4390026       07:30:00
+## 3 L459-133 28882247      456  4560025       08:30:00
+## 4 L459-133 28882225      459  4590011       09:30:00
+## 5 L459-133 28882231      459  4590010       11:20:00
+## 6 L459-133 28882226      459  4590011       13:05:00
 \end{verbatim}
 \begin{alltt}
 \hlkwd{plot}\hlstd{(block)}
@@ -1841,7 +1779,8 @@ We can get one day of data for a vehicle:
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{blockA} \hlkwb{<-} \hlstd{hist.blocks[[}\hlnum{2}\hlstd{]][[}\hlnum{2}\hlstd{]]}
+\hlcom{#blockA <- hist.blocks[[2]][[2]]}
+\hlstd{blockA} \hlkwb{<-} \hlstd{hist.blocks[[}\hlnum{3}\hlstd{]][[}\hlstr{"y6010"}\hlstd{]]}
 \hlstd{getBlockAlt} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{ids}\hlstd{,} \hlkwc{date}\hlstd{,} \hlkwc{conn}\hlstd{) \{}
     \hlstd{blockInfo} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
         \hlstd{conn,}
@@ -1859,7 +1798,8 @@ We can get one day of data for a vehicle:
 
     \hlstd{fullPath} \hlkwb{<-} \hlkwd{do.call}\hlstd{(rbind, blockShapes[blockInfo}\hlopt{$}\hlstd{shape_id])}
     \hlstd{blockPath} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{lon} \hlstd{= fullPath}\hlopt{$}\hlstd{lon,} \hlkwc{lat} \hlstd{= fullPath}\hlopt{$}\hlstd{lat,}
-                            \hlkwc{trip_id} \hlstd{=} \hlkwd{rep}\hlstd{(blockInfo}\hlopt{$}\hlstd{trip_id,} \hlkwd{sapply}\hlstd{(blockShapes, nrow)))}
+                            \hlkwc{trip_id} \hlstd{=} \hlkwd{rep}\hlstd{(blockInfo}\hlopt{$}\hlstd{trip_id,}
+                                \hlkwd{sapply}\hlstd{(blockShapes[blockInfo}\hlopt{$}\hlstd{shape_id], nrow)))}
     \hlkwd{class}\hlstd{(blockPath)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.shape"}\hlstd{,} \hlkwd{class}\hlstd{(blockPath))}
 
     \hlstd{schedule} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
@@ -1887,11 +1827,18 @@ We can get one day of data for a vehicle:
 \hlstd{block} \hlkwb{<-} \hlkwd{getBlockAlt}\hlstd{(blockA}\hlopt{$}\hlstd{trip_id, blockA}\hlopt{$}\hlstd{trip_start_date[}\hlnum{1}\hlstd{], mbta)}
 \hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{4}\hlstd{,} \hlnum{2}\hlstd{))}
 \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(block}\hlopt{$}\hlstd{trips))}
-    \hlkwd{plot}\hlstd{(block, i)}
+    \hlkwd{plot}\hlstd{(block,} \hlkwc{highlight} \hlstd{= i)}
 \end{alltt}
 \end{kframe}
 
 {\centering \includegraphics[width=0.8\textwidth]{figure/manual_blocking-1} 
+
+}
+
+
+
+
+{\centering \includegraphics[width=0.8\textwidth]{figure/manual_blocking-2} 
 
 }
 
@@ -2082,6 +2029,7 @@ Matching is wrong. Need to restrict distance by time.
 
     \hlstd{res}
 \hlstd{\}}
+
 \hlstd{fit} \hlkwb{<-} \hlkwd{pf2}\hlstd{(block,} \hlkwc{start.obs} \hlstd{=} \hlnum{5}\hlstd{)}
 \end{alltt}
 \end{kframe}
@@ -2090,18 +2038,24 @@ Matching is wrong. Need to restrict distance by time.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{4}\hlstd{,} \hlnum{2}\hlstd{))}
-\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlnum{5}\hlstd{,} \hlnum{20}\hlstd{,} \hlnum{30}\hlstd{,} \hlnum{65}\hlstd{,} \hlnum{100}\hlstd{,} \hlnum{190}\hlstd{,} \hlnum{220}\hlstd{))}
+\hlcom{#par(mfrow = c(4, 2))}
+\hlcom{#for (i in c(2, 5, 20, 30, 65, 100, 190, 220))}
+\hlcom{#for (i in c(2, 3, 4, 10, 30, 40, 50, 60))}
+\hlkwd{unlink}\hlstd{(}\hlstr{"FIGS/anim*.jpg"}\hlstd{)}
+\hlkwd{jpeg}\hlstd{(}\hlstr{"FIGS/anim%04d.jpg"}\hlstd{,} \hlkwc{width} \hlstd{=} \hlnum{400}\hlstd{,} \hlkwc{height} \hlstd{=} \hlnum{300}\hlstd{)}
+\hlkwa{for}\hlstd{(i} \hlkwa{in} \hlnum{2}\hlopt{:}\hlkwd{length}\hlstd{(fit}\hlopt{$}\hlstd{HX[}\hlnum{1}\hlstd{,}\hlnum{1}\hlstd{,]))}
     \hlkwd{plot}\hlstd{(fit, i)}
+\hlkwd{dev.off}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+## pdf 
+##   2
+\end{verbatim}
+\begin{alltt}
+\hlcom{#unlink("figure/animated_block_history.gif")}
+\hlcom{#system("convert -delay 0.5 FIGS/anim*.jpg figure/animated_block_history.gif")}
 \end{alltt}
 \end{kframe}
-
-{\centering \includegraphics[width=0.8\textwidth]{figure/plot_new_fit-1} 
-
-}
-
-
-
 \end{knitrout}
 
 So, few issues. First, once the bus reaches the end of a trip, the speed is reset to 0, and so it's
@@ -2128,6 +2082,29 @@ Using the previous example, we can use the first trip's schedule to demonstrate:
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
+\hlstd{getShapeDist} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{sched}\hlstd{,} \hlkwc{sh}\hlstd{) \{}
+    \hlcom{## DRY - need a function for this ... or just to it in getBlock ...}
+    \hlstd{z} \hlkwb{<-} \hlkwd{t}\hlstd{(sh[,}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{])}
+    \hlstd{di} \hlkwb{<-} \hlkwd{distanceFlat}\hlstd{(z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)], z[,} \hlopt{-}\hlnum{1}\hlstd{])}
+    \hlstd{sh}\hlopt{$}\hlstd{distance} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{cumsum}\hlstd{(di))}
+    \hlstd{sh}\hlopt{$}\hlstd{length} \hlkwb{<-} \hlkwd{c}\hlstd{(di,} \hlnum{NA}\hlstd{)}
+    \hlstd{sh}\hlopt{$}\hlstd{bearing} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{bearing}\hlstd{(z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)], z[,} \hlopt{-}\hlnum{1}\hlstd{]),} \hlnum{NA}\hlstd{)}
+    \hlstd{sh} \hlkwb{<-} \hlstd{sh[sh}\hlopt{$}\hlstd{length} \hlopt{>} \hlnum{0} \hlopt{|} \hlkwd{is.na}\hlstd{(sh}\hlopt{$}\hlstd{length), ]}
+
+    \hlstd{d} \hlkwb{<-} \hlnum{0}
+    \hlstd{J} \hlkwb{<-} \hlnum{1}
+    \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{(}\hlkwd{nrow}\hlstd{(sched)}\hlopt{-}\hlnum{1}\hlstd{)) \{}
+        \hlstd{p} \hlkwb{<-} \hlstd{sched[i,} \hlkwd{c}\hlstd{(}\hlstr{"stop_lon"}\hlstd{,} \hlstr{"stop_lat"}\hlstd{)]}
+        \hlkwa{for} \hlstd{(j} \hlkwa{in} \hlstd{J}\hlopt{:}\hlkwd{nrow}\hlstd{(sh)) \{}
+            \hlstd{q1} \hlkwb{<-} \hlstd{sh[j,} \hlkwd{c}\hlstd{(}\hlstr{"lon"}\hlstd{,} \hlstr{"lat"}\hlstd{)]}
+            \hlstd{q2} \hlkwb{<-} \hlstd{sh[j}\hlopt{+}\hlnum{1}\hlstd{,} \hlkwd{c}\hlstd{(}\hlstr{"lon"}\hlstd{,} \hlstr{"lat"}\hlstd{)]}
+            \hlstd{v} \hlkwb{<-} \hlstd{q2} \hlopt{-} \hlstd{q1}
+            \hlstd{w} \hlkwb{<-} \hlstd{p} \hlopt{-} \hlstd{q1}
+
+        \hlstd{\}}
+    \hlstd{\}}
+\hlstd{\}}
+
 \hlstd{getBlock} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{ids}\hlstd{,} \hlkwc{date}\hlstd{,} \hlkwc{conn}\hlstd{) \{}
     \hlstd{blockInfo} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
         \hlstd{conn,}
@@ -2151,7 +2128,7 @@ Using the previous example, we can use the first trip's schedule to demonstrate:
     \hlcom{## Get the position of the stops}
     \hlstd{schedule} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
         \hlstd{conn,}
-        \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT st.trip_id, s.stop_id, s.stop_sequence,
+        \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT st.trip_id, st.stop_id, st.stop_sequence,
                         s.stop_lat, s.stop_lon,
                         CASE WHEN st.arrival_time IS NULL 
                           THEN st.departure_time 
@@ -2163,6 +2140,14 @@ Using the previous example, we can use the first trip's schedule to demonstrate:
                 \hlkwd{paste}\hlstd{(blockInfo}\hlopt{$}\hlstd{trip_id,} \hlkwc{collapse} \hlstd{=} \hlstr{"','"}\hlstd{))}
     \hlstd{)}
 
+    \hlcom{## Compute distance into trip:}
+    \hlkwa{if} \hlstd{(}\hlkwd{any}\hlstd{(}\hlkwd{is.na}\hlstd{(schedule}\hlopt{$}\hlstd{shape_dist_traveled))) \{}
+        \hlstd{sdt} \hlkwb{<-} \hlkwd{lapply}\hlstd{(}\hlkwd{unique}\hlstd{(schedule}\hlopt{$}\hlstd{trip_id),} \hlkwa{function}\hlstd{(}\hlkwc{id}\hlstd{)}
+            \hlkwd{getShapeDist}\hlstd{(schedule[schedule}\hlopt{$}\hlstd{trip_id} \hlopt{==} \hlstd{id, ],}
+                         \hlstd{blockShapes[[blockInfo[blockInfo}\hlopt{$}\hlstd{trip_id} \hlopt{==} \hlstd{id,} \hlstr{"shape_id"}\hlstd{]]]))}
+        \hlstd{schedule}\hlopt{$}\hlstd{shape_dist_traveled} \hlkwb{<-} \hlkwd{do.call}\hlstd{(c, sdt)}
+    \hlstd{\}}
+
     \hlstd{out} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{trips} \hlstd{= blockInfo,}
                 \hlkwc{shapes} \hlstd{= blockShapes,}
                 \hlkwc{path} \hlstd{= blockPath,}
@@ -2172,8 +2157,12 @@ Using the previous example, we can use the first trip's schedule to demonstrate:
     \hlkwd{class}\hlstd{(out)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.block"}\hlstd{)}
     \hlstd{out}
 \hlstd{\}}
+
+\hlkwd{getBlock}\hlstd{(blockA}\hlopt{$}\hlstd{trip_id, blockA}\hlopt{$}\hlstd{trip_start_date[}\hlnum{1}\hlstd{], mbta)} \hlkwb{->} \hlstd{DD}
 \end{alltt}
-\end{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in rep(blockInfo\$trip\_id, sapply(blockShapes, nrow)): invalid 'times' argument}}\end{kframe}
 \end{knitrout}
 
 

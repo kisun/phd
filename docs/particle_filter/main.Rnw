@@ -7,10 +7,14 @@
 \usepackage{fullpage}
 \usepackage{parskip}
 
-<<echo=FALSE,results="hide",messages=FALSE>>=
+\usepackage[keepaspectratio]{animate}
+
+<<echo=FALSE,results="hide",messages=FALSE,echo=FALSE>>=
 opts_chunk$set(fig.width=8,fig.height=5,fig.align="center")
-library(mvtnorm)
-library(RSQLite)
+suppressMessages({
+    library(mvtnorm)
+    library(RSQLite)
+})
 @ 
 
 
@@ -59,7 +63,7 @@ library(RSQLite)
 \maketitle
 
 
-\section{Trajectory Constrained tos ``Road''}
+\section{Trajectory Constrained to ``Road''}
 
 
 We propose a two-stage algorithm that involves several different aspects:
@@ -1178,11 +1182,11 @@ print.gtfs.block <- function(x, ...) {
 head.gtfs.block <- function(x, n = 6, ...)
     head(x$trips, n, ...)
 plot.gtfs.block <- function(x, highlight = 1, ...)
-    plot(x$shapes, highlight = highlight, ...)
+    plot.gtfs.block.shapes(x$shapes[x$trips$shape_id], highlight = highlight, ...)
 plot.gtfs.block.shapes <- function(x, highlight = 1, ...) {
     # plot ALL of the shapes...
     all <- do.call(rbind, x)
-    
+
     plot(NA, type = "n", asp = 1,
          xlim = range(all$lon), ylim = range(all$lat),
          xlab = "Longitude", ylab = "Latitude",
@@ -1271,7 +1275,8 @@ hist.blocks <- lapply(hist.dates, function(h) {
 
 We can get one day of data for a vehicle:
 <<manual_blocking,fig.width=10,fig.height=12,out.width="0.8\\textwidth">>=
-blockA <- hist.blocks[[2]][[2]]
+#blockA <- hist.blocks[[2]][[2]]
+blockA <- hist.blocks[[3]][["y6010"]]
 getBlockAlt <- function(ids, date, conn) {
     blockInfo <- dbGetQuery(
         conn,
@@ -1289,7 +1294,8 @@ getBlockAlt <- function(ids, date, conn) {
     
     fullPath <- do.call(rbind, blockShapes[blockInfo$shape_id])
     blockPath <- data.frame(lon = fullPath$lon, lat = fullPath$lat,
-                            trip_id = rep(blockInfo$trip_id, sapply(blockShapes, nrow)))
+                            trip_id = rep(blockInfo$trip_id, 
+                                sapply(blockShapes[blockInfo$shape_id], nrow)))
     class(blockPath) <- c("gtfs.shape", class(blockPath))
     
     schedule <- dbGetQuery(
@@ -1317,7 +1323,7 @@ getBlockAlt <- function(ids, date, conn) {
 block <- getBlockAlt(blockA$trip_id, blockA$trip_start_date[1], mbta)
 par(mfrow = c(4, 2))
 for (i in 1:nrow(block$trips))
-    plot(block, i)
+    plot(block, highlight = i)
 @ 
 
 Now THAT looks much better! Let's get the data:
@@ -1475,13 +1481,22 @@ pf2 <- function(block,
     
     res
 }
+
 fit <- pf2(block, start.obs = 5)
 @ 
 
 <<plot_new_fit,fig.width=10,fig.height=12,out.width="0.8\\textwidth">>=
-par(mfrow = c(4, 2))
-for (i in c(2, 5, 20, 30, 65, 100, 190, 220))
+#par(mfrow = c(4, 2))
+#for (i in c(2, 5, 20, 30, 65, 100, 190, 220))
+#for (i in c(2, 3, 4, 10, 30, 40, 50, 60))
+unlink("FIGS/anim*.jpg")
+jpeg("FIGS/anim%04d.jpg", width = 400, height = 300)
+for(i in 2:length(fit$HX[1,1,]))
     plot(fit, i)
+dev.off()
+unlink("figure/animated_block_history.gif")
+system("convert -delay 1 FIGS/anim*.jpg figure/animated_block_history.gif")
+unlink("FIGS/*.jpg")
 @ 
 
 So, few issues. First, once the bus reaches the end of a trip, the speed is reset to 0, and so it's
