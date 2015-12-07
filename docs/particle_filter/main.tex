@@ -60,7 +60,6 @@
 
 
 
-
 \newcommand{\bx}{\boldsymbol{x}}
 \newcommand{\bu}{\boldsymbol{u}}
 \newcommand{\bw}{\boldsymbol{w}}
@@ -2052,8 +2051,9 @@ Matching is wrong. Need to restrict distance by time.
 ##   2
 \end{verbatim}
 \begin{alltt}
-\hlcom{#unlink("figure/animated_block_history.gif")}
-\hlcom{#system("convert -delay 0.5 FIGS/anim*.jpg figure/animated_block_history.gif")}
+\hlkwd{unlink}\hlstd{(}\hlstr{"figure/animated_block_history.gif"}\hlstd{)}
+\hlkwd{system}\hlstd{(}\hlstr{"convert -delay 1 FIGS/anim*.jpg figure/animated_block_history.gif"}\hlstd{)}
+\hlkwd{unlink}\hlstd{(}\hlstr{"FIGS/*.jpg"}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -2091,18 +2091,70 @@ Using the previous example, we can use the first trip's schedule to demonstrate:
     \hlstd{sh}\hlopt{$}\hlstd{bearing} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{bearing}\hlstd{(z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)], z[,} \hlopt{-}\hlnum{1}\hlstd{]),} \hlnum{NA}\hlstd{)}
     \hlstd{sh} \hlkwb{<-} \hlstd{sh[sh}\hlopt{$}\hlstd{length} \hlopt{>} \hlnum{0} \hlopt{|} \hlkwd{is.na}\hlstd{(sh}\hlopt{$}\hlstd{length), ]}
 
-    \hlstd{d} \hlkwb{<-} \hlnum{0}
+    \hlcom{## Convert to FLAT XY}
+    \hlstd{sh}\hlopt{$}\hlstd{lam} \hlkwb{<-} \hlstd{sh}\hlopt{$}\hlstd{lon} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{sh}\hlopt{$}\hlstd{phi} \hlkwb{<-} \hlstd{sh}\hlopt{$}\hlstd{lat} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{sched}\hlopt{$}\hlstd{lam} \hlkwb{<-} \hlstd{sched}\hlopt{$}\hlstd{stop_lon} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+    \hlstd{sched}\hlopt{$}\hlstd{phi} \hlkwb{<-} \hlstd{sched}\hlopt{$}\hlstd{stop_lat} \hlopt{*} \hlstd{pi} \hlopt{/} \hlnum{180}
+
+    \hlstd{phi1} \hlkwb{<-} \hlkwd{mean}\hlstd{(sh}\hlopt{$}\hlstd{phi)}
+    \hlstd{sh}\hlopt{$}\hlstd{x} \hlkwb{<-} \hlstd{sh}\hlopt{$}\hlstd{lam} \hlopt{*} \hlkwd{cos}\hlstd{(phi1)}
+    \hlstd{sh}\hlopt{$}\hlstd{y} \hlkwb{<-} \hlstd{sh}\hlopt{$}\hlstd{phi}
+    \hlstd{sched}\hlopt{$}\hlstd{x} \hlkwb{<-} \hlstd{sched}\hlopt{$}\hlstd{lam} \hlopt{*} \hlkwd{cos}\hlstd{(phi1)}
+    \hlstd{sched}\hlopt{$}\hlstd{y} \hlkwb{<-} \hlstd{sched}\hlopt{$}\hlstd{phi}
+
+    \hlcom{#plot(sh$x, sh$y, type = "l", asp = 1)}
+
+    \hlstd{d} \hlkwb{<-} \hlkwd{numeric}\hlstd{(}\hlkwd{nrow}\hlstd{(sched))}
     \hlstd{J} \hlkwb{<-} \hlnum{1}
-    \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{(}\hlkwd{nrow}\hlstd{(sched)}\hlopt{-}\hlnum{1}\hlstd{)) \{}
-        \hlstd{p} \hlkwb{<-} \hlstd{sched[i,} \hlkwd{c}\hlstd{(}\hlstr{"stop_lon"}\hlstd{,} \hlstr{"stop_lat"}\hlstd{)]}
-        \hlkwa{for} \hlstd{(j} \hlkwa{in} \hlstd{J}\hlopt{:}\hlkwd{nrow}\hlstd{(sh)) \{}
-            \hlstd{q1} \hlkwb{<-} \hlstd{sh[j,} \hlkwd{c}\hlstd{(}\hlstr{"lon"}\hlstd{,} \hlstr{"lat"}\hlstd{)]}
-            \hlstd{q2} \hlkwb{<-} \hlstd{sh[j}\hlopt{+}\hlnum{1}\hlstd{,} \hlkwd{c}\hlstd{(}\hlstr{"lon"}\hlstd{,} \hlstr{"lat"}\hlstd{)]}
+    \hlstd{nr} \hlkwb{<-} \hlkwd{nrow}\hlstd{(sh)}
+    \hlstd{nr1} \hlkwb{<-} \hlstd{nr} \hlopt{-} \hlnum{1}
+    \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(sched)) \{}
+        \hlstd{p} \hlkwb{<-} \hlkwd{as.numeric}\hlstd{(sched[i,} \hlkwd{c}\hlstd{(}\hlstr{"x"}\hlstd{,} \hlstr{"y"}\hlstd{)])}
+
+        \hlstd{di} \hlkwb{<-} \hlstd{ri} \hlkwb{<-} \hlkwd{numeric}\hlstd{(nr} \hlopt{-} \hlstd{J)}
+        \hlstd{pxy} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{nrow} \hlstd{= nr} \hlopt{-} \hlstd{J,} \hlkwc{ncol} \hlstd{=} \hlnum{2}\hlstd{)}
+        \hlkwa{for} \hlstd{(j} \hlkwa{in} \hlstd{J}\hlopt{:}\hlstd{nr1) \{}
+            \hlstd{ji} \hlkwb{<-} \hlstd{j} \hlopt{-} \hlstd{J} \hlopt{+} \hlnum{1}
+            \hlstd{q1} \hlkwb{<-} \hlkwd{as.numeric}\hlstd{(sh[j,} \hlkwd{c}\hlstd{(}\hlstr{"x"}\hlstd{,} \hlstr{"y"}\hlstd{)])}
+            \hlstd{q2} \hlkwb{<-} \hlkwd{as.numeric}\hlstd{(sh[j} \hlopt{+} \hlnum{1}\hlstd{,} \hlkwd{c}\hlstd{(}\hlstr{"x"}\hlstd{,} \hlstr{"y"}\hlstd{)])}
+
             \hlstd{v} \hlkwb{<-} \hlstd{q2} \hlopt{-} \hlstd{q1}
             \hlstd{w} \hlkwb{<-} \hlstd{p} \hlopt{-} \hlstd{q1}
 
+            \hlstd{wv} \hlkwb{<-} \hlstd{w} \hlopt{%*%} \hlstd{v}
+            \hlstd{vv} \hlkwb{<-} \hlstd{v} \hlopt{%*%} \hlstd{v}
+            \hlstd{ww} \hlkwb{<-} \hlstd{w} \hlopt{%*%} \hlstd{w}
+
+            \hlkwa{if} \hlstd{(wv} \hlopt{<} \hlnum{0}\hlstd{) \{}
+                \hlstd{r2} \hlkwb{<-} \hlstd{ww}
+                \hlstd{di[ji]} \hlkwb{<-} \hlnum{0}
+                \hlstd{ri[ji]} \hlkwb{<-} \hlkwd{sqrt}\hlstd{(r2)}
+            \hlstd{\}} \hlkwa{else if} \hlstd{(wv} \hlopt{<=} \hlstd{vv) \{}
+                \hlstd{d2} \hlkwb{<-} \hlstd{wv}\hlopt{^}\hlnum{2} \hlopt{/} \hlstd{vv}
+                \hlstd{r2} \hlkwb{<-} \hlstd{ww} \hlopt{-} \hlstd{d2}
+                \hlstd{ri[ji]} \hlkwb{<-} \hlkwd{sqrt}\hlstd{(r2)}
+                \hlstd{di[ji]} \hlkwb{<-} \hlkwd{sqrt}\hlstd{(d2)}
+            \hlstd{\}} \hlkwa{else} \hlstd{\{}
+                \hlstd{r2} \hlkwb{<-} \hlstd{(w} \hlopt{-} \hlstd{v)} \hlopt{%*%} \hlstd{(w} \hlopt{-} \hlstd{v)}
+                \hlstd{d2} \hlkwb{<-} \hlstd{vv}
+                \hlstd{ri[ji]} \hlkwb{<-} \hlkwd{sqrt}\hlstd{(r2)}
+                \hlstd{di[ji]} \hlkwb{<-} \hlkwd{sqrt}\hlstd{(d2)}
+            \hlstd{\}}
+
+            \hlstd{pxy[ji, ]} \hlkwb{<-} \hlstd{q1} \hlopt{+} \hlstd{di[ji]} \hlopt{/} \hlkwd{sqrt}\hlstd{(vv)} \hlopt{*} \hlstd{v}
         \hlstd{\}}
+
+        \hlstd{wi} \hlkwb{<-} \hlkwd{which.min}\hlstd{(ri)}
+        \hlstd{J} \hlkwb{<-} \hlstd{J} \hlopt{+} \hlstd{wi} \hlopt{-} \hlnum{1}
+
+        \hlcom{## convert it:}
+        \hlcom{## points(pxy[1], pxy[2], cex = 0.5, pch = 4, col = "blue")}
+        \hlstd{pll} \hlkwb{<-} \hlkwd{c}\hlstd{(pxy[wi,} \hlnum{1}\hlstd{]} \hlopt{/} \hlkwd{cos}\hlstd{(phi1), pxy[wi,} \hlnum{2}\hlstd{])} \hlopt{*} \hlnum{180} \hlopt{/} \hlstd{pi}
+        \hlstd{d[i]} \hlkwb{<-} \hlstd{sh[J,} \hlstr{"distance"}\hlstd{]} \hlopt{+} \hlkwd{distanceFlat}\hlstd{(pll,} \hlkwd{as.numeric}\hlstd{(sh[J,} \hlkwd{c}\hlstd{(}\hlstr{"lon"}\hlstd{,} \hlstr{"lat"}\hlstd{)]))}
     \hlstd{\}}
+
+    \hlstd{d}
 \hlstd{\}}
 
 \hlstd{getBlock} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{ids}\hlstd{,} \hlkwc{date}\hlstd{,} \hlkwc{conn}\hlstd{) \{}
@@ -2122,7 +2174,8 @@ Using the previous example, we can use the first trip's schedule to demonstrate:
 
     \hlstd{fullPath} \hlkwb{<-} \hlkwd{do.call}\hlstd{(rbind, blockShapes[blockInfo}\hlopt{$}\hlstd{shape_id])}
     \hlstd{blockPath} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{lon} \hlstd{= fullPath}\hlopt{$}\hlstd{lon,} \hlkwc{lat} \hlstd{= fullPath}\hlopt{$}\hlstd{lat,}
-                            \hlkwc{trip_id} \hlstd{=} \hlkwd{rep}\hlstd{(blockInfo}\hlopt{$}\hlstd{trip_id,} \hlkwd{sapply}\hlstd{(blockShapes, nrow)))}
+                            \hlkwc{trip_id} \hlstd{=} \hlkwd{rep}\hlstd{(blockInfo}\hlopt{$}\hlstd{trip_id,}
+                                \hlkwd{sapply}\hlstd{(blockShapes[blockInfo}\hlopt{$}\hlstd{shape_id], nrow)))}
     \hlkwd{class}\hlstd{(blockPath)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.shape"}\hlstd{,} \hlkwd{class}\hlstd{(blockPath))}
 
     \hlcom{## Get the position of the stops}
@@ -2148,22 +2201,70 @@ Using the previous example, we can use the first trip's schedule to demonstrate:
         \hlstd{schedule}\hlopt{$}\hlstd{shape_dist_traveled} \hlkwb{<-} \hlkwd{do.call}\hlstd{(c, sdt)}
     \hlstd{\}}
 
+    \hlcom{## Compute speed functions:}
+    \hlstd{speedFns} \hlkwb{<-} \hlkwd{tapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(schedule), schedule}\hlopt{$}\hlstd{trip_id,}
+                       \hlkwa{function}\hlstd{(}\hlkwc{id}\hlstd{) \{}
+                           \hlstd{x} \hlkwb{<-} \hlstd{schedule}\hlopt{$}\hlstd{shape_dist_traveled[id]}
+                           \hlstd{t} \hlkwb{<-} \hlkwd{hms}\hlstd{(schedule}\hlopt{$}\hlstd{time[id])}
+                           \hlstd{tt} \hlkwb{<-} \hlstd{(}\hlkwd{hour}\hlstd{(t)} \hlopt{*} \hlnum{60} \hlopt{+} \hlkwd{minute}\hlstd{(t))} \hlopt{*} \hlnum{60}
+                           \hlstd{t0} \hlkwb{<-} \hlstd{tt} \hlopt{-} \hlkwd{min}\hlstd{(tt)}
+                           \hlstd{yy} \hlkwb{<-} \hlkwd{unique}\hlstd{(t0)}
+                           \hlstd{xx} \hlkwb{<-} \hlkwd{tapply}\hlstd{(x, t0, min)}
+
+                           \hlkwd{splinefun}\hlstd{(xx, yy)}
+                       \hlstd{\})}
+
+
     \hlstd{out} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{trips} \hlstd{= blockInfo,}
                 \hlkwc{shapes} \hlstd{= blockShapes,}
                 \hlkwc{path} \hlstd{= blockPath,}
                 \hlkwc{schedule} \hlstd{= schedule,}
+                \hlkwc{speed} \hlstd{= speedFns,}
                 \hlkwc{date} \hlstd{= date)}
 
     \hlkwd{class}\hlstd{(out)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"gtfs.block"}\hlstd{)}
     \hlstd{out}
 \hlstd{\}}
 
-\hlkwd{getBlock}\hlstd{(blockA}\hlopt{$}\hlstd{trip_id, blockA}\hlopt{$}\hlstd{trip_start_date[}\hlnum{1}\hlstd{], mbta)} \hlkwb{->} \hlstd{DD}
+\hlstd{block.speed} \hlkwb{<-} \hlkwd{getBlock}\hlstd{(blockA}\hlopt{$}\hlstd{trip_id, blockA}\hlopt{$}\hlstd{trip_start_date[}\hlnum{1}\hlstd{], mbta)}
 \end{alltt}
-
-
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in rep(blockInfo\$trip\_id, sapply(blockShapes, nrow)): invalid 'times' argument}}\end{kframe}
+\end{kframe}
 \end{knitrout}
+
+So now each trip has a ``speed'' function computed. In actual fact, the function is
+``scheduled time at distance $x$ into trip'', the derivative of which gives us speed:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{fn1} \hlkwb{<-} \hlstd{block.speed}\hlopt{$}\hlstd{speed[[}\hlnum{1}\hlstd{]]}
+\hlkwd{curve}\hlstd{(}\hlkwd{fn1}\hlstd{(x),} \hlnum{0}\hlstd{,}
+      \hlkwd{max}\hlstd{(block.speed}\hlopt{$}\hlstd{schedule[block.speed}\hlopt{$}\hlstd{schedule}\hlopt{$}\hlstd{trip_id} \hlopt{==}
+                                   \hlstd{block.speed}\hlopt{$}\hlstd{trips}\hlopt{$}\hlstd{trip_id[}\hlnum{1}\hlstd{], ]}\hlopt{$}\hlstd{shape_dist_traveled),}
+      \hlkwc{xlab} \hlstd{=} \hlstr{"Distance (m)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Time (s)"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/speed_function_1-1} 
+
+}
+
+
+\begin{kframe}\begin{alltt}
+\hlkwd{curve}\hlstd{(}\hlkwd{fn1}\hlstd{(x,} \hlnum{1}\hlstd{),} \hlnum{0}\hlstd{,}
+      \hlkwd{max}\hlstd{(block.speed}\hlopt{$}\hlstd{schedule[block.speed}\hlopt{$}\hlstd{schedule}\hlopt{$}\hlstd{trip_id} \hlopt{==}
+                                   \hlstd{block.speed}\hlopt{$}\hlstd{trips}\hlopt{$}\hlstd{trip_id[}\hlnum{1}\hlstd{], ]}\hlopt{$}\hlstd{shape_dist_traveled),}
+      \hlkwc{xlab} \hlstd{=} \hlstr{"Distance (m)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Speed (m/s)"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/speed_function_1-2} 
+
+}
+
+
+
+\end{knitrout}
+
 
 
 \end{document}

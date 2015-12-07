@@ -17,7 +17,6 @@ suppressMessages({
 })
 @ 
 
-
 \newcommand{\bx}{\boldsymbol{x}}
 \newcommand{\bu}{\boldsymbol{u}}
 \newcommand{\bw}{\boldsymbol{w}}
@@ -1485,7 +1484,7 @@ pf2 <- function(block,
 fit <- pf2(block, start.obs = 5)
 @ 
 
-<<plot_new_fit,fig.width=10,fig.height=12,out.width="0.8\\textwidth">>=
+<<plot_new_fit,fig.width=10,fig.height=12,out.width="0.8\\textwidth",cache=TRUE>>=
 #par(mfrow = c(4, 2))
 #for (i in c(2, 5, 20, 30, 65, 100, 190, 220))
 #for (i in c(2, 3, 4, 10, 30, 40, 50, 60))
@@ -1520,7 +1519,7 @@ arrival times.
 For this, we need to know the distance-into-trip of the stops in a trip.
 Using the previous example, we can use the first trip's schedule to demonstrate:
 
-<<shape_of_first_trip>>=
+<<shape_of_first_trip,cache=TRUE>>=
 getShapeDist <- function(sched, sh) {
     ## DRY - need a function for this ... or just to it in getBlock ...
     z <- t(sh[,1:2])
@@ -1530,18 +1529,70 @@ getShapeDist <- function(sched, sh) {
     sh$bearing <- c(bearing(z[, -ncol(z)], z[, -1]), NA)
     sh <- sh[sh$length > 0 | is.na(sh$length), ]
     
-    d <- 0
+    ## Convert to FLAT XY
+    sh$lam <- sh$lon * pi / 180
+    sh$phi <- sh$lat * pi / 180
+    sched$lam <- sched$stop_lon * pi / 180
+    sched$phi <- sched$stop_lat * pi / 180
+    
+    phi1 <- mean(sh$phi)
+    sh$x <- sh$lam * cos(phi1)
+    sh$y <- sh$phi
+    sched$x <- sched$lam * cos(phi1)
+    sched$y <- sched$phi
+    
+    #plot(sh$x, sh$y, type = "l", asp = 1)
+    
+    d <- numeric(nrow(sched))
     J <- 1
-    for (i in 1:(nrow(sched)-1)) {
-        p <- sched[i, c("stop_lon", "stop_lat")]
-        for (j in J:nrow(sh)) {
-            q1 <- sh[j, c("lon", "lat")]
-            q2 <- sh[j+1, c("lon", "lat")]
+    nr <- nrow(sh)
+    nr1 <- nr - 1
+    for (i in 1:nrow(sched)) {
+        p <- as.numeric(sched[i, c("x", "y")])
+        
+        di <- ri <- numeric(nr - J)
+        pxy <- matrix(NA, nrow = nr - J, ncol = 2)
+        for (j in J:nr1) {
+            ji <- j - J + 1
+            q1 <- as.numeric(sh[j, c("x", "y")])
+            q2 <- as.numeric(sh[j + 1, c("x", "y")])
+            
             v <- q2 - q1
             w <- p - q1
+        
+            wv <- w %*% v
+            vv <- v %*% v
+            ww <- w %*% w
+                        
+            if (wv < 0) {
+                r2 <- ww
+                di[ji] <- 0
+                ri[ji] <- sqrt(r2)
+            } else if (wv <= vv) {
+                d2 <- wv^2 / vv
+                r2 <- ww - d2
+                ri[ji] <- sqrt(r2)
+                di[ji] <- sqrt(d2)
+            } else {
+                r2 <- (w - v) %*% (w - v)
+                d2 <- vv
+                ri[ji] <- sqrt(r2)
+                di[ji] <- sqrt(d2)
+            }
             
+            pxy[ji, ] <- q1 + di[ji] / sqrt(vv) * v
         }
+        
+        wi <- which.min(ri)
+        J <- J + wi - 1
+        
+        ## convert it:
+        ## points(pxy[1], pxy[2], cex = 0.5, pch = 4, col = "blue")
+        pll <- c(pxy[wi, 1] / cos(phi1), pxy[wi, 2]) * 180 / pi
+        d[i] <- sh[J, "distance"] + distanceFlat(pll, as.numeric(sh[J, c("lon", "lat")]))
     }
+
+    d
 }
 
 getBlock <- function(ids, date, conn) {
@@ -1561,7 +1612,8 @@ getBlock <- function(ids, date, conn) {
     
     fullPath <- do.call(rbind, blockShapes[blockInfo$shape_id])
     blockPath <- data.frame(lon = fullPath$lon, lat = fullPath$lat,
-                            trip_id = rep(blockInfo$trip_id, sapply(blockShapes, nrow)))
+                            trip_id = rep(blockInfo$trip_id, 
+                                sapply(blockShapes[blockInfo$shape_id], nrow)))
     class(blockPath) <- c("gtfs.shape", class(blockPath))
     
     ## Get the position of the stops
@@ -1586,19 +1638,171 @@ getBlock <- function(ids, date, conn) {
                          blockShapes[[blockInfo[blockInfo$trip_id == id, "shape_id"]]]))
         schedule$shape_dist_traveled <- do.call(c, sdt)
     }
-        
+    
+    ## Compute speed functions:
+    speedFns <- tapply(1:nrow(schedule), schedule$trip_id,
+                       function(id) {
+                           x <- schedule$shape_dist_traveled[id]
+                           t <- hms(schedule$time[id])
+                           tt <- (hour(t) * 60 + minute(t)) * 60
+                           t0 <- tt - min(tt)
+                           yy <- unique(t0)
+                           xx <- tapply(x, t0, min)
+                           
+                           splinefun(xx, yy)
+                       })
+    
+    
     out <- list(trips = blockInfo,
                 shapes = blockShapes,
                 path = blockPath,
                 schedule = schedule, 
+                speed = speedFns,
                 date = date)
     
     class(out) <- c("gtfs.block")
     out
 }
 
-getBlock(blockA$trip_id, blockA$trip_start_date[1], mbta) -> DD
+block.speed <- getBlock(blockA$trip_id, blockA$trip_start_date[1], mbta)
 @ 
 
+So now each trip has a ``speed'' function computed. In actual fact, the function is
+``scheduled time at distance $x$ into trip'', the derivative of which gives us speed:
+<<speed_function_1>>=
+fn1 <- block.speed$speed[[1]]
+curve(fn1(x), 0, 
+      max(block.speed$schedule[block.speed$schedule$trip_id == 
+                                   block.speed$trips$trip_id[1], ]$shape_dist_traveled),
+      xlab = "Distance (m)", ylab = "Time (s)")
+curve(fn1(x, 1), 0, 
+      max(block.speed$schedule[block.speed$schedule$trip_id == 
+                                   block.speed$trips$trip_id[1], ]$shape_dist_traveled),
+      xlab = "Distance (m)", ylab = "Speed (m/s)")
+@ 
+
+Now, we need to incorporate this into the model!
+
+<<speed_particle_filter>>=
+speedPF <- function(block,
+                    N = 200,
+                    zero.start = TRUE,
+                    start.obs = 1,
+                    x0,
+                    GPS.error = 20,
+                    sig.e = 0.03,
+                    progress = FALSE,
+                    ...) {
+    shape <- block$path
+    data <- block$history[start.obs:nrow(block$history), ]
+    trips <- block$trips
+    trips$end_time <- hms(c(trips$departure_time[-1]), tz = "EST5EDT")
+    
+    schedule <- block$schedule
+    speed <- block$speed
+    
+    if (missing(x0)) {
+        x0 <- c(0, speed[[schedule$trip_id[1]]](0))
+    }
+    
+    ## Sort out the shape information (using previously defined functions)
+    z <- t(shape[,1:2])
+    di <- distanceFlat(z[, -ncol(z)], z[, -1])
+    shape$distance <- c(0, cumsum(di))
+    shape$length <- c(di, NA)
+    shape$bearing <- c(bearing(z[, -ncol(z)], z[, -1]), NA)
+    shape <- shape[shape$length > 0 | is.na(shape$length), ]
+        
+    ## Preparation (redefining all functions):
+    h <- function(x) {
+        if (x[1] <= 0) return(c(0, 0))
+        if (x[1] > max(shape$distance)) return(as.numeric(shape[nrow(shape), 1:2]))
+        j <- which.min(x[1] > shape$distance) - 1
+        sj <- shape[j, ]
+        Psi <- sj$bearing
+        d <- x[1] - sj$distance
+        
+        ## only do the calculations if we need to!
+        if (d == 0) return(as.numeric(sj[1:2]))
+        partialSegment(as.numeric(sj[1:2]), Psi, d)
+    }
+    ## ------------------------------------------------- The likelihood ##
+    lhood <- function(y, x) {
+        # y: GPS observation
+        # x: a distance-into-trip
+        dnorm(distanceFlat(y, h(x)), 0, sd = GPS.error) * 
+            ifelse(x[2] <= 0, 0.000001, 1)
+
+    }
+    ## The random component:
+    pw <- function(n)
+        rnorm(n, 0, sig.e)
+    
+    ## The formal model ...
+    ## ---------------------------------------------------------------- ##
+    A <- function(d) cbind(c(1, 0), c(d, 0))
+    G <- function(d) rbind(d^2/2, d)
+    fn <- function(x, u, t, w) { ## x: [distance, velocity]; u: [delta, time]; w: [error]
+        X <- structure(A(u) %*% x + G(u) %*% w, 
+                       .Dimnames = list(c("distance", "speed"), NULL))
+        
+        tid <- trips$trip_id[which(trips$end_time > t)[1]]
+        if (is.na(tid))
+            return(X)
+        Xmax <- max(shape[shape$trip_id == tid, "distance"])
+        X <- apply(X, 2, function(x) if (x[1] > Xmax) c(Xmax, 0) else x)
+        X[2, ] <- ifelse(X[2, ] < 0, 0, X[2, ])
+        
+        X
+    }
+    
+    ## Data prep:
+    y <- rbind(data$lon, data$lat)
+    t <- data$time
+    TIME <- lubridate::hms(format(as.POSIXct(data$time, origin="1970-01-01", tz="EST5EDT"), "%H:%M:%S"),
+                           tz = "EDT5EDT")
+    Delta <- diff(t)
+    M <- length(Delta)  ## the number of "true" observations...?
+    
+    ## Matrix prep:
+    hx <- hxhat <- xxhat <- xx <- array(NA, c(2, N, M + 1))
+    
+    ## Initialise:
+    xx[,,1] <- x0
+    
+    ## run the simulations
+    if (progress) {
+        suppressMessages({library(R.utils)})
+        pb <- txtProgressBar(min = 0, max = M, style = 3)
+    }
+    for (i in 1:M) {
+        xxhat[,,i+1] <- fn(xx[,,i], Delta[i], TIME[i+1], pw(N))
+        weights <- apply(xxhat[,,i+1], 2, function(xi) lhood(y[,i+1], xi))
+        qi <- weights / sum(weights)
+        if (any(is.na(qi)))
+            qi <- NULL
+            
+        ii <- sample(N, N, TRUE, qi)
+        xx[,,i+1] <- xxhat[,ii,i+1]
+        
+        hxhat[,,i+1] <- apply(xxhat[,,i+1], 2, h)
+        hx[,,i+1] <- apply(xx[,,i+1], 2, h)
+        if (progress) setTxtProgressBar(pb, i)
+    }
+    if (progress) close(pb)
+    
+    res <- list(Xhat = xxhat, 
+                X = xx, 
+                HXhat = hxhat, 
+                HX = hx,
+                y = y, t = t, M = M, N = N,
+                block = block)
+    class(res) <- "pf.blockfit"
+    
+    res
+}
+
+fit <- pf2(block, start.obs = 5)
+@ 
 
 \end{document}
