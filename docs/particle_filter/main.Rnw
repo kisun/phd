@@ -7,7 +7,6 @@
 \usepackage{fullpage}
 \usepackage{parskip}
 
-\usepackage[keepaspectratio]{animate}
 
 <<echo=FALSE,results="hide",messages=FALSE,echo=FALSE>>=
 opts_chunk$set(fig.width=8,fig.height=5,fig.align="center")
@@ -1274,8 +1273,8 @@ hist.blocks <- lapply(hist.dates, function(h) {
 
 We can get one day of data for a vehicle:
 <<manual_blocking,fig.width=10,fig.height=12,out.width="0.8\\textwidth">>=
-#blockA <- hist.blocks[[2]][[2]]
-blockA <- hist.blocks[[3]][["y6010"]]
+blockA <- hist.blocks[[2]][[2]]
+#blockA <- hist.blocks[[3]][["y6010"]]
 getBlockAlt <- function(ids, date, conn) {
     blockInfo <- dbGetQuery(
         conn,
