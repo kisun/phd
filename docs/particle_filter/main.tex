@@ -342,6 +342,15 @@ Now for the rest of them \ldots
 \begin{alltt}
 \hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(xxhat.hist[}\hlnum{1}\hlstd{,,]),} \hlkwc{ylim} \hlstd{=} \hlkwd{range}\hlstd{(xxhat.hist[}\hlnum{2}\hlstd{,,]),}
      \hlkwc{xlab} \hlstd{=} \hlstr{"Distance (m)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Speed (m/s)"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/dist_speed_plots-1} 
+
+}
+
+
+\begin{kframe}\begin{alltt}
 \hlstd{cols} \hlkwb{<-} \hlkwd{rainbow}\hlstd{(M)}
 \hlstd{colsa} \hlkwb{<-} \hlkwd{rainbow}\hlstd{(M,} \hlkwc{alpha} \hlstd{=} \hlnum{0.1}\hlstd{)}
 \hlkwd{invisible}\hlstd{(}
@@ -351,14 +360,11 @@ Now for the rest of them \ldots
            \hlstd{\})}
     \hlstd{)}
 \end{alltt}
-\end{kframe}
-
-{\centering \includegraphics[width=\maxwidth]{figure/dist_speed_plots-1} 
-
-}
 
 
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in lapply(X = X, FUN = FUN, ...): internal error -3 in R\_decompress1}}
 
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in lapply(X = X, FUN = FUN, ...): lazy-load database '/home/tom/Documents/uni/phd/docs/particle\_filter/cache/true\_positions\_8e477dc42fd5f5075ae5f49c718f3956.rdb' is corrupt}}\end{kframe}
 \end{knitrout}
 
 
@@ -657,13 +663,19 @@ This can of course be vectorised fairly easily:
 \hlstd{\}}
 \hlstd{y} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{174.78525}\hlstd{,} \hlopt{-}\hlnum{36.84914}\hlstd{)}
 \hlstd{z} \hlkwb{<-} \hlkwd{t}\hlstd{(shape1)}
+\end{alltt}
+
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning: restarting interrupted promise evaluation}}
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning: internal error -3 in R\_decompress1}}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in eval(expr, envir, enclos): lazy-load database '/home/tom/Documents/uni/phd/docs/particle\_filter/cache/true\_positions\_8e477dc42fd5f5075ae5f49c718f3956.rdb' is corrupt}}\begin{alltt}
 \hlkwd{distanceFlat}\hlstd{(y, z)}
 \end{alltt}
 \begin{verbatim}
-##  [1] 4149.9430 3773.1680 3672.3494 3561.8636 3377.5161 3190.9290 3044.6800
-##  [8] 2750.7017 2535.6988 2240.4274 2008.4752 1878.3004 1771.6265 1404.8933
-## [15] 1196.1452 1012.4265  809.3050  604.4278  512.1066  367.1038  163.3630
-## [22]  106.1185  340.3363 1066.4919 1653.8565
+##        y 
+## 1653.856
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -680,20 +692,36 @@ We will compute bearings in the next part.
 \begin{alltt}
 \hlcom{# "from" 1->2, 2->3, 3->4, ..., (n-1)->n}
 \hlstd{y} \hlkwb{<-} \hlstd{z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)]}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in -ncol(z): invalid argument to unary operator}}\begin{alltt}
 \hlstd{z} \hlkwb{<-} \hlstd{z[,} \hlopt{-}\hlnum{1}\hlstd{]}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in z[, -1]: incorrect number of dimensions}}\begin{alltt}
 \hlstd{di} \hlkwb{<-} \hlkwd{distanceFlat}\hlstd{(y, z)}
 \hlstd{shape1}\hlopt{$}\hlstd{distance} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{cumsum}\hlstd{(di))}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in `\$<-.data.frame`(`*tmp*`, "{}distance"{}, value = structure(c(0, : replacement has 2 rows, data has 25}}\begin{alltt}
 \hlstd{shape1}\hlopt{$}\hlstd{length} \hlkwb{<-} \hlkwd{c}\hlstd{(di,} \hlnum{NA}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in `\$<-.data.frame`(`*tmp*`, "{}length"{}, value = structure(c(1653.8564672522, : replacement has 2 rows, data has 25}}\begin{alltt}
 \hlstd{shape1[}\hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{3}\hlstd{,} \hlnum{23}\hlopt{:}\hlnum{25}\hlstd{), ]}
 \end{alltt}
 \begin{verbatim}
-##         lon       lat  distance   length
-## 1  174.7985 -36.88493    0.0000 376.7768
-## 2  174.7973 -36.88168  376.7768 104.2504
-## 3  174.7972 -36.88074  481.0271 263.5338
-## 23 174.7818 -36.84780 5801.5484 726.6895
-## 24 174.7742 -36.84535 6528.2379 590.9006
-## 25 174.7678 -36.84393 7119.1384       NA
+##         lon       lat
+## 1  174.7985 -36.88493
+## 2  174.7973 -36.88168
+## 3  174.7972 -36.88074
+## 23 174.7818 -36.84780
+## 24 174.7742 -36.84535
+## 25 174.7678 -36.84393
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -740,16 +768,20 @@ Also, $\Delta\lambda = \lambda_b - \lambda_a$.
     \hlstd{(th.rad} \hlopt{*} \hlnum{180} \hlopt{/} \hlstd{pi)} \hlopt{%%} \hlnum{360}
 \hlstd{\}}
 \hlstd{shape1}\hlopt{$}\hlstd{bearing} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{bearing}\hlstd{(y, z),} \hlnum{NA}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in if (ncol(a) != ncol(b) \& ncol(a) > 1 \& ncol(b) > 1) stop("{}Incorrent dimensions"{}): argument is of length zero}}\begin{alltt}
 \hlkwd{head}\hlstd{(shape1)}
 \end{alltt}
 \begin{verbatim}
-##        lon       lat  distance   length   bearing
-## 1 174.7985 -36.88493    0.0000 376.7768 343.68534
-## 2 174.7973 -36.88168  376.7768 104.2504 358.04430
-## 3 174.7972 -36.88074  481.0271 263.5338 279.76479
-## 4 174.7943 -36.88034  744.5610 250.6042 305.63207
-## 5 174.7920 -36.87902  995.1652 229.7301  24.23082
-## 6 174.7931 -36.87714 1224.8952 165.5958  14.62306
+##        lon       lat
+## 1 174.7985 -36.88493
+## 2 174.7973 -36.88168
+## 3 174.7972 -36.88074
+## 4 174.7943 -36.88034
+## 5 174.7920 -36.87902
+## 6 174.7931 -36.87714
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -812,6 +844,10 @@ Looks simple enough, let's use it. Let's say we are 3000~m into the trip:
 \hlstd{\}}
 \hlstd{x} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{3000}\hlstd{,} \hlnum{NA}\hlstd{)}
 \hlstd{z} \hlkwb{<-} \hlkwd{h}\hlstd{(x, shape1)}
+\end{alltt}
+
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}\begin{alltt}
 \hlkwd{plotShape}\hlstd{(shapeIDs[}\hlnum{1}\hlstd{,} \hlnum{1}\hlstd{], con)}
 \hlkwd{points}\hlstd{(shape1}\hlopt{$}\hlstd{lon, shape1}\hlopt{$}\hlstd{lat,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{)}
 \hlkwd{points}\hlstd{(z[}\hlnum{1}\hlstd{], z[}\hlnum{2}\hlstd{],} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.6}\hlstd{)}
@@ -889,7 +925,28 @@ Let's create some mock data:
 
 \hlstd{Xtrue} \hlkwb{<-} \hlkwd{rbind}\hlstd{(t} \hlopt{*} \hlnum{11}\hlstd{,} \hlnum{11}\hlstd{)}
 \hlstd{Ytrue} \hlkwb{<-} \hlkwd{apply}\hlstd{(Xtrue,} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape1)}
+\end{alltt}
 
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(shape\$distance): no non-missing arguments to max; returning -Inf}}\begin{alltt}
 \hlstd{v} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{50}\hlstd{),} \hlkwd{runif}\hlstd{(n,} \hlnum{0}\hlstd{,} \hlnum{180}\hlstd{))}
 \hlstd{y} \hlkwb{<-} \hlkwd{sapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlstd{n,} \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{)} \hlkwd{partialSegment}\hlstd{(Ytrue[, i], v[}\hlnum{2}\hlstd{, i], v[}\hlnum{1}\hlstd{, i]))}
 
@@ -1004,7 +1061,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##   1.439   0.000   1.444
+##   1.477   0.000   1.489
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1193,7 +1250,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##   4.059   0.003   4.070
+##   4.192   0.006   4.277
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1879,9 +1936,11 @@ Alright, so let's just cross our fingers and apply the particle filter!
     \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{y[}\hlnum{1}\hlstd{,obs], x}\hlopt{$}\hlstd{y[}\hlnum{2}\hlstd{,obs],} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{)}
 \hlstd{\}}
 
-\hlstd{pfit} \hlkwb{<-} \hlkwd{blockPF}\hlstd{(block,} \hlkwc{start.obs} \hlstd{=} \hlnum{5}\hlstd{)}
+\hlstd{pfit} \hlkwb{<-} \hlkwd{blockPF}\hlstd{(block,} \hlkwc{start.obs} \hlstd{=} \hlnum{1}\hlstd{)}
 \end{alltt}
-\end{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in `[.data.frame`(shape, , 1:2): undefined columns selected}}\end{kframe}
 \end{knitrout}
 
 \begin{knitrout}
@@ -2022,7 +2081,7 @@ Matching is wrong. Need to restrict distance by time.
     \hlstd{res}
 \hlstd{\}}
 
-\hlstd{fit} \hlkwb{<-} \hlkwd{pf2}\hlstd{(block,} \hlkwc{start.obs} \hlstd{=} \hlnum{5}\hlstd{)}
+\hlstd{fit} \hlkwb{<-} \hlkwd{pf2}\hlstd{(block,} \hlkwc{start.obs} \hlstd{=} \hlnum{1}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -2030,17 +2089,10 @@ Matching is wrong. Need to restrict distance by time.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlcom{#par(mfrow = c(4, 2))}
-\hlcom{#for (i in c(2, 5, 20, 30, 65, 100, 190, 220))}
-\hlcom{#for (i in c(2, 3, 4, 10, 30, 40, 50, 60))}
 \hlkwd{unlink}\hlstd{(}\hlstr{"FIGS/anim*.jpg"}\hlstd{)}
 \hlkwd{jpeg}\hlstd{(}\hlstr{"FIGS/anim%04d.jpg"}\hlstd{,} \hlkwc{width} \hlstd{=} \hlnum{400}\hlstd{,} \hlkwc{height} \hlstd{=} \hlnum{300}\hlstd{)}
 \hlkwa{for}\hlstd{(i} \hlkwa{in} \hlnum{2}\hlopt{:}\hlkwd{length}\hlstd{(fit}\hlopt{$}\hlstd{HX[}\hlnum{1}\hlstd{,}\hlnum{1}\hlstd{,]))}
     \hlkwd{plot}\hlstd{(fit, i)}
-\end{alltt}
-
-
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in plot.new(): could not open file 'FIGS/anim0001.jpg'}}\begin{alltt}
 \hlkwd{dev.off}\hlstd{()}
 \end{alltt}
 \begin{verbatim}
@@ -2224,6 +2276,7 @@ Using the previous example, we can use the first trip's schedule to demonstrate:
 \hlstd{\}}
 
 \hlstd{block.speed} \hlkwb{<-} \hlkwd{getBlock}\hlstd{(blockA}\hlopt{$}\hlstd{trip_id, blockA}\hlopt{$}\hlstd{trip_start_date[}\hlnum{1}\hlstd{], mbta)}
+\hlstd{block.speed} \hlkwb{<-} \hlkwd{getBlockData}\hlstd{(block.speed}\hlopt{$}\hlstd{date,} \hlkwc{block} \hlstd{= block.speed,} \hlkwc{conn} \hlstd{= mbta)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -2262,132 +2315,20 @@ So now each trip has a ``speed'' function computed. In actual fact, the function
 
 \end{knitrout}
 
-Now, we need to incorporate this into the model!
+Now, we need to incorporate this into the model ... but how?
 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-\begin{alltt}
-\hlstd{speedPF} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{block}\hlstd{,}
-                    \hlkwc{N} \hlstd{=} \hlnum{200}\hlstd{,}
-                    \hlkwc{zero.start} \hlstd{=} \hlnum{TRUE}\hlstd{,}
-                    \hlkwc{start.obs} \hlstd{=} \hlnum{1}\hlstd{,}
-                    \hlkwc{x0}\hlstd{,}
-                    \hlkwc{GPS.error} \hlstd{=} \hlnum{20}\hlstd{,}
-                    \hlkwc{sig.e} \hlstd{=} \hlnum{0.03}\hlstd{,}
-                    \hlkwc{progress} \hlstd{=} \hlnum{FALSE}\hlstd{,}
-                    \hlkwc{...}\hlstd{) \{}
-    \hlstd{shape} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{path}
-    \hlstd{data} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{history[start.obs}\hlopt{:}\hlkwd{nrow}\hlstd{(block}\hlopt{$}\hlstd{history), ]}
-    \hlstd{trips} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{trips}
-    \hlstd{trips}\hlopt{$}\hlstd{end_time} \hlkwb{<-} \hlkwd{hms}\hlstd{(}\hlkwd{c}\hlstd{(trips}\hlopt{$}\hlstd{departure_time[}\hlopt{-}\hlnum{1}\hlstd{]),} \hlkwc{tz} \hlstd{=} \hlstr{"EST5EDT"}\hlstd{)}
 
-    \hlstd{schedule} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{schedule}
-    \hlstd{speed} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{speed}
+\subsection{Incorporating Speed in the Model}
 
-    \hlkwa{if} \hlstd{(}\hlkwd{missing}\hlstd{(x0)) \{}
-        \hlstd{x0} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{, speed[[schedule}\hlopt{$}\hlstd{trip_id[}\hlnum{1}\hlstd{]]](}\hlnum{0}\hlstd{))}
-    \hlstd{\}}
+We need something like
+\begin{equation}
+  \label{eq:speed_model_required}
+  \bx_k = A_k \bx_{k-1} + B_k \bu_k + G_k \bw_k
+\end{equation}
+but now, instead of $\bx$ containing distance into trip and speed, it can contain distance into trip
+and some \emph{delay} parameter (running slower or faster than usual?).
 
-    \hlcom{## Sort out the shape information (using previously defined functions)}
-    \hlstd{z} \hlkwb{<-} \hlkwd{t}\hlstd{(shape[,}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{])}
-    \hlstd{di} \hlkwb{<-} \hlkwd{distanceFlat}\hlstd{(z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)], z[,} \hlopt{-}\hlnum{1}\hlstd{])}
-    \hlstd{shape}\hlopt{$}\hlstd{distance} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{cumsum}\hlstd{(di))}
-    \hlstd{shape}\hlopt{$}\hlstd{length} \hlkwb{<-} \hlkwd{c}\hlstd{(di,} \hlnum{NA}\hlstd{)}
-    \hlstd{shape}\hlopt{$}\hlstd{bearing} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{bearing}\hlstd{(z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)], z[,} \hlopt{-}\hlnum{1}\hlstd{]),} \hlnum{NA}\hlstd{)}
-    \hlstd{shape} \hlkwb{<-} \hlstd{shape[shape}\hlopt{$}\hlstd{length} \hlopt{>} \hlnum{0} \hlopt{|} \hlkwd{is.na}\hlstd{(shape}\hlopt{$}\hlstd{length), ]}
 
-    \hlcom{## Preparation (redefining all functions):}
-    \hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) \{}
-        \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{<=} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{))}
-        \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlkwd{max}\hlstd{(shape}\hlopt{$}\hlstd{distance))} \hlkwd{return}\hlstd{(}\hlkwd{as.numeric}\hlstd{(shape[}\hlkwd{nrow}\hlstd{(shape),} \hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]))}
-        \hlstd{j} \hlkwb{<-} \hlkwd{which.min}\hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlstd{shape}\hlopt{$}\hlstd{distance)} \hlopt{-} \hlnum{1}
-        \hlstd{sj} \hlkwb{<-} \hlstd{shape[j, ]}
-        \hlstd{Psi} \hlkwb{<-} \hlstd{sj}\hlopt{$}\hlstd{bearing}
-        \hlstd{d} \hlkwb{<-} \hlstd{x[}\hlnum{1}\hlstd{]} \hlopt{-} \hlstd{sj}\hlopt{$}\hlstd{distance}
 
-        \hlcom{## only do the calculations if we need to!}
-        \hlkwa{if} \hlstd{(d} \hlopt{==} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(}\hlkwd{as.numeric}\hlstd{(sj[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]))}
-        \hlkwd{partialSegment}\hlstd{(}\hlkwd{as.numeric}\hlstd{(sj[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]), Psi, d)}
-    \hlstd{\}}
-    \hlcom{## ------------------------------------------------- The likelihood ##}
-    \hlstd{lhood} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{x}\hlstd{) \{}
-        \hlcom{# y: GPS observation}
-        \hlcom{# x: a distance-into-trip}
-        \hlkwd{dnorm}\hlstd{(}\hlkwd{distanceFlat}\hlstd{(y,} \hlkwd{h}\hlstd{(x)),} \hlnum{0}\hlstd{,} \hlkwc{sd} \hlstd{= GPS.error)} \hlopt{*}
-            \hlkwd{ifelse}\hlstd{(x[}\hlnum{2}\hlstd{]} \hlopt{<=} \hlnum{0}\hlstd{,} \hlnum{0.000001}\hlstd{,} \hlnum{1}\hlstd{)}
-
-    \hlstd{\}}
-    \hlcom{## The random component:}
-    \hlstd{pw} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{n}\hlstd{)}
-        \hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{, sig.e)}
-
-    \hlcom{## The formal model ...}
-    \hlcom{## ---------------------------------------------------------------- ##}
-    \hlstd{A} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{)} \hlkwd{cbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(d,} \hlnum{0}\hlstd{))}
-    \hlstd{G} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{)} \hlkwd{rbind}\hlstd{(d}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, d)}
-    \hlstd{fn} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{u}\hlstd{,} \hlkwc{t}\hlstd{,} \hlkwc{w}\hlstd{) \{} \hlcom{## x: [distance, velocity]; u: [delta, time]; w: [error]}
-        \hlstd{X} \hlkwb{<-} \hlkwd{structure}\hlstd{(}\hlkwd{A}\hlstd{(u)} \hlopt{%*%} \hlstd{x} \hlopt{+} \hlkwd{G}\hlstd{(u)} \hlopt{%*%} \hlstd{w,}
-                       \hlkwc{.Dimnames} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"distance"}\hlstd{,} \hlstr{"speed"}\hlstd{),} \hlkwa{NULL}\hlstd{))}
-
-        \hlstd{tid} \hlkwb{<-} \hlstd{trips}\hlopt{$}\hlstd{trip_id[}\hlkwd{which}\hlstd{(trips}\hlopt{$}\hlstd{end_time} \hlopt{>} \hlstd{t)[}\hlnum{1}\hlstd{]]}
-        \hlkwa{if} \hlstd{(}\hlkwd{is.na}\hlstd{(tid))}
-            \hlkwd{return}\hlstd{(X)}
-        \hlstd{Xmax} \hlkwb{<-} \hlkwd{max}\hlstd{(shape[shape}\hlopt{$}\hlstd{trip_id} \hlopt{==} \hlstd{tid,} \hlstr{"distance"}\hlstd{])}
-        \hlstd{X} \hlkwb{<-} \hlkwd{apply}\hlstd{(X,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{)} \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlstd{Xmax)} \hlkwd{c}\hlstd{(Xmax,} \hlnum{0}\hlstd{)} \hlkwa{else} \hlstd{x)}
-        \hlstd{X[}\hlnum{2}\hlstd{, ]} \hlkwb{<-} \hlkwd{ifelse}\hlstd{(X[}\hlnum{2}\hlstd{, ]} \hlopt{<} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{, X[}\hlnum{2}\hlstd{, ])}
-
-        \hlstd{X}
-    \hlstd{\}}
-
-    \hlcom{## Data prep:}
-    \hlstd{y} \hlkwb{<-} \hlkwd{rbind}\hlstd{(data}\hlopt{$}\hlstd{lon, data}\hlopt{$}\hlstd{lat)}
-    \hlstd{t} \hlkwb{<-} \hlstd{data}\hlopt{$}\hlstd{time}
-    \hlstd{TIME} \hlkwb{<-} \hlstd{lubridate}\hlopt{::}\hlkwd{hms}\hlstd{(}\hlkwd{format}\hlstd{(}\hlkwd{as.POSIXct}\hlstd{(data}\hlopt{$}\hlstd{time,} \hlkwc{origin}\hlstd{=}\hlstr{"1970-01-01"}\hlstd{,} \hlkwc{tz}\hlstd{=}\hlstr{"EST5EDT"}\hlstd{),} \hlstr{"%H:%M:%S"}\hlstd{),}
-                           \hlkwc{tz} \hlstd{=} \hlstr{"EDT5EDT"}\hlstd{)}
-    \hlstd{Delta} \hlkwb{<-} \hlkwd{diff}\hlstd{(t)}
-    \hlstd{M} \hlkwb{<-} \hlkwd{length}\hlstd{(Delta)}  \hlcom{## the number of "true" observations...?}
-
-    \hlcom{## Matrix prep:}
-    \hlstd{hx} \hlkwb{<-} \hlstd{hxhat} \hlkwb{<-} \hlstd{xxhat} \hlkwb{<-} \hlstd{xx} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{, N, M} \hlopt{+} \hlnum{1}\hlstd{))}
-
-    \hlcom{## Initialise:}
-    \hlstd{xx[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{x0}
-
-    \hlcom{## run the simulations}
-    \hlkwa{if} \hlstd{(progress) \{}
-        \hlkwd{suppressMessages}\hlstd{(\{}\hlkwd{library}\hlstd{(R.utils)\})}
-        \hlstd{pb} \hlkwb{<-} \hlkwd{txtProgressBar}\hlstd{(}\hlkwc{min} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{max} \hlstd{= M,} \hlkwc{style} \hlstd{=} \hlnum{3}\hlstd{)}
-    \hlstd{\}}
-    \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{M) \{}
-        \hlstd{xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{fn}\hlstd{(xx[,,i], Delta[i], TIME[i}\hlopt{+}\hlnum{1}\hlstd{],} \hlkwd{pw}\hlstd{(N))}
-        \hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood}\hlstd{(y[,i}\hlopt{+}\hlnum{1}\hlstd{], xi))}
-        \hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
-        \hlkwa{if} \hlstd{(}\hlkwd{any}\hlstd{(}\hlkwd{is.na}\hlstd{(qi)))}
-            \hlstd{qi} \hlkwb{<-} \hlkwa{NULL}
-
-        \hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
-        \hlstd{xx[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{xxhat[,ii,i}\hlopt{+}\hlnum{1}\hlstd{]}
-
-        \hlstd{hxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{, h)}
-        \hlstd{hx[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{apply}\hlstd{(xx[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{, h)}
-        \hlkwa{if} \hlstd{(progress)} \hlkwd{setTxtProgressBar}\hlstd{(pb, i)}
-    \hlstd{\}}
-    \hlkwa{if} \hlstd{(progress)} \hlkwd{close}\hlstd{(pb)}
-
-    \hlstd{res} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{Xhat} \hlstd{= xxhat,}
-                \hlkwc{X} \hlstd{= xx,}
-                \hlkwc{HXhat} \hlstd{= hxhat,}
-                \hlkwc{HX} \hlstd{= hx,}
-                \hlkwc{y} \hlstd{= y,} \hlkwc{t} \hlstd{= t,} \hlkwc{M} \hlstd{= M,} \hlkwc{N} \hlstd{= N,}
-                \hlkwc{block} \hlstd{= block)}
-    \hlkwd{class}\hlstd{(res)} \hlkwb{<-} \hlstr{"pf.blockfit"}
-
-    \hlstd{res}
-\hlstd{\}}
-
-\hlstd{fit} \hlkwb{<-} \hlkwd{pf2}\hlstd{(block,} \hlkwc{start.obs} \hlstd{=} \hlnum{5}\hlstd{)}
-\end{alltt}
-\end{kframe}
-\end{knitrout}
 
 \end{document}

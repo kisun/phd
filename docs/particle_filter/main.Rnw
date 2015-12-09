@@ -1352,7 +1352,7 @@ plot.pf.blockfit <- function(x, obs = 1, highlight = FALSE) {
     points(x$y[1,obs], x$y[2,obs], col = "red", pch = 19, cex = 0.4)
 }
 
-pfit <- blockPF(block, start.obs = 5)
+pfit <- blockPF(block, start.obs = 1)
 @ 
 
 <<manual_fit_explore>>=
@@ -1480,13 +1480,10 @@ pf2 <- function(block,
     res
 }
 
-fit <- pf2(block, start.obs = 5)
+fit <- pf2(block, start.obs = 1)
 @ 
 
 <<plot_new_fit,fig.width=10,fig.height=12,out.width="0.8\\textwidth",cache=TRUE>>=
-#par(mfrow = c(4, 2))
-#for (i in c(2, 5, 20, 30, 65, 100, 190, 220))
-#for (i in c(2, 3, 4, 10, 30, 40, 50, 60))
 unlink("FIGS/anim*.jpg")
 jpeg("FIGS/anim%04d.jpg", width = 400, height = 300)
 for(i in 2:length(fit$HX[1,1,]))
@@ -1664,6 +1661,7 @@ getBlock <- function(ids, date, conn) {
 }
 
 block.speed <- getBlock(blockA$trip_id, blockA$trip_start_date[1], mbta)
+block.speed <- getBlockData(block.speed$date, block = block.speed, conn = mbta)
 @ 
 
 So now each trip has a ``speed'' function computed. In actual fact, the function is
@@ -1680,9 +1678,21 @@ curve(fn1(x, 1), 0,
       xlab = "Distance (m)", ylab = "Speed (m/s)")
 @ 
 
-Now, we need to incorporate this into the model!
+Now, we need to incorporate this into the model ... but how?
 
-<<speed_particle_filter>>=
+
+\subsection{Incorporating Speed in the Model}
+
+We need something like
+\begin{equation}
+  \label{eq:speed_model_required}
+  \bx_k = A_k \bx_{k-1} + B_k \bu_k + G_k \bw_k
+\end{equation}
+but now, instead of $\bx$ containing distance into trip and speed, it can contain distance into trip
+and some \emph{delay} parameter (running slower or faster than usual?).
+
+
+<<speed_particle_filter,echo=FALSE>>=
 speedPF <- function(block,
                     N = 200,
                     zero.start = TRUE,
@@ -1801,7 +1811,7 @@ speedPF <- function(block,
     res
 }
 
-fit <- pf2(block, start.obs = 5)
+#fit <- pf2(block.speed, start.obs = 1)
 @ 
 
 \end{document}
