@@ -1686,13 +1686,30 @@ Now, we need to incorporate this into the model ... but how?
 We need something like
 \begin{equation}
   \label{eq:speed_model_required}
-  \bx_k = A_k \bx_{k-1} + B_k \bu_k + G_k \bw_k
+  \bx_k = A_k \bx_{k-1} + B_{k-1} \bu_k + G_{k-1} \bw_k
 \end{equation}
 but now, instead of $\bx$ containing distance into trip and speed, it can contain distance into trip
 and some \emph{delay} parameter (running slower or faster than usual?).
 
+Let's start very simply:
+\begin{equation*}
+  A =
+  \begin{bmatrix}
+    1 & 0 \\
+    0 & 0
+  \end{bmatrix},\qquad
+  B_k =
+  \begin{bmatrix}
+    s(d_k) \\ 0
+  \end{bmatrix},\quad\text{and}\quad
+  \bu_k =
+  \begin{bmatrix}
+    \Delta_k
+  \end{bmatrix},
+\end{equation*}
 
-<<speed_particle_filter,echo=FALSE>>=
+
+<<speed_particle_filter,cache=TRUE>>=
 speedPF <- function(block,
                     N = 200,
                     zero.start = TRUE,
@@ -1750,9 +1767,10 @@ speedPF <- function(block,
     ## The formal model ...
     ## ---------------------------------------------------------------- ##
     A <- function(d) cbind(c(1, 0), c(d, 0))
+    B <- function(x) rbind(s(x[1]), 0)
     G <- function(d) rbind(d^2/2, d)
     fn <- function(x, u, t, w) { ## x: [distance, velocity]; u: [delta, time]; w: [error]
-        X <- structure(A(u) %*% x + G(u) %*% w, 
+        X <- structure(A(u) %*% x + + B(x) %*% u[1] + G(u) %*% w, 
                        .Dimnames = list(c("distance", "speed"), NULL))
         
         tid <- trips$trip_id[which(trips$end_time > t)[1]]
@@ -1811,7 +1829,18 @@ speedPF <- function(block,
     res
 }
 
-#fit <- pf2(block.speed, start.obs = 1)
+fit <- pf2(block.speed, start.obs = 1)
+@ 
+
+<<plot_new_fit2,fig.width=10,fig.height=12,out.width="0.8\\textwidth",cache=TRUE>>=
+unlink("FIGS/anim*.jpg")
+jpeg("FIGS/anim%04d.jpg", width = 400, height = 300)
+for(i in 2:length(fit$HX[1,1,]))
+    plot(fit, i)
+dev.off()
+unlink("figure/animated_block_history2.gif")
+system("convert -delay 2 FIGS/anim*.jpg figure/animated_block_history2.gif")
+unlink("FIGS/*.jpg")
 @ 
 
 \end{document}
