@@ -1655,7 +1655,7 @@ From the MBTA feed we can get block information, so:
     \hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,} \hlkwc{asp} \hlstd{=} \hlnum{1}\hlstd{,}
          \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(all}\hlopt{$}\hlstd{lon),} \hlkwc{ylim} \hlstd{=} \hlkwd{range}\hlstd{(all}\hlopt{$}\hlstd{lat),}
          \hlkwc{xlab} \hlstd{=} \hlstr{"Longitude"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Latitude"}\hlstd{,}
-         \hlkwc{main} \hlstd{=} \hlkwd{paste}\hlstd{(}\hlstr{"Highlighting route"}\hlstd{, highlight))}
+         \hlstd{...)}
 
     \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlkwd{length}\hlstd{(x)) \{}
         \hlkwa{if} \hlstd{(highlight[}\hlnum{1}\hlstd{]} \hlopt{==} \hlstd{i)}
@@ -1872,8 +1872,8 @@ Alright, so let's just cross our fingers and apply the particle filter!
     \hlkwd{class}\hlstd{(pf)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"pf.blockfit"}\hlstd{)}
     \hlstd{pf}
 \hlstd{\}}
-\hlstd{plot.pf.blockfit} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{obs} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{highlight} \hlstd{=} \hlnum{FALSE}\hlstd{) \{}
-    \hlkwd{plot}\hlstd{(x}\hlopt{$}\hlstd{block,} \hlkwc{highlight} \hlstd{= highlight)}
+\hlstd{plot.pf.blockfit} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{obs} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{highlight} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{...}\hlstd{) \{}
+    \hlkwd{plot}\hlstd{(x}\hlopt{$}\hlstd{block,} \hlkwc{highlight} \hlstd{= highlight, ...)}
     \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{HXhat[}\hlnum{1}\hlstd{,,obs], x}\hlopt{$}\hlstd{HXhat[}\hlnum{2}\hlstd{,,obs],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{)}
     \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{HX[}\hlnum{1}\hlstd{,,obs], x}\hlopt{$}\hlstd{HX[}\hlnum{2}\hlstd{,,obs],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
     \hlkwd{points}\hlstd{(x}\hlopt{$}\hlstd{y[}\hlnum{1}\hlstd{,obs], x}\hlopt{$}\hlstd{y[}\hlnum{2}\hlstd{,obs],} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.4}\hlstd{)}
@@ -1881,9 +1881,7 @@ Alright, so let's just cross our fingers and apply the particle filter!
 
 \hlstd{pfit} \hlkwb{<-} \hlkwd{blockPF}\hlstd{(block,} \hlkwc{start.obs} \hlstd{=} \hlnum{1}\hlstd{)}
 \end{alltt}
-
-
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in `[.data.frame`(shape, , 1:2): undefined columns selected}}\end{kframe}
+\end{kframe}
 \end{knitrout}
 
 \begin{knitrout}
@@ -2035,7 +2033,7 @@ Matching is wrong. Need to restrict distance by time.
 \hlkwd{unlink}\hlstd{(}\hlstr{"FIGS/anim*.jpg"}\hlstd{)}
 \hlkwd{jpeg}\hlstd{(}\hlstr{"FIGS/anim%04d.jpg"}\hlstd{,} \hlkwc{width} \hlstd{=} \hlnum{400}\hlstd{,} \hlkwc{height} \hlstd{=} \hlnum{300}\hlstd{)}
 \hlkwa{for}\hlstd{(i} \hlkwa{in} \hlnum{2}\hlopt{:}\hlkwd{length}\hlstd{(fit}\hlopt{$}\hlstd{HX[}\hlnum{1}\hlstd{,}\hlnum{1}\hlstd{,]))}
-    \hlkwd{plot}\hlstd{(fit, i)}
+    \hlkwd{plot}\hlstd{(fit, i,} \hlkwc{main} \hlstd{=} \hlstr{" "}\hlstd{)}
 \hlkwd{dev.off}\hlstd{()}
 \end{alltt}
 \begin{verbatim}
@@ -2422,7 +2420,7 @@ Let's start very simply:
 \hlkwd{unlink}\hlstd{(}\hlstr{"FIGS/anim*.jpg"}\hlstd{)}
 \hlkwd{jpeg}\hlstd{(}\hlstr{"FIGS/anim%04d.jpg"}\hlstd{,} \hlkwc{width} \hlstd{=} \hlnum{400}\hlstd{,} \hlkwc{height} \hlstd{=} \hlnum{300}\hlstd{)}
 \hlkwa{for}\hlstd{(i} \hlkwa{in} \hlnum{2}\hlopt{:}\hlkwd{length}\hlstd{(fit}\hlopt{$}\hlstd{HX[}\hlnum{1}\hlstd{,}\hlnum{1}\hlstd{,]))}
-    \hlkwd{plot}\hlstd{(fit, i)}
+    \hlkwd{plot}\hlstd{(fit, i,} \hlkwc{main} \hlstd{=} \hlstr{" "}\hlstd{)}
 \hlkwd{dev.off}\hlstd{()}
 \end{alltt}
 \begin{verbatim}
@@ -2431,7 +2429,7 @@ Let's start very simply:
 \end{verbatim}
 \begin{alltt}
 \hlkwd{unlink}\hlstd{(}\hlstr{"figure/animated_block_history2.gif"}\hlstd{)}
-\hlkwd{system}\hlstd{(}\hlstr{"convert -delay 2 FIGS/anim*.jpg figure/animated_block_history2.gif"}\hlstd{)}
+\hlkwd{system}\hlstd{(}\hlstr{"convert -delay 30 FIGS/anim*.jpg figure/animated_block_history2.gif"}\hlstd{)}
 \hlkwd{unlink}\hlstd{(}\hlstr{"FIGS/*.jpg"}\hlstd{)}
 \end{alltt}
 \end{kframe}

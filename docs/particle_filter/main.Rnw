@@ -1188,7 +1188,7 @@ plot.gtfs.block.shapes <- function(x, highlight = 1, ...) {
     plot(NA, type = "n", asp = 1,
          xlim = range(all$lon), ylim = range(all$lat),
          xlab = "Longitude", ylab = "Latitude",
-         main = paste("Highlighting route", highlight))
+         ...)
     
     for (i in 1:length(x)) {
         if (highlight[1] == i)
@@ -1345,8 +1345,8 @@ blockPF <- function(block, zero.start = TRUE, start.obs = 1, ...) {
     class(pf) <- c("pf.blockfit")
     pf
 }
-plot.pf.blockfit <- function(x, obs = 1, highlight = FALSE) {
-    plot(x$block, highlight = highlight)
+plot.pf.blockfit <- function(x, obs = 1, highlight = FALSE, ...) {
+    plot(x$block, highlight = highlight, ...)
     points(x$HXhat[1,,obs], x$HXhat[2,,obs], pch = 4, col = "#00009930")
     points(x$HX[1,,obs], x$HX[2,,obs], pch = 4, cex = 0.5, col = "#00990070")
     points(x$y[1,obs], x$y[2,obs], col = "red", pch = 19, cex = 0.4)
@@ -1487,7 +1487,7 @@ fit <- pf2(block, start.obs = 1)
 unlink("FIGS/anim*.jpg")
 jpeg("FIGS/anim%04d.jpg", width = 400, height = 300)
 for(i in 2:length(fit$HX[1,1,]))
-    plot(fit, i)
+    plot(fit, i, main = " ")
 dev.off()
 unlink("figure/animated_block_history.gif")
 system("convert -delay 1 FIGS/anim*.jpg figure/animated_block_history.gif")
@@ -1836,10 +1836,10 @@ fit <- pf2(block.speed, start.obs = 1)
 unlink("FIGS/anim*.jpg")
 jpeg("FIGS/anim%04d.jpg", width = 400, height = 300)
 for(i in 2:length(fit$HX[1,1,]))
-    plot(fit, i)
+    plot(fit, i, main = " ")
 dev.off()
 unlink("figure/animated_block_history2.gif")
-system("convert -delay 2 FIGS/anim*.jpg figure/animated_block_history2.gif")
+system("convert -delay 30 FIGS/anim*.jpg figure/animated_block_history2.gif")
 unlink("FIGS/*.jpg")
 @ 
 
