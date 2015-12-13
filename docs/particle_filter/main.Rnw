@@ -1636,16 +1636,24 @@ getBlock <- function(ids, date, conn) {
     }
     
     ## Compute speed functions:
+    schedule$time.seconds <- numeric(nrow(schedule))
     speedFns <- tapply(1:nrow(schedule), schedule$trip_id,
                        function(id) {
-                           x <- schedule$shape_dist_traveled[id]
+                           # Returns the scheduled speed at a given distance-into-trip:
+                           d <- schedule$shape_dist_traveled[id]
                            t <- hms(schedule$time[id])
                            tt <- (hour(t) * 60 + minute(t)) * 60
                            t0 <- tt - min(tt)
-                           yy <- unique(t0)
-                           xx <- tapply(x, t0, min)
+                           schedule$time.seconds[id] <<- t0
+                           xx <- unique(t0)
+                           yy <- tapply(d, t0, min)
                            
-                           splinefun(xx, yy)
+                           ## function from distance to time:
+                           f1 <- splinefun(yy, xx) 
+                           ## function from time to distance:
+                           f2 <- splinefun(xx, yy)
+                           
+                           list(d2t = f1, t2d = f2)
                        })
     
     
@@ -1668,17 +1676,46 @@ So now each trip has a ``speed'' function computed. In actual fact, the function
 ``scheduled time at distance $x$ into trip'', the derivative of which gives us speed:
 <<speed_function_1>>=
 fn1 <- block.speed$speed[[1]]
-curve(fn1(x), 0, 
+curve(fn1$t2d(x), 0, 
       max(block.speed$schedule[block.speed$schedule$trip_id == 
-                                   block.speed$trips$trip_id[1], ]$shape_dist_traveled),
-      xlab = "Distance (m)", ylab = "Time (s)")
-curve(fn1(x, 1), 0, 
+                                   block.speed$trips$trip_id[1], ]$time.seconds),
+      xlab = "Time (s)", ylab = "Distance (m)")
+curve(fn1$t2d(x, 1), 0, 
       max(block.speed$schedule[block.speed$schedule$trip_id == 
-                                   block.speed$trips$trip_id[1], ]$shape_dist_traveled),
-      xlab = "Distance (m)", ylab = "Speed (m/s)")
+                                   block.speed$trips$trip_id[1], ]$time.seconds),
+      xlab = "Time (s)", ylab = "Scheduled Speed (m/s)")
 @ 
 
 Now, we need to incorporate this into the model ... but how?
+We need one final function to obtain the scheduled speed at a given \emph{distance into trip}.
+
+<<speed_at_distance,fig.width=8,fig.height=10,out.width="0.6\\textwidth">>=
+par(mfrow = c(2, 1))
+curve(fn1$d2t(x), 0, 
+      mx <- max(block.speed$schedule[block.speed$schedule$trip_id == 
+                                 block.speed$trips$trip_id[1], ]$shape_dist_traveled),
+      xlab = "Distance (m)", ylab = "Scheduled Time (s)", 
+      yaxs = "i", xaxs = "i", yaxt = "n", xaxt = "n")
+dk <- 4000
+tk <- fn1$d2t(dk)
+axis(1, at = c(par()$xaxp[1:2], dk),
+     labels = c(par()$xaxp[1:2], expression(d[k])))
+axis(2, at = c(par()$yaxp[1:2], tk),
+     labels = c(par()$yaxp[1:2], expression(t[k])), las = 2)
+lines(c(rep(dk, 3), 0), c(0, rep(tk, 3)),  lty = 3)
+
+curve(fn1$t2d(x, 1), 0, 
+      max(block.speed$schedule[block.speed$schedule$trip_id == 
+                                   block.speed$trips$trip_id[1], ]$time.seconds),
+      xlab = "Time (s)", ylab = "Scheduled Speed (m/s)", 
+      xaxs = "i", xaxt = "n", yaxs = "i", yaxt = "n")
+axis(1, at = c(par()$xaxp[1:2], tk),
+     labels = c(par()$xaxp[1:2], expression(t[k])))
+axis(2, at = c(par()$yaxp[1:2], sk),
+     labels = c(par()$yaxp[1:2], expression(s(d[k]))), las = 2)
+sk <- fn1$t2d(tk, 1)
+lines(c(rep(tk, 3), sk), c(0, rep(sk, 3)), lty = 3)
+@ 
 
 
 \subsection{Incorporating Speed in the Model}
@@ -1728,7 +1765,7 @@ speedPF <- function(block,
     speed <- block$speed
     
     if (missing(x0)) {
-        x0 <- c(0, speed[[schedule$trip_id[1]]](0))
+        x0 <- c(0, with(speed[[schedule$trip_id[1]]], t2d(d2t(0), 1)))
     }
     
     ## Sort out the shape information (using previously defined functions)
@@ -1767,13 +1804,16 @@ speedPF <- function(block,
     ## The formal model ...
     ## ---------------------------------------------------------------- ##
     A <- function(d) cbind(c(1, 0), c(d, 0))
-    B <- function(x) rbind(s(x[1]), 0)
+    B <- function(x, sfns) {
+        s <- function(d) sfns$t2d(sfns$d2t(d), 1)
+        rbind(s(x[1]), 0)
+    }
     G <- function(d) rbind(d^2/2, d)
     fn <- function(x, u, t, w) { ## x: [distance, velocity]; u: [delta, time]; w: [error]
-        X <- structure(A(u) %*% x + + B(x) %*% u[1] + G(u) %*% w, 
-                       .Dimnames = list(c("distance", "speed"), NULL))
-        
         tid <- trips$trip_id[which(trips$end_time > t)[1]]
+        print(B(x, sfns = speed[[tid]]))
+        X <- structure(A(u) %*% x + B(x, sfns = speed[[tid]]) %*% u[1] + G(u) %*% w, 
+                       .Dimnames = list(c("distance", "speed"), NULL))
         if (is.na(tid))
             return(X)
         Xmax <- max(shape[shape$trip_id == tid, "distance"])
@@ -1803,6 +1843,7 @@ speedPF <- function(block,
         pb <- txtProgressBar(min = 0, max = M, style = 3)
     }
     for (i in 1:M) {
+        
         xxhat[,,i+1] <- fn(xx[,,i], Delta[i], TIME[i+1], pw(N))
         weights <- apply(xxhat[,,i+1], 2, function(xi) lhood(y[,i+1], xi))
         qi <- weights / sum(weights)
@@ -1829,18 +1870,18 @@ speedPF <- function(block,
     res
 }
 
-fit <- pf2(block.speed, start.obs = 1)
+fit <- speedPF(block.speed, start.obs = 1)
 @ 
 
 <<plot_new_fit2,fig.width=10,fig.height=12,out.width="0.8\\textwidth",cache=TRUE>>=
-unlink("FIGS/anim*.jpg")
-jpeg("FIGS/anim%04d.jpg", width = 400, height = 300)
-for(i in 2:length(fit$HX[1,1,]))
-    plot(fit, i, main = " ")
-dev.off()
-unlink("figure/animated_block_history2.gif")
-system("convert -delay 30 FIGS/anim*.jpg figure/animated_block_history2.gif")
-unlink("FIGS/*.jpg")
+## unlink("FIGS/anim*.jpg")
+## jpeg("FIGS/anim%04d.jpg", width = 400, height = 300)
+## for(i in 2:length(fit$HX[1,1,]))
+##     plot(fit, i, main = " ")
+## dev.off()
+## unlink("figure/animated_block_history2.gif")
+## system("convert -delay 30 FIGS/anim*.jpg figure/animated_block_history2.gif")
+## unlink("FIGS/*.jpg")
 @ 
 
 \end{document}
