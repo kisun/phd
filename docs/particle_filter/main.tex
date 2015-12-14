@@ -1004,7 +1004,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##   0.968   0.000   0.973
+##   1.477   0.000   1.489
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1193,7 +1193,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##   2.628   0.000   2.627
+##   4.192   0.006   4.277
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1286,18 +1286,18 @@ And the historical data can be sorted through nicely:
 \hlkwd{head}\hlstd{(hist)}
 \end{alltt}
 \begin{verbatim}
-##    trip_id shape_id   n
-## 1 28879365  4590010 527
-## 2 28879378  4590011 516
-## 3 28878584  4550078 489
-## 4 28245353   080070 473
-## 5 28878623  4350043 473
-## 6 28878719  4490019 463
+##    trip_id shape_id    n
+## 1 27638244  7420013 2399
+## 2 27638190  7420013 2205
+## 3 27508685  5530028 1393
+## 4 27936496  4490021 1275
+## 5 27937019  4590008 1211
+## 6 27501654   660056 1202
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
 
-So, trip \verb+28879365+ looks pretty popular. We'll get some useful information for that.
+So, trip \verb+27638244+ looks pretty popular. We'll get some useful information for that.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -1332,7 +1332,8 @@ our way through---hopefully we will be able to start generating priors and stuff
 \hlstd{(dates} \hlkwb{<-} \hlstd{all.dates}\hlopt{$}\hlstd{trip_start_date)}
 \end{alltt}
 \begin{verbatim}
-## [1] "20151201" "20151202" "20151203"
+## [1] "20150817" "20150820" "20150824" "20150825" "20150826" "20150827"
+## [7] "20150831" "20150901" "20150903"
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -1372,12 +1373,12 @@ So, on the first day:
 \end{alltt}
 \begin{verbatim}
 ##        lat       lon       time
-## 1 42.35458 -71.05811 1449014852
-## 2 42.35458 -71.05811 1449014852
-## 3 42.35458 -71.05811 1449014852
-## 4 42.35458 -71.05811 1449014852
-## 5 42.35458 -71.05811 1449014852
-## 6 42.35458 -71.05811 1449014852
+## 1 42.35349 -71.05190 1439817349
+## 2 42.35273 -71.05531 1439817410
+## 3 42.35183 -71.05594 1439817440
+## 4 42.35192 -71.05589 1439817501
+## 5 42.35261 -71.05546 1439817561
+## 6 42.35127 -71.04459 1439817719
 \end{verbatim}
 \begin{alltt}
 \hlstd{tripShape} \hlkwb{<-} \hlkwd{plotShape}\hlstd{(sID, mbta)}
@@ -1679,12 +1680,12 @@ From the MBTA feed we can get block information, so:
 \end{alltt}
 \begin{verbatim}
 ##   block_id  trip_id route_id shape_id departure_time
-## 1 L459-133 28882062      439  4390024       07:10:00
-## 2 L459-133 28882175      439  4390026       07:30:00
-## 3 L459-133 28882247      456  4560025       08:30:00
-## 4 L459-133 28882225      459  4590011       09:30:00
-## 5 L459-133 28882231      459  4590010       11:20:00
-## 6 L459-133 28882226      459  4590011       13:05:00
+## 1  S742-84 27638243      746  7460006       06:04:00
+## 2  S742-84 27638234      742  7420013       06:11:00
+## 3  S742-84 26206548      746  7460006       06:31:00
+## 4  S742-84 27647452      746  7460006       06:31:00
+## 5  S742-84 27638233      742  7420015       06:32:00
+## 6  S742-84 26206544      742  7420013       06:38:00
 \end{verbatim}
 \begin{alltt}
 \hlkwd{plot}\hlstd{(block)}
@@ -2191,26 +2192,42 @@ Using the previous example, we can use the first trip's schedule to demonstrate:
     \hlstd{\}}
 
     \hlcom{## Compute speed functions:}
-    \hlstd{schedule}\hlopt{$}\hlstd{time.seconds} \hlkwb{<-} \hlkwd{numeric}\hlstd{(}\hlkwd{nrow}\hlstd{(schedule))}
-    \hlstd{speedFns} \hlkwb{<-} \hlkwd{tapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(schedule), schedule}\hlopt{$}\hlstd{trip_id,}
-                       \hlkwa{function}\hlstd{(}\hlkwc{id}\hlstd{) \{}
-                           \hlcom{# Returns the scheduled speed at a given distance-into-trip:}
-                           \hlstd{d} \hlkwb{<-} \hlstd{schedule}\hlopt{$}\hlstd{shape_dist_traveled[id]}
-                           \hlstd{t} \hlkwb{<-} \hlkwd{hms}\hlstd{(schedule}\hlopt{$}\hlstd{time[id])}
-                           \hlstd{tt} \hlkwb{<-} \hlstd{(}\hlkwd{hour}\hlstd{(t)} \hlopt{*} \hlnum{60} \hlopt{+} \hlkwd{minute}\hlstd{(t))} \hlopt{*} \hlnum{60}
-                           \hlstd{t0} \hlkwb{<-} \hlstd{tt} \hlopt{-} \hlkwd{min}\hlstd{(tt)}
-                           \hlstd{schedule}\hlopt{$}\hlstd{time.seconds[id]} \hlkwb{<<-} \hlstd{t0}
-                           \hlstd{xx} \hlkwb{<-} \hlkwd{unique}\hlstd{(t0)}
-                           \hlstd{yy} \hlkwb{<-} \hlkwd{tapply}\hlstd{(d, t0, min)}
+    \hlcom{## schedule$time.seconds <- numeric(nrow(schedule))}
+    \hlcom{## speedFns <- tapply(1:nrow(schedule), schedule$trip_id,}
+    \hlcom{##                    function(id) \{}
+    \hlcom{##                        # Returns the scheduled speed at a given distance-into-trip:}
+    \hlcom{##                        d <- schedule$shape_dist_traveled[id]}
+    \hlcom{##                        t <- hms(schedule$time[id])}
+    \hlcom{##                        tt <- (hour(t) * 60 + minute(t)) * 60}
+    \hlcom{##                        t0 <- tt - min(tt)}
+    \hlcom{##                        schedule$time.seconds[id] <<- t0}
+    \hlcom{##                        xx <- unique(t0)}
+    \hlcom{##                        yy <- tapply(d, t0, min)}
 
-                           \hlcom{## function from distance to time:}
-                           \hlstd{f1} \hlkwb{<-} \hlkwd{splinefun}\hlstd{(yy, xx)}
-                           \hlcom{## function from time to distance:}
-                           \hlstd{f2} \hlkwb{<-} \hlkwd{splinefun}\hlstd{(xx, yy)}
+    \hlcom{##                        ## function from distance to time:}
+    \hlcom{##                        f1 <- splinefun(yy, xx, method = "hyman")}
+    \hlcom{##                        ## function from time to distance:}
+    \hlcom{##                        f2 <- splinefun(xx, yy, method = "hyman")}
 
-                           \hlkwd{list}\hlstd{(}\hlkwc{d2t} \hlstd{= f1,} \hlkwc{t2d} \hlstd{= f2)}
-                       \hlstd{\})}
+    \hlcom{##                        list(d2t = f1, t2d = f2)}
+    \hlcom{##                   \})}
+    \hlstd{lens} \hlkwb{<-} \hlkwd{tapply}\hlstd{(schedule}\hlopt{$}\hlstd{shape_dist_traveled, schedule}\hlopt{$}\hlstd{trip_id, max)}
+    \hlstd{lens} \hlkwb{<-} \hlstd{lens[}\hlkwd{unique}\hlstd{(schedule}\hlopt{$}\hlstd{trip_id)]}
+    \hlstd{lens} \hlkwb{<-} \hlkwd{cumsum}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{, lens[}\hlopt{-}\hlkwd{length}\hlstd{(lens)]))}
+    \hlkwd{names}\hlstd{(lens)} \hlkwb{<-} \hlkwd{unique}\hlstd{(schedule}\hlopt{$}\hlstd{trip_id)}
+    \hlstd{d} \hlkwb{<-} \hlstd{schedule}\hlopt{$}\hlstd{shape_dist_traveled} \hlopt{+} \hlstd{lens[schedule}\hlopt{$}\hlstd{trip_id]}
+    \hlstd{t} \hlkwb{<-} \hlkwd{hms}\hlstd{(schedule}\hlopt{$}\hlstd{time)}
+    \hlstd{tt} \hlkwb{<-} \hlstd{(}\hlkwd{hour}\hlstd{(t)} \hlopt{*} \hlnum{60} \hlopt{+} \hlkwd{minute}\hlstd{(t))} \hlopt{*} \hlnum{60}
+    \hlstd{t0} \hlkwb{<-} \hlstd{tt} \hlopt{-} \hlkwd{min}\hlstd{(tt)}
+    \hlstd{schedule}\hlopt{$}\hlstd{time.seconds} \hlkwb{<-} \hlstd{t0}
+    \hlstd{xx} \hlkwb{<-} \hlkwd{unique}\hlstd{(t0)}
+    \hlstd{yy} \hlkwb{<-} \hlkwd{tapply}\hlstd{(d, t0, min)}
 
+    \hlcom{## function from distance to time:}
+    \hlstd{f1} \hlkwb{<-} \hlkwd{splinefun}\hlstd{(yy, xx,} \hlkwc{method} \hlstd{=} \hlstr{"hyman"}\hlstd{)}
+    \hlcom{## function from time to distance:}
+    \hlstd{f2} \hlkwb{<-} \hlkwd{splinefun}\hlstd{(xx, yy,} \hlkwc{method} \hlstd{=} \hlstr{"hyman"}\hlstd{)}
+    \hlstd{speedFns} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{d2t} \hlstd{= f1,} \hlkwc{t2d} \hlstd{= f2)}
 
     \hlstd{out} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{trips} \hlstd{= blockInfo,}
                 \hlkwc{shapes} \hlstd{= blockShapes,}
@@ -2234,10 +2251,9 @@ So now each trip has a ``speed'' function computed. In actual fact, the function
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{fn1} \hlkwb{<-} \hlstd{block.speed}\hlopt{$}\hlstd{speed[[}\hlnum{1}\hlstd{]]}
+\hlstd{fn1} \hlkwb{<-} \hlstd{block.speed}\hlopt{$}\hlstd{speed}
 \hlkwd{curve}\hlstd{(fn1}\hlopt{$}\hlkwd{t2d}\hlstd{(x),} \hlnum{0}\hlstd{,}
-      \hlkwd{max}\hlstd{(block.speed}\hlopt{$}\hlstd{schedule[block.speed}\hlopt{$}\hlstd{schedule}\hlopt{$}\hlstd{trip_id} \hlopt{==}
-                                   \hlstd{block.speed}\hlopt{$}\hlstd{trips}\hlopt{$}\hlstd{trip_id[}\hlnum{1}\hlstd{], ]}\hlopt{$}\hlstd{time.seconds),}
+      \hlkwd{max}\hlstd{(block.speed}\hlopt{$}\hlstd{schedule}\hlopt{$}\hlstd{time.seconds),} \hlkwc{n} \hlstd{=} \hlnum{1001}\hlstd{,}
       \hlkwc{xlab} \hlstd{=} \hlstr{"Time (s)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Distance (m)"}\hlstd{)}
 \end{alltt}
 \end{kframe}
@@ -2249,8 +2265,7 @@ So now each trip has a ``speed'' function computed. In actual fact, the function
 
 \begin{kframe}\begin{alltt}
 \hlkwd{curve}\hlstd{(fn1}\hlopt{$}\hlkwd{t2d}\hlstd{(x,} \hlnum{1}\hlstd{),} \hlnum{0}\hlstd{,}
-      \hlkwd{max}\hlstd{(block.speed}\hlopt{$}\hlstd{schedule[block.speed}\hlopt{$}\hlstd{schedule}\hlopt{$}\hlstd{trip_id} \hlopt{==}
-                                   \hlstd{block.speed}\hlopt{$}\hlstd{trips}\hlopt{$}\hlstd{trip_id[}\hlnum{1}\hlstd{], ]}\hlopt{$}\hlstd{time.seconds),}
+      \hlkwd{max}\hlstd{(block.speed}\hlopt{$}\hlstd{schedule}\hlopt{$}\hlstd{time.seconds),} \hlkwc{n} \hlstd{=} \hlnum{1001}\hlstd{,}
       \hlkwc{xlab} \hlstd{=} \hlstr{"Time (s)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Scheduled Speed (m/s)"}\hlstd{)}
 \end{alltt}
 \end{kframe}
@@ -2271,8 +2286,7 @@ We need one final function to obtain the scheduled speed at a given \emph{distan
 \begin{alltt}
 \hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,} \hlnum{1}\hlstd{))}
 \hlkwd{curve}\hlstd{(fn1}\hlopt{$}\hlkwd{d2t}\hlstd{(x),} \hlnum{0}\hlstd{,}
-      \hlstd{mx} \hlkwb{<-} \hlkwd{max}\hlstd{(block.speed}\hlopt{$}\hlstd{schedule[block.speed}\hlopt{$}\hlstd{schedule}\hlopt{$}\hlstd{trip_id} \hlopt{==}
-                                 \hlstd{block.speed}\hlopt{$}\hlstd{trips}\hlopt{$}\hlstd{trip_id[}\hlnum{1}\hlstd{], ]}\hlopt{$}\hlstd{shape_dist_traveled),}
+      \hlstd{mx} \hlkwb{<-} \hlnum{8000}\hlstd{,} \hlkwc{n} \hlstd{=} \hlnum{1001}\hlstd{,} \hlcom{#max(block.speed$schedule$shape_dist_traveled), n = 1001,}
       \hlkwc{xlab} \hlstd{=} \hlstr{"Distance (m)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Scheduled Time (s)"}\hlstd{,}
       \hlkwc{yaxs} \hlstd{=} \hlstr{"i"}\hlstd{,} \hlkwc{xaxs} \hlstd{=} \hlstr{"i"}\hlstd{,} \hlkwc{yaxt} \hlstd{=} \hlstr{"n"}\hlstd{,} \hlkwc{xaxt} \hlstd{=} \hlstr{"n"}\hlstd{)}
 \hlstd{dk} \hlkwb{<-} \hlnum{4000}
@@ -2283,9 +2297,7 @@ We need one final function to obtain the scheduled speed at a given \emph{distan
      \hlkwc{labels} \hlstd{=} \hlkwd{c}\hlstd{(}\hlkwd{par}\hlstd{()}\hlopt{$}\hlstd{yaxp[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{],} \hlkwd{expression}\hlstd{(t[k])),} \hlkwc{las} \hlstd{=} \hlnum{2}\hlstd{)}
 \hlkwd{lines}\hlstd{(}\hlkwd{c}\hlstd{(}\hlkwd{rep}\hlstd{(dk,} \hlnum{3}\hlstd{),} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{rep}\hlstd{(tk,} \hlnum{3}\hlstd{)),}  \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
 
-\hlkwd{curve}\hlstd{(fn1}\hlopt{$}\hlkwd{t2d}\hlstd{(x,} \hlnum{1}\hlstd{),} \hlnum{0}\hlstd{,}
-      \hlkwd{max}\hlstd{(block.speed}\hlopt{$}\hlstd{schedule[block.speed}\hlopt{$}\hlstd{schedule}\hlopt{$}\hlstd{trip_id} \hlopt{==}
-                                   \hlstd{block.speed}\hlopt{$}\hlstd{trips}\hlopt{$}\hlstd{trip_id[}\hlnum{1}\hlstd{], ]}\hlopt{$}\hlstd{time.seconds),}
+\hlkwd{curve}\hlstd{(fn1}\hlopt{$}\hlkwd{t2d}\hlstd{(x,} \hlnum{1}\hlstd{),} \hlnum{0}\hlstd{, tk} \hlopt{*} \hlnum{2}\hlstd{,} \hlkwc{n} \hlstd{=} \hlnum{1001}\hlstd{,}
       \hlkwc{xlab} \hlstd{=} \hlstr{"Time (s)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Scheduled Speed (m/s)"}\hlstd{,}
       \hlkwc{xaxs} \hlstd{=} \hlstr{"i"}\hlstd{,} \hlkwc{xaxt} \hlstd{=} \hlstr{"n"}\hlstd{,} \hlkwc{yaxs} \hlstd{=} \hlstr{"i"}\hlstd{,} \hlkwc{yaxt} \hlstd{=} \hlstr{"n"}\hlstd{)}
 \hlkwd{axis}\hlstd{(}\hlnum{1}\hlstd{,} \hlkwc{at} \hlstd{=} \hlkwd{c}\hlstd{(}\hlkwd{par}\hlstd{()}\hlopt{$}\hlstd{xaxp[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{], tk),}
@@ -2355,7 +2367,7 @@ Let's start very simply:
     \hlstd{speed} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{speed}
 
     \hlkwa{if} \hlstd{(}\hlkwd{missing}\hlstd{(x0)) \{}
-        \hlstd{x0} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{with}\hlstd{(speed[[schedule}\hlopt{$}\hlstd{trip_id[}\hlnum{1}\hlstd{]]],} \hlkwd{t2d}\hlstd{(}\hlkwd{d2t}\hlstd{(}\hlnum{0}\hlstd{),} \hlnum{1}\hlstd{)))}
+        \hlstd{x0} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{with}\hlstd{(speed,} \hlkwd{t2d}\hlstd{(}\hlkwd{d2t}\hlstd{(}\hlnum{0}\hlstd{),} \hlnum{1}\hlstd{)))}
     \hlstd{\}}
 
     \hlcom{## Sort out the shape information (using previously defined functions)}
@@ -2394,21 +2406,26 @@ Let's start very simply:
     \hlcom{## The formal model ...}
     \hlcom{## ---------------------------------------------------------------- ##}
     \hlstd{A} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{)} \hlkwd{cbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(d,} \hlnum{0}\hlstd{))}
-    \hlstd{B} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{sfns}\hlstd{) \{}
-        \hlstd{s} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{) sfns}\hlopt{$}\hlkwd{t2d}\hlstd{(sfns}\hlopt{$}\hlkwd{d2t}\hlstd{(d),} \hlnum{1}\hlstd{)}
-        \hlkwd{rbind}\hlstd{(}\hlkwd{s}\hlstd{(x[}\hlnum{1}\hlstd{]),} \hlnum{0}\hlstd{)}
+    \hlstd{B} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{s}\hlstd{) \{}
+        \hlstd{sf} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{) s}\hlopt{$}\hlkwd{t2d}\hlstd{(s}\hlopt{$}\hlkwd{d2t}\hlstd{(d),} \hlnum{1}\hlstd{)}
+        \hlkwd{rbind}\hlstd{(}\hlkwd{sf}\hlstd{(x[}\hlnum{1}\hlstd{, ]),} \hlnum{0}\hlstd{)}
     \hlstd{\}}
     \hlstd{G} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{)} \hlkwd{rbind}\hlstd{(d}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, d)}
     \hlstd{fn} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{u}\hlstd{,} \hlkwc{t}\hlstd{,} \hlkwc{w}\hlstd{) \{} \hlcom{## x: [distance, velocity]; u: [delta, time]; w: [error]}
-        \hlstd{tid} \hlkwb{<-} \hlstd{trips}\hlopt{$}\hlstd{trip_id[}\hlkwd{which}\hlstd{(trips}\hlopt{$}\hlstd{end_time} \hlopt{>} \hlstd{t)[}\hlnum{1}\hlstd{]]}
-        \hlkwd{print}\hlstd{(}\hlkwd{B}\hlstd{(x,} \hlkwc{sfns} \hlstd{= speed[[tid]]))}
-        \hlstd{X} \hlkwb{<-} \hlkwd{structure}\hlstd{(}\hlkwd{A}\hlstd{(u)} \hlopt{%*%} \hlstd{x} \hlopt{+} \hlkwd{B}\hlstd{(x,} \hlkwc{sfns} \hlstd{= speed[[tid]])} \hlopt{%*%} \hlstd{u[}\hlnum{1}\hlstd{]} \hlopt{+} \hlkwd{G}\hlstd{(u)} \hlopt{%*%} \hlstd{w,}
+
+        \hlstd{X} \hlkwb{<-} \hlkwd{structure}\hlstd{(}\hlkwd{A}\hlstd{(u)} \hlopt{%*%} \hlstd{x} \hlopt{+} \hlkwd{B}\hlstd{(x,} \hlkwc{s} \hlstd{= speed)} \hlopt{*} \hlstd{u[}\hlnum{1}\hlstd{]} \hlopt{+} \hlkwd{G}\hlstd{(u)} \hlopt{%*%} \hlstd{w,}
                        \hlkwc{.Dimnames} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"distance"}\hlstd{,} \hlstr{"speed"}\hlstd{),} \hlkwa{NULL}\hlstd{))}
+        \hlstd{X[}\hlnum{2}\hlstd{, ]} \hlkwb{<-} \hlkwd{ifelse}\hlstd{(X[}\hlnum{2}\hlstd{, ]} \hlopt{<} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{, X[}\hlnum{2}\hlstd{, ])}
+
+        \hlstd{tid} \hlkwb{<-} \hlstd{trips}\hlopt{$}\hlstd{trip_id[}\hlkwd{which}\hlstd{(trips}\hlopt{$}\hlstd{end_time} \hlopt{>} \hlstd{t)[}\hlnum{1}\hlstd{]]}
         \hlkwa{if} \hlstd{(}\hlkwd{is.na}\hlstd{(tid))}
             \hlkwd{return}\hlstd{(X)}
-        \hlstd{Xmax} \hlkwb{<-} \hlkwd{max}\hlstd{(shape[shape}\hlopt{$}\hlstd{trip_id} \hlopt{==} \hlstd{tid,} \hlstr{"distance"}\hlstd{])}
+
+        \hlstd{stopi} \hlkwb{<-} \hlkwd{which}\hlstd{(shape}\hlopt{$}\hlstd{trip_id} \hlopt{==} \hlstd{tid)}
+        \hlstd{Xmax} \hlkwb{<-} \hlkwd{max}\hlstd{(shape[stopi} \hlopt{+} \hlnum{1}\hlstd{,} \hlstr{"distance"}\hlstd{])}
+
         \hlstd{X} \hlkwb{<-} \hlkwd{apply}\hlstd{(X,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{)} \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlstd{Xmax)} \hlkwd{c}\hlstd{(Xmax,} \hlnum{0}\hlstd{)} \hlkwa{else} \hlstd{x)}
-        \hlstd{X[}\hlnum{2}\hlstd{, ]} \hlkwb{<-} \hlkwd{ifelse}\hlstd{(X[}\hlnum{2}\hlstd{, ]} \hlopt{<} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{, X[}\hlnum{2}\hlstd{, ])}
+
 
         \hlstd{X}
     \hlstd{\}}
@@ -2460,31 +2477,237 @@ Let's start very simply:
     \hlstd{res}
 \hlstd{\}}
 
-\hlstd{fit} \hlkwb{<-} \hlkwd{speedPF}\hlstd{(block.speed,} \hlkwc{start.obs} \hlstd{=} \hlnum{1}\hlstd{)}
+
+\hlstd{fit} \hlkwb{<-} \hlkwd{speedPF}\hlstd{(block.speed,} \hlkwc{start.obs} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{progress}\hlstd{=F)}
 \end{alltt}
-\begin{verbatim}
-##          [,1]
-## [1,] 13.50822
-## [2,]  0.00000
-\end{verbatim}
-
-
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in A(u) \%*\% x + B(x, sfns = speed[[tid]]) \%*\% u[1]: non-conformable arrays}}\end{kframe}
+\end{kframe}
 \end{knitrout}
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlcom{## unlink("FIGS/anim*.jpg")}
-\hlcom{## jpeg("FIGS/anim%04d.jpg", width = 400, height = 300)}
-\hlcom{## for(i in 2:length(fit$HX[1,1,]))}
-\hlcom{##     plot(fit, i, main = " ")}
-\hlcom{## dev.off()}
-\hlcom{## unlink("figure/animated_block_history2.gif")}
-\hlcom{## system("convert -delay 30 FIGS/anim*.jpg figure/animated_block_history2.gif")}
-\hlcom{## unlink("FIGS/*.jpg")}
+\hlkwd{unlink}\hlstd{(}\hlstr{"FIGS/anim*.jpg"}\hlstd{)}
+\hlkwd{jpeg}\hlstd{(}\hlstr{"FIGS/anim%04d.jpg"}\hlstd{,} \hlkwc{width} \hlstd{=} \hlnum{400}\hlstd{,} \hlkwc{height} \hlstd{=} \hlnum{300}\hlstd{)}
+\hlkwa{for}\hlstd{(i} \hlkwa{in} \hlnum{2}\hlopt{:}\hlkwd{length}\hlstd{(fit}\hlopt{$}\hlstd{HX[}\hlnum{1}\hlstd{,}\hlnum{1}\hlstd{,]))}
+    \hlkwd{plot}\hlstd{(fit, i,} \hlkwc{main} \hlstd{=} \hlstr{" "}\hlstd{)}
+\hlkwd{dev.off}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+## pdf 
+##   2
+\end{verbatim}
+\begin{alltt}
+\hlkwd{unlink}\hlstd{(}\hlstr{"figure/animated_block_history2.gif"}\hlstd{)}
+\hlkwd{system}\hlstd{(}\hlstr{"convert -delay 30 FIGS/anim*.jpg figure/animated_block_history2.gif"}\hlstd{)}
+\hlkwd{unlink}\hlstd{(}\hlstr{"FIGS/*.jpg"}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
+
+
+\subsection{Use the Integral of Speed}
+
+Instead of using a point speed which from the figures above we can see is absolute rubbish,
+we can use the actual scheduled distance covered in time $\Delta_k$, starting at distance $d_{k-1}$.
+That is,
+\begin{equation}
+  \label{eq:integrate_speed}
+  \hat d_k - d_{k-1} = 
+  \left.\int s\left(t_k\right)\, \mathrm{d}t \right|_{d_{k-1}}^{d_k}
+\end{equation}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{dist2time} \hlkwb{<-} \hlstd{block.speed}\hlopt{$}\hlstd{speed}\hlopt{$}\hlstd{d2t}
+\hlstd{time2dist} \hlkwb{<-} \hlstd{block.speed}\hlopt{$}\hlstd{speed}\hlopt{$}\hlstd{t2d}
+\hlkwd{curve}\hlstd{(}\hlkwd{time2dist}\hlstd{(x,} \hlnum{1}\hlstd{),} \hlnum{0}\hlstd{,} \hlnum{780}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/integrate_example-1} 
+
+}
+
+
+\begin{kframe}\begin{alltt}
+\hlkwd{integrate}\hlstd{(time2dist,} \hlnum{0}\hlstd{,} \hlnum{780}\hlstd{,} \hlkwc{deriv} \hlstd{=} \hlnum{1}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## 6632.004 with absolute error < 0.69
+\end{verbatim}
+\begin{alltt}
+\hlstd{block.speed}\hlopt{$}\hlstd{schedule[}\hlnum{25}\hlstd{,} \hlstr{"shape_dist_traveled"}\hlstd{]}
+\end{alltt}
+\begin{verbatim}
+## [1] 6632.102
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+Close enough for our purposes.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{speedPF} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{block}\hlstd{,}
+                    \hlkwc{N} \hlstd{=} \hlnum{200}\hlstd{,}
+                    \hlkwc{zero.start} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                    \hlkwc{start.obs} \hlstd{=} \hlnum{1}\hlstd{,}
+                    \hlkwc{x0}\hlstd{,}
+                    \hlkwc{GPS.error} \hlstd{=} \hlnum{20}\hlstd{,}
+                    \hlkwc{sig.e} \hlstd{=} \hlnum{0.03}\hlstd{,}
+                    \hlkwc{progress} \hlstd{=} \hlnum{FALSE}\hlstd{,}
+                    \hlkwc{...}\hlstd{) \{}
+    \hlstd{shape} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{path}
+    \hlstd{data} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{history[start.obs}\hlopt{:}\hlkwd{nrow}\hlstd{(block}\hlopt{$}\hlstd{history), ]}
+    \hlstd{trips} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{trips}
+    \hlstd{trips}\hlopt{$}\hlstd{end_time} \hlkwb{<-} \hlkwd{hms}\hlstd{(}\hlkwd{c}\hlstd{(trips}\hlopt{$}\hlstd{departure_time[}\hlopt{-}\hlnum{1}\hlstd{]),} \hlkwc{tz} \hlstd{=} \hlstr{"EST5EDT"}\hlstd{)}
+
+    \hlstd{schedule} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{schedule}
+    \hlstd{speed} \hlkwb{<-} \hlstd{block}\hlopt{$}\hlstd{speed}
+
+    \hlkwa{if} \hlstd{(}\hlkwd{missing}\hlstd{(x0)) \{}
+        \hlstd{x0} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{with}\hlstd{(speed,} \hlkwd{t2d}\hlstd{(}\hlkwd{d2t}\hlstd{(}\hlnum{0}\hlstd{),} \hlnum{1}\hlstd{)))}
+    \hlstd{\}}
+
+    \hlcom{## Sort out the shape information (using previously defined functions)}
+    \hlstd{z} \hlkwb{<-} \hlkwd{t}\hlstd{(shape[,}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{])}
+    \hlstd{di} \hlkwb{<-} \hlkwd{distanceFlat}\hlstd{(z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)], z[,} \hlopt{-}\hlnum{1}\hlstd{])}
+    \hlstd{shape}\hlopt{$}\hlstd{distance} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{cumsum}\hlstd{(di))}
+    \hlstd{shape}\hlopt{$}\hlstd{length} \hlkwb{<-} \hlkwd{c}\hlstd{(di,} \hlnum{NA}\hlstd{)}
+    \hlstd{shape}\hlopt{$}\hlstd{bearing} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{bearing}\hlstd{(z[,} \hlopt{-}\hlkwd{ncol}\hlstd{(z)], z[,} \hlopt{-}\hlnum{1}\hlstd{]),} \hlnum{NA}\hlstd{)}
+    \hlstd{shape} \hlkwb{<-} \hlstd{shape[shape}\hlopt{$}\hlstd{length} \hlopt{>} \hlnum{0} \hlopt{|} \hlkwd{is.na}\hlstd{(shape}\hlopt{$}\hlstd{length), ]}
+
+    \hlcom{## Preparation (redefining all functions):}
+    \hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) \{}
+        \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{<=} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{))}
+        \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlkwd{max}\hlstd{(shape}\hlopt{$}\hlstd{distance))} \hlkwd{return}\hlstd{(}\hlkwd{as.numeric}\hlstd{(shape[}\hlkwd{nrow}\hlstd{(shape),} \hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]))}
+        \hlstd{j} \hlkwb{<-} \hlkwd{which.min}\hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlstd{shape}\hlopt{$}\hlstd{distance)} \hlopt{-} \hlnum{1}
+        \hlstd{sj} \hlkwb{<-} \hlstd{shape[j, ]}
+        \hlstd{Psi} \hlkwb{<-} \hlstd{sj}\hlopt{$}\hlstd{bearing}
+        \hlstd{d} \hlkwb{<-} \hlstd{x[}\hlnum{1}\hlstd{]} \hlopt{-} \hlstd{sj}\hlopt{$}\hlstd{distance}
+
+        \hlcom{## only do the calculations if we need to!}
+        \hlkwa{if} \hlstd{(d} \hlopt{==} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(}\hlkwd{as.numeric}\hlstd{(sj[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]))}
+        \hlkwd{partialSegment}\hlstd{(}\hlkwd{as.numeric}\hlstd{(sj[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]), Psi, d)}
+    \hlstd{\}}
+    \hlcom{## ------------------------------------------------- The likelihood ##}
+    \hlstd{lhood} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{x}\hlstd{) \{}
+        \hlcom{# y: GPS observation}
+        \hlcom{# x: a distance-into-trip}
+        \hlkwd{dnorm}\hlstd{(}\hlkwd{distanceFlat}\hlstd{(y,} \hlkwd{h}\hlstd{(x)),} \hlnum{0}\hlstd{,} \hlkwc{sd} \hlstd{= GPS.error)} \hlopt{*}
+            \hlkwd{ifelse}\hlstd{(x[}\hlnum{2}\hlstd{]} \hlopt{<=} \hlnum{0}\hlstd{,} \hlnum{0.000001}\hlstd{,} \hlnum{1}\hlstd{)}
+
+    \hlstd{\}}
+    \hlcom{## The random component:}
+    \hlstd{pw} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{n}\hlstd{)}
+        \hlkwd{rnorm}\hlstd{(n,} \hlnum{0}\hlstd{, sig.e)}
+
+    \hlcom{## The formal model ...}
+    \hlcom{## ---------------------------------------------------------------- ##}
+    \hlstd{A} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{)} \hlkwd{cbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwd{c}\hlstd{(d,} \hlnum{0}\hlstd{))}
+    \hlstd{B} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{u}\hlstd{,} \hlkwc{s}\hlstd{) \{}
+        \hlstd{D} \hlkwb{<-} \hlkwd{cbind}\hlstd{(s}\hlopt{$}\hlkwd{d2t}\hlstd{(x[}\hlnum{1}\hlstd{, ]), s}\hlopt{$}\hlkwd{d2t}\hlstd{(x[}\hlnum{1}\hlstd{, ])} \hlopt{+} \hlstd{u[}\hlnum{1}\hlstd{])}
+        \hlstd{d} \hlkwb{<-} \hlkwd{apply}\hlstd{(D,} \hlnum{1}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{t}\hlstd{)} \hlkwd{integrate}\hlstd{(s}\hlopt{$}\hlstd{t2d, t[}\hlnum{1}\hlstd{], t[}\hlnum{2}\hlstd{],} \hlkwc{deriv} \hlstd{=} \hlnum{1}\hlstd{)}\hlopt{$}\hlstd{value)}
+        \hlkwd{rbind}\hlstd{(d,} \hlnum{0}\hlstd{)}
+    \hlstd{\}}
+    \hlstd{G} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{)} \hlkwd{rbind}\hlstd{(d}\hlopt{^}\hlnum{2}\hlopt{/}\hlnum{2}\hlstd{, d)}
+    \hlstd{fn} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{u}\hlstd{,} \hlkwc{t}\hlstd{,} \hlkwc{w}\hlstd{) \{} \hlcom{## x: [distance, velocity]; u: [delta, time]; w: [error]}
+
+        \hlstd{X} \hlkwb{<-} \hlkwd{structure}\hlstd{(}\hlkwd{A}\hlstd{(u)} \hlopt{%*%} \hlstd{x} \hlopt{+} \hlkwd{B}\hlstd{(x, u,} \hlkwc{s} \hlstd{= speed)} \hlopt{+} \hlkwd{G}\hlstd{(u)} \hlopt{%*%} \hlstd{w,}
+                       \hlkwc{.Dimnames} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"distance"}\hlstd{,} \hlstr{"speed"}\hlstd{),} \hlkwa{NULL}\hlstd{))}
+        \hlstd{X[}\hlnum{2}\hlstd{, ]} \hlkwb{<-} \hlkwd{ifelse}\hlstd{(X[}\hlnum{2}\hlstd{, ]} \hlopt{<} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{, X[}\hlnum{2}\hlstd{, ])}
+
+        \hlstd{tid} \hlkwb{<-} \hlstd{trips}\hlopt{$}\hlstd{trip_id[}\hlkwd{which}\hlstd{(trips}\hlopt{$}\hlstd{end_time} \hlopt{>} \hlstd{t)[}\hlnum{1}\hlstd{]]}
+        \hlkwa{if} \hlstd{(}\hlkwd{is.na}\hlstd{(tid))}
+            \hlkwd{return}\hlstd{(X)}
+
+        \hlstd{stopi} \hlkwb{<-} \hlkwd{which}\hlstd{(shape}\hlopt{$}\hlstd{trip_id} \hlopt{==} \hlstd{tid)}
+        \hlstd{Xmax} \hlkwb{<-} \hlkwd{max}\hlstd{(shape[stopi} \hlopt{+} \hlnum{1}\hlstd{,} \hlstr{"distance"}\hlstd{])}
+
+        \hlstd{X} \hlkwb{<-} \hlkwd{apply}\hlstd{(X,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{)} \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlstd{Xmax)} \hlkwd{c}\hlstd{(Xmax,} \hlnum{0}\hlstd{)} \hlkwa{else} \hlstd{x)}
+
+
+        \hlstd{X}
+    \hlstd{\}}
+
+    \hlcom{## Data prep:}
+    \hlstd{y} \hlkwb{<-} \hlkwd{rbind}\hlstd{(data}\hlopt{$}\hlstd{lon, data}\hlopt{$}\hlstd{lat)}
+    \hlstd{t} \hlkwb{<-} \hlstd{data}\hlopt{$}\hlstd{time}
+    \hlstd{TIME} \hlkwb{<-} \hlstd{lubridate}\hlopt{::}\hlkwd{hms}\hlstd{(}\hlkwd{format}\hlstd{(}\hlkwd{as.POSIXct}\hlstd{(data}\hlopt{$}\hlstd{time,} \hlkwc{origin}\hlstd{=}\hlstr{"1970-01-01"}\hlstd{,} \hlkwc{tz}\hlstd{=}\hlstr{"EST5EDT"}\hlstd{),} \hlstr{"%H:%M:%S"}\hlstd{),}
+                           \hlkwc{tz} \hlstd{=} \hlstr{"EDT5EDT"}\hlstd{)}
+    \hlstd{Delta} \hlkwb{<-} \hlkwd{diff}\hlstd{(t)}
+    \hlstd{M} \hlkwb{<-} \hlkwd{length}\hlstd{(Delta)}  \hlcom{## the number of "true" observations...?}
+
+    \hlcom{## Matrix prep:}
+    \hlstd{hx} \hlkwb{<-} \hlstd{hxhat} \hlkwb{<-} \hlstd{xxhat} \hlkwb{<-} \hlstd{xx} \hlkwb{<-} \hlkwd{array}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{, N, M} \hlopt{+} \hlnum{1}\hlstd{))}
+
+    \hlcom{## Initialise:}
+    \hlstd{xx[,,}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{x0}
+
+    \hlcom{## run the simulations}
+    \hlkwa{if} \hlstd{(progress) \{}
+        \hlkwd{suppressMessages}\hlstd{(\{}\hlkwd{library}\hlstd{(R.utils)\})}
+        \hlstd{pb} \hlkwb{<-} \hlkwd{txtProgressBar}\hlstd{(}\hlkwc{min} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{max} \hlstd{= M,} \hlkwc{style} \hlstd{=} \hlnum{3}\hlstd{)}
+    \hlstd{\}}
+    \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{M) \{}
+
+        \hlstd{xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{fn}\hlstd{(xx[,,i], Delta[i], TIME[i}\hlopt{+}\hlnum{1}\hlstd{],} \hlkwd{pw}\hlstd{(N))}
+        \hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood}\hlstd{(y[,i}\hlopt{+}\hlnum{1}\hlstd{], xi))}
+        \hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
+        \hlkwa{if} \hlstd{(}\hlkwd{any}\hlstd{(}\hlkwd{is.na}\hlstd{(qi)))}
+            \hlstd{qi} \hlkwb{<-} \hlkwa{NULL}
+
+        \hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
+        \hlstd{xx[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{xxhat[,ii,i}\hlopt{+}\hlnum{1}\hlstd{]}
+
+        \hlstd{hxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{, h)}
+        \hlstd{hx[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{apply}\hlstd{(xx[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{, h)}
+        \hlkwa{if} \hlstd{(progress)} \hlkwd{setTxtProgressBar}\hlstd{(pb, i)}
+    \hlstd{\}}
+    \hlkwa{if} \hlstd{(progress)} \hlkwd{close}\hlstd{(pb)}
+
+    \hlstd{res} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{Xhat} \hlstd{= xxhat,}
+                \hlkwc{X} \hlstd{= xx,}
+                \hlkwc{HXhat} \hlstd{= hxhat,}
+                \hlkwc{HX} \hlstd{= hx,}
+                \hlkwc{y} \hlstd{= y,} \hlkwc{t} \hlstd{= t,} \hlkwc{M} \hlstd{= M,} \hlkwc{N} \hlstd{= N,}
+                \hlkwc{block} \hlstd{= block)}
+    \hlkwd{class}\hlstd{(res)} \hlkwb{<-} \hlstr{"pf.blockfit"}
+
+    \hlstd{res}
+\hlstd{\}}
+
+
+\hlstd{fit} \hlkwb{<-} \hlkwd{speedPF}\hlstd{(block.speed,} \hlkwc{start.obs} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{progress}\hlstd{=F)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{unlink}\hlstd{(}\hlstr{"FIGS/anim*.jpg"}\hlstd{)}
+\hlkwd{jpeg}\hlstd{(}\hlstr{"FIGS/anim%04d.jpg"}\hlstd{,} \hlkwc{width} \hlstd{=} \hlnum{400}\hlstd{,} \hlkwc{height} \hlstd{=} \hlnum{300}\hlstd{)}
+\hlkwa{for}\hlstd{(i} \hlkwa{in} \hlnum{2}\hlopt{:}\hlkwd{length}\hlstd{(fit}\hlopt{$}\hlstd{HX[}\hlnum{1}\hlstd{,}\hlnum{1}\hlstd{,]))}
+    \hlkwd{plot}\hlstd{(fit, i,} \hlkwc{main} \hlstd{=} \hlstr{" "}\hlstd{)}
+\hlkwd{dev.off}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+## pdf 
+##   2
+\end{verbatim}
+\begin{alltt}
+\hlkwd{unlink}\hlstd{(}\hlstr{"figure/animated_block_history3.gif"}\hlstd{)}
+\hlkwd{system}\hlstd{(}\hlstr{"convert -delay 30 FIGS/anim*.jpg figure/animated_block_history3.gif"}\hlstd{)}
+\hlkwd{unlink}\hlstd{(}\hlstr{"FIGS/*.jpg"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+
+That sort of worked, but then it didn't.
 
 \end{document}

@@ -1636,26 +1636,42 @@ getBlock <- function(ids, date, conn) {
     }
     
     ## Compute speed functions:
-    schedule$time.seconds <- numeric(nrow(schedule))
-    speedFns <- tapply(1:nrow(schedule), schedule$trip_id,
-                       function(id) {
-                           # Returns the scheduled speed at a given distance-into-trip:
-                           d <- schedule$shape_dist_traveled[id]
-                           t <- hms(schedule$time[id])
-                           tt <- (hour(t) * 60 + minute(t)) * 60
-                           t0 <- tt - min(tt)
-                           schedule$time.seconds[id] <<- t0
-                           xx <- unique(t0)
-                           yy <- tapply(d, t0, min)
+    ## schedule$time.seconds <- numeric(nrow(schedule))
+    ## speedFns <- tapply(1:nrow(schedule), schedule$trip_id,
+    ##                    function(id) {
+    ##                        # Returns the scheduled speed at a given distance-into-trip:
+    ##                        d <- schedule$shape_dist_traveled[id]
+    ##                        t <- hms(schedule$time[id])
+    ##                        tt <- (hour(t) * 60 + minute(t)) * 60
+    ##                        t0 <- tt - min(tt)
+    ##                        schedule$time.seconds[id] <<- t0
+    ##                        xx <- unique(t0)
+    ##                        yy <- tapply(d, t0, min)
                            
-                           ## function from distance to time:
-                           f1 <- splinefun(yy, xx) 
-                           ## function from time to distance:
-                           f2 <- splinefun(xx, yy)
+    ##                        ## function from distance to time:
+    ##                        f1 <- splinefun(yy, xx, method = "hyman")
+    ##                        ## function from time to distance:
+    ##                        f2 <- splinefun(xx, yy, method = "hyman")
                            
-                           list(d2t = f1, t2d = f2)
-                       })
+    ##                        list(d2t = f1, t2d = f2)
+    ##                   })
+    lens <- tapply(schedule$shape_dist_traveled, schedule$trip_id, max)
+    lens <- lens[unique(schedule$trip_id)]
+    lens <- cumsum(c(0, lens[-length(lens)]))
+    names(lens) <- unique(schedule$trip_id)
+    d <- schedule$shape_dist_traveled + lens[schedule$trip_id]
+    t <- hms(schedule$time)
+    tt <- (hour(t) * 60 + minute(t)) * 60
+    t0 <- tt - min(tt)
+    schedule$time.seconds <- t0
+    xx <- unique(t0)
+    yy <- tapply(d, t0, min)
     
+    ## function from distance to time:
+    f1 <- splinefun(yy, xx, method = "hyman")
+    ## function from time to distance:
+    f2 <- splinefun(xx, yy, method = "hyman")
+    speedFns <- list(d2t = f1, t2d = f2)
     
     out <- list(trips = blockInfo,
                 shapes = blockShapes,
@@ -1675,14 +1691,12 @@ block.speed <- getBlockData(block.speed$date, block = block.speed, conn = mbta)
 So now each trip has a ``speed'' function computed. In actual fact, the function is
 ``scheduled time at distance $x$ into trip'', the derivative of which gives us speed:
 <<speed_function_1>>=
-fn1 <- block.speed$speed[[1]]
+fn1 <- block.speed$speed
 curve(fn1$t2d(x), 0, 
-      max(block.speed$schedule[block.speed$schedule$trip_id == 
-                                   block.speed$trips$trip_id[1], ]$time.seconds),
+      max(block.speed$schedule$time.seconds), n = 1001,
       xlab = "Time (s)", ylab = "Distance (m)")
-curve(fn1$t2d(x, 1), 0, 
-      max(block.speed$schedule[block.speed$schedule$trip_id == 
-                                   block.speed$trips$trip_id[1], ]$time.seconds),
+curve(fn1$t2d(x, 1), 0,
+      max(block.speed$schedule$time.seconds), n = 1001,
       xlab = "Time (s)", ylab = "Scheduled Speed (m/s)")
 @ 
 
@@ -1692,8 +1706,7 @@ We need one final function to obtain the scheduled speed at a given \emph{distan
 <<speed_at_distance,fig.width=8,fig.height=10,out.width="0.6\\textwidth">>=
 par(mfrow = c(2, 1))
 curve(fn1$d2t(x), 0, 
-      mx <- max(block.speed$schedule[block.speed$schedule$trip_id == 
-                                 block.speed$trips$trip_id[1], ]$shape_dist_traveled),
+      mx <- 8000, n = 1001, #max(block.speed$schedule$shape_dist_traveled), n = 1001,
       xlab = "Distance (m)", ylab = "Scheduled Time (s)", 
       yaxs = "i", xaxs = "i", yaxt = "n", xaxt = "n")
 dk <- 4000
@@ -1704,9 +1717,7 @@ axis(2, at = c(par()$yaxp[1:2], tk),
      labels = c(par()$yaxp[1:2], expression(t[k])), las = 2)
 lines(c(rep(dk, 3), 0), c(0, rep(tk, 3)),  lty = 3)
 
-curve(fn1$t2d(x, 1), 0, 
-      max(block.speed$schedule[block.speed$schedule$trip_id == 
-                                   block.speed$trips$trip_id[1], ]$time.seconds),
+curve(fn1$t2d(x, 1), 0, tk * 2, n = 1001,
       xlab = "Time (s)", ylab = "Scheduled Speed (m/s)", 
       xaxs = "i", xaxt = "n", yaxs = "i", yaxt = "n")
 axis(1, at = c(par()$xaxp[1:2], tk),
@@ -1765,7 +1776,7 @@ speedPF <- function(block,
     speed <- block$speed
     
     if (missing(x0)) {
-        x0 <- c(0, with(speed[[schedule$trip_id[1]]], t2d(d2t(0), 1)))
+        x0 <- c(0, with(speed, t2d(d2t(0), 1)))
     }
     
     ## Sort out the shape information (using previously defined functions)
@@ -1804,21 +1815,26 @@ speedPF <- function(block,
     ## The formal model ...
     ## ---------------------------------------------------------------- ##
     A <- function(d) cbind(c(1, 0), c(d, 0))
-    B <- function(x, sfns) {
-        s <- function(d) sfns$t2d(sfns$d2t(d), 1)
-        rbind(s(x[1]), 0)
+    B <- function(x, s) {
+        sf <- function(d) s$t2d(s$d2t(d), 1)
+        rbind(sf(x[1, ]), 0)
     }
     G <- function(d) rbind(d^2/2, d)
     fn <- function(x, u, t, w) { ## x: [distance, velocity]; u: [delta, time]; w: [error]
-        tid <- trips$trip_id[which(trips$end_time > t)[1]]
-        print(B(x, sfns = speed[[tid]]))
-        X <- structure(A(u) %*% x + B(x, sfns = speed[[tid]]) %*% u[1] + G(u) %*% w, 
+        
+        X <- structure(A(u) %*% x + B(x, s = speed) * u[1] + G(u) %*% w, 
                        .Dimnames = list(c("distance", "speed"), NULL))
+        X[2, ] <- ifelse(X[2, ] < 0, 0, X[2, ])
+        
+        tid <- trips$trip_id[which(trips$end_time > t)[1]]
         if (is.na(tid))
             return(X)
-        Xmax <- max(shape[shape$trip_id == tid, "distance"])
+        
+        stopi <- which(shape$trip_id == tid)
+        Xmax <- max(shape[stopi + 1, "distance"])
+
         X <- apply(X, 2, function(x) if (x[1] > Xmax) c(Xmax, 0) else x)
-        X[2, ] <- ifelse(X[2, ] < 0, 0, X[2, ])
+        
         
         X
     }
@@ -1870,18 +1886,193 @@ speedPF <- function(block,
     res
 }
 
-fit <- speedPF(block.speed, start.obs = 1)
+
+fit <- speedPF(block.speed, start.obs = 1, progress=F)
 @ 
 
 <<plot_new_fit2,fig.width=10,fig.height=12,out.width="0.8\\textwidth",cache=TRUE>>=
-## unlink("FIGS/anim*.jpg")
-## jpeg("FIGS/anim%04d.jpg", width = 400, height = 300)
-## for(i in 2:length(fit$HX[1,1,]))
-##     plot(fit, i, main = " ")
-## dev.off()
-## unlink("figure/animated_block_history2.gif")
-## system("convert -delay 30 FIGS/anim*.jpg figure/animated_block_history2.gif")
-## unlink("FIGS/*.jpg")
+unlink("FIGS/anim*.jpg")
+jpeg("FIGS/anim%04d.jpg", width = 400, height = 300)
+for(i in 2:length(fit$HX[1,1,]))
+    plot(fit, i, main = " ")
+dev.off()
+
+unlink("figure/animated_block_history2.gif")
+system("convert -delay 30 FIGS/anim*.jpg figure/animated_block_history2.gif")
+unlink("FIGS/*.jpg")
 @ 
+
+
+\subsection{Use the Integral of Speed}
+
+Instead of using a point speed which from the figures above we can see is absolute rubbish,
+we can use the actual scheduled distance covered in time $\Delta_k$, starting at distance $d_{k-1}$.
+That is,
+\begin{equation}
+  \label{eq:integrate_speed}
+  \hat d_k - d_{k-1} = 
+  \left.\int s\left(t_k\right)\, \mathrm{d}t \right|_{d_{k-1}}^{d_k}
+\end{equation}
+
+<<integrate_example>>=
+dist2time <- block.speed$speed$d2t
+time2dist <- block.speed$speed$t2d
+curve(time2dist(x, 1), 0, 780)
+
+integrate(time2dist, 0, 780, deriv = 1)
+block.speed$schedule[25, "shape_dist_traveled"]
+@ 
+
+Close enough for our purposes.
+
+<<speed_function_integral_distance, cache=TRUE>>=
+speedPF <- function(block,
+                    N = 200,
+                    zero.start = TRUE,
+                    start.obs = 1,
+                    x0,
+                    GPS.error = 20,
+                    sig.e = 0.03,
+                    progress = FALSE,
+                    ...) {
+    shape <- block$path
+    data <- block$history[start.obs:nrow(block$history), ]
+    trips <- block$trips
+    trips$end_time <- hms(c(trips$departure_time[-1]), tz = "EST5EDT")
+    
+    schedule <- block$schedule
+    speed <- block$speed
+    
+    if (missing(x0)) {
+        x0 <- c(0, with(speed, t2d(d2t(0), 1)))
+    }
+    
+    ## Sort out the shape information (using previously defined functions)
+    z <- t(shape[,1:2])
+    di <- distanceFlat(z[, -ncol(z)], z[, -1])
+    shape$distance <- c(0, cumsum(di))
+    shape$length <- c(di, NA)
+    shape$bearing <- c(bearing(z[, -ncol(z)], z[, -1]), NA)
+    shape <- shape[shape$length > 0 | is.na(shape$length), ]
+        
+    ## Preparation (redefining all functions):
+    h <- function(x) {
+        if (x[1] <= 0) return(c(0, 0))
+        if (x[1] > max(shape$distance)) return(as.numeric(shape[nrow(shape), 1:2]))
+        j <- which.min(x[1] > shape$distance) - 1
+        sj <- shape[j, ]
+        Psi <- sj$bearing
+        d <- x[1] - sj$distance
+        
+        ## only do the calculations if we need to!
+        if (d == 0) return(as.numeric(sj[1:2]))
+        partialSegment(as.numeric(sj[1:2]), Psi, d)
+    }
+    ## ------------------------------------------------- The likelihood ##
+    lhood <- function(y, x) {
+        # y: GPS observation
+        # x: a distance-into-trip
+        dnorm(distanceFlat(y, h(x)), 0, sd = GPS.error) * 
+            ifelse(x[2] <= 0, 0.000001, 1)
+
+    }
+    ## The random component:
+    pw <- function(n)
+        rnorm(n, 0, sig.e)
+    
+    ## The formal model ...
+    ## ---------------------------------------------------------------- ##
+    A <- function(d) cbind(c(1, 0), c(d, 0))
+    B <- function(x, u, s) {
+        D <- cbind(s$d2t(x[1, ]), s$d2t(x[1, ]) + u[1])
+        d <- apply(D, 1, function(t) integrate(s$t2d, t[1], t[2], deriv = 1)$value)
+        rbind(d, 0)
+    }
+    G <- function(d) rbind(d^2/2, d)
+    fn <- function(x, u, t, w) { ## x: [distance, velocity]; u: [delta, time]; w: [error]
+        
+        X <- structure(A(u) %*% x + B(x, u, s = speed) + G(u) %*% w, 
+                       .Dimnames = list(c("distance", "speed"), NULL))
+        X[2, ] <- ifelse(X[2, ] < 0, 0, X[2, ])
+        
+        tid <- trips$trip_id[which(trips$end_time > t)[1]]
+        if (is.na(tid))
+            return(X)
+        
+        stopi <- which(shape$trip_id == tid)
+        Xmax <- max(shape[stopi + 1, "distance"])
+
+        X <- apply(X, 2, function(x) if (x[1] > Xmax) c(Xmax, 0) else x)
+        
+        
+        X
+    }
+    
+    ## Data prep:
+    y <- rbind(data$lon, data$lat)
+    t <- data$time
+    TIME <- lubridate::hms(format(as.POSIXct(data$time, origin="1970-01-01", tz="EST5EDT"), "%H:%M:%S"),
+                           tz = "EDT5EDT")
+    Delta <- diff(t)
+    M <- length(Delta)  ## the number of "true" observations...?
+    
+    ## Matrix prep:
+    hx <- hxhat <- xxhat <- xx <- array(NA, c(2, N, M + 1))
+    
+    ## Initialise:
+    xx[,,1] <- x0
+    
+    ## run the simulations
+    if (progress) {
+        suppressMessages({library(R.utils)})
+        pb <- txtProgressBar(min = 0, max = M, style = 3)
+    }
+    for (i in 1:M) {
+        
+        xxhat[,,i+1] <- fn(xx[,,i], Delta[i], TIME[i+1], pw(N))
+        weights <- apply(xxhat[,,i+1], 2, function(xi) lhood(y[,i+1], xi))
+        qi <- weights / sum(weights)
+        if (any(is.na(qi)))
+            qi <- NULL
+            
+        ii <- sample(N, N, TRUE, qi)
+        xx[,,i+1] <- xxhat[,ii,i+1]
+        
+        hxhat[,,i+1] <- apply(xxhat[,,i+1], 2, h)
+        hx[,,i+1] <- apply(xx[,,i+1], 2, h)
+        if (progress) setTxtProgressBar(pb, i)
+    }
+    if (progress) close(pb)
+    
+    res <- list(Xhat = xxhat, 
+                X = xx, 
+                HXhat = hxhat, 
+                HX = hx,
+                y = y, t = t, M = M, N = N,
+                block = block)
+    class(res) <- "pf.blockfit"
+    
+    res
+}
+
+
+fit <- speedPF(block.speed, start.obs = 1, progress=F)
+@ 
+
+
+<<plot_new_fit3,fig.width=10,fig.height=12,out.width="0.8\\textwidth",cache=TRUE>>=
+unlink("FIGS/anim*.jpg")
+jpeg("FIGS/anim%04d.jpg", width = 400, height = 300)
+for(i in 2:length(fit$HX[1,1,]))
+    plot(fit, i, main = " ")
+dev.off()
+
+unlink("figure/animated_block_history3.gif")
+system("convert -delay 30 FIGS/anim*.jpg figure/animated_block_history3.gif")
+unlink("FIGS/*.jpg")
+@ 
+
+
+That sort of worked, but then it didn't.
 
 \end{document}
