@@ -2075,4 +2075,39 @@ unlink("FIGS/*.jpg")
 
 That sort of worked, but then it didn't.
 
+
+
+
+
+\section{Schedule-based Acceleration}
+
+Further modifying the model, we can use acceleration estimates from the schedule (the
+second derivative of the distance versus time spline curve). The model becomes:
+
+\begin{align*}
+  \hat X_{k+1}
+  &=
+    \begin{bmatrix}
+      \hat d_{k+1} \\ \hat v_{k+1} \\ \hat a_{k+1}
+    \end{bmatrix}
+  =
+  \begin{bmatrix}
+    d_k + v_k \delta_k + \frac{1}{2} a_k \delta_k^2 \\
+    v_k + a_k \delta_k \\
+    s'\left(d_{k+1}\right)
+  \end{bmatrix} \\
+  X_{k+1} &= \hat X_{k+1} + W_k \\
+  &=
+    \begin{bmatrix}
+      \hat d_{k+1} \\ \hat v_{k+1} \\ \hat a_{k+1}
+    \end{bmatrix} +
+  \begin{bmatrix}
+    \frac{1}{2} \varepsilon_k \delta_k^2 \\
+    \varepsilon_k \delta_k \\
+    \varepsilon_k
+  \end{bmatrix},\quad
+  \varepsilon_k \sim \mathcal{N}\left(0, \sigma_a\right)
+\end{align*}
+
+
 \end{document}
