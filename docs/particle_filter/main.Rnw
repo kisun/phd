@@ -2139,36 +2139,191 @@ velocity based on the scheduled acceleration:
     s'\left(d_{k}\right)
   \end{bmatrix}.
 \end{equation}
-Of course, we don't know $d_k$ yet, so we will need to compute $a_k$ as required.
-
-
-\begin{align*}
-  \hat \bx_{k+1}
-  &=
-    \begin{bmatrix}
-      \hat d_{k+1} \\ \hat v_{k+1} \\ \hat a_{k+1}
-    \end{bmatrix}
-  =
+Of course, we don't know $d_k$ yet, so we will need to compute $a_k$ as required. That is,
+\begin{equation*}
+  \bF\left(\bx_{k-1}, \bu_k\right) =
   \begin{bmatrix}
-    d_k + v_k \delta_k + \frac{1}{2} a_k \delta_k^2 \\
-    v_k + a_k \delta_k \\
-    s'\left(d_{k+1}\right)
-  \end{bmatrix} \\
-  \bx_{k+1} &= \hat \bx_{k+1} + W_k \\
-  &=
-    \begin{bmatrix}
-      \hat d_{k+1} \\ \hat v_{k+1} \\ \hat a_{k+1}
-    \end{bmatrix} +
+    d_{k-1} + v_{k-1} \delta_k + \frac{1}{2} s'\left(d_{k-1}\right) \delta_k^2 \\
+    v_{k-1} + s'\left(d_{k-1}\right) \delta_k \\
+    s'\left(d_{k}\right)
+  \end{bmatrix}.
+\end{equation*}
+
+It would seem we don't need the third component of $\bx$, however we will keep it for extensibility
+in the future (i.e., we might want to estimate $a_k$ using $a_{k-1}$ adjusted by the expected
+\emph{change} in acceleration over time $\delta_k$.
+
+The error function, $\bw$, describes the error distribution of the process.
+We have no prior information on this, so we will follow Cathey \& Dailey~(2004) using
+Brownian Motion as the error distribution on acceleration. This is then included in the velocity and
+distance estimates, so
+\begin{equation}
+  \label{eq:error-function-acc}
+  \bw\left(\bu_k, \sigma_a^2\right) =
   \begin{bmatrix}
-    \frac{1}{2} \varepsilon_k \delta_k^2 \\
-    \varepsilon_k \delta_k \\
-    \varepsilon_k
-  \end{bmatrix},\quad
-  \varepsilon_k \sim \mathcal{N}\left(0, \sigma_a\right)
-\end{align*}
+    w_1 \\ w_2 \\ w_3
+  \end{bmatrix} =
+  \begin{bmatrix}
+    \frac{1}{2} e_k \delta_k^2 \\
+    e_k \delta_k \\
+    e_k
+  \end{bmatrix}, \quad
+  e_k \sim \mathcal{N}\left(0, \sigma_a^2\right)
+\end{equation}
+
+We also need to ensure that speed is not negative: $v_k > 0\ \forall k$. We'll just do that at the
+end of the final function \ldots
 
 
+\subsection{Defining the Model}
 
+We'll be more efficient now (finally!) and define the likelihood and other funcions outside the main one.
+
+<<acceleration_definition>>=
+accelPF <- function(block,
+                    N = 200,
+                    zero.start = TRUE,
+                    start.obs = 1,
+                    x0,
+                    GPS.error = 20,
+                    sig.e = 3,
+                    progress = FALSE,
+                    h, lhood, pw, fn, 
+                    ...) {
+    shape <- block$path
+    data <- block$history[start.obs:nrow(block$history), ]
+    trips <- block$trips
+    trips$end_time <- hms(c(trips$departure_time[-1]), tz = "EST5EDT")
+    
+    schedule <- block$schedule
+    speed <- block$speed
+    
+    if (missing(x0)) {
+        x0 <- c(0, with(speed, t2d(d2t(0), 1)), with(speed, t2d(d2t(0), 2)))
+    }
+    
+    ## Sort out the shape information (using previously defined functions)
+    z <- t(shape[,1:2])
+    di <- distanceFlat(z[, -ncol(z)], z[, -1])
+    shape$distance <- c(0, cumsum(di))
+    shape$length <- c(di, NA)
+    shape$bearing <- c(bearing(z[, -ncol(z)], z[, -1]), NA)
+    shape <- shape[shape$length > 0 | is.na(shape$length), ]
+    
+    ## Data prep:
+    y <- rbind(data$lon, data$lat)
+    t <- data$time
+    TIME <- lubridate::hms(format(as.POSIXct(data$time, origin="1970-01-01", tz="EST5EDT"), "%H:%M:%S"),
+                           tz = "EDT5EDT")
+    Delta <- diff(t)
+    M <- length(Delta)  ## the number of "true" observations...?
+    
+    ## Matrix prep:
+    xxhat <- xx <- array(NA, c(3, N, M + 1))
+    hx <- hxhat <- array(NA, c(2, N, M + 1))
+    
+    ## Initialise:
+    xx[,,1] <- x0
+    
+    ## run the simulations
+    if (progress) {
+        suppressMessages({library(R.utils)})
+        pb <- txtProgressBar(min = 0, max = M, style = 3)
+    }
+    for (i in 1:M) {
+        xxhat[,,i+1] <- fn(xx[,,i], list(delta=Delta[i], t=TIME[i+1]), pw(N, sig.e), 
+                           fun = speed, trips = trips, shape = shape)
+        weights <- apply(xxhat[,,i+1], 2, function(xi) lhood(y[,i+1], xi, GPS.error))
+        qi <- weights / sum(weights)
+        if (any(is.na(qi)))
+            qi <- NULL
+            
+        ii <- sample(N, N, TRUE, qi)
+        xx[,,i+1] <- xxhat[,ii,i+1]
+        
+        hxhat[,,i+1] <- apply(xxhat[,,i+1], 2, h)
+        hx[,,i+1] <- apply(xx[,,i+1], 2, h)
+        if (progress) setTxtProgressBar(pb, i)
+    }
+    if (progress) close(pb)
+    
+    res <- list(Xhat = xxhat, 
+                X = xx, 
+                HXhat = hxhat, 
+                HX = hx,
+                y = y, t = t, M = M, N = N,
+                block = block)
+    class(res) <- "pf.blockfit"
+    
+    invisible(res)
+}
+
+## These stay the same:
+h <- function(x) {
+    if (x[1] <= 0) return(c(0, 0))
+    if (x[1] > max(shape$distance)) return(as.numeric(shape[nrow(shape), 1:2]))
+    j <- which.min(x[1] > shape$distance) - 1
+    sj <- shape[j, ]
+    Psi <- sj$bearing
+    d <- x[1] - sj$distance
+    
+    ## only do the calculations if we need to!
+    if (d == 0) return(as.numeric(sj[1:2]))
+    partialSegment(as.numeric(sj[1:2]), Psi, d)
+}
+## ------------------------------------------------- The likelihood ##
+lhood <- function(y, x, sig) {
+                                        # y: GPS observation
+                                        # x: a distance-into-trip
+    dnorm(distanceFlat(y, h(x)), 0, sd = sig) * 
+        ifelse(x[2] <= 0, 0.000001, 1)
+    
+}
+@ 
+
+
+Now, implementing what we had above:
+<<acceleration_functions>>=
+## The random component:
+pw <- function(n, sig.e)
+    rnorm(n, 0, sig.e)
+
+## The formal model ...
+## ---------------------------------------------------------------- ##
+fn <- function(x, u, w, fun, trips, shape) { ## x: [distance, velocity]; u: [delta, time]; w: [error]
+    s <- function(d, deriv, fn = fun)
+        fn$t2d(fn$d2t(d), deriv = deriv + 1)
+        
+    Xhat <- structure(rbind(x[1, ] + x[2, ] * u[[1]] + 0.5 * s(x[1, ], 1) * u[[1]]^2,
+                            x[2, ] + s(x[1, ], 1) * u[[1]],
+                            0),
+                   .Dimnames = list(c("distance", "speed", "acceleration"), NULL))
+    W <- rbind(0.5 * w * u[[1]]^2,
+               w * u[[1]],
+               w)
+    
+    X <- Xhat + W
+    
+    X[1, ] <- ifelse(X[1, ] < 0, 0, X[1, ])
+    X[2, ] <- ifelse(X[2, ] < 0, 0, X[2, ])
+    
+    tid <- trips$trip_id[which(trips$end_time > u[[2]])[1]]
+    if (is.na(tid))
+        return(X)
+    
+    stopi <- which(shape$trip_id == tid)
+    Xmax <- max(shape[stopi + 1, "distance"])
+    
+    X <- apply(X, 2, function(x) if (x[1] > Xmax) c(Xmax, 0, 0) else x)
+     
+    X
+}
+@ 
+
+Now we try running it:
+<<acceleration_run>>=
+fit <- accelPF(block.speed, N = 4, sig.e = 0.5, progress = TRUE, h = h, lhood = lhood, pw = pw, fn = fn)
+@ 
 
 
 
