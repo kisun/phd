@@ -1004,7 +1004,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##   0.968   0.000   0.973
+##   1.477   0.000   1.489
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1193,7 +1193,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##   2.628   0.000   2.627
+##   4.192   0.006   4.277
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1286,18 +1286,18 @@ And the historical data can be sorted through nicely:
 \hlkwd{head}\hlstd{(hist)}
 \end{alltt}
 \begin{verbatim}
-##    trip_id shape_id   n
-## 1 28879365  4590010 527
-## 2 28879378  4590011 516
-## 3 28878584  4550078 489
-## 4 28245353   080070 473
-## 5 28878623  4350043 473
-## 6 28878719  4490019 463
+##    trip_id shape_id    n
+## 1 27638244  7420013 2399
+## 2 27638190  7420013 2205
+## 3 27508685  5530028 1393
+## 4 27936496  4490021 1275
+## 5 27937019  4590008 1211
+## 6 27501654   660056 1202
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
 
-So, trip \verb+28879365+ looks pretty popular. We'll get some useful information for that.
+So, trip \verb+27638244+ looks pretty popular. We'll get some useful information for that.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -1332,7 +1332,8 @@ our way through---hopefully we will be able to start generating priors and stuff
 \hlstd{(dates} \hlkwb{<-} \hlstd{all.dates}\hlopt{$}\hlstd{trip_start_date)}
 \end{alltt}
 \begin{verbatim}
-## [1] "20151201" "20151202" "20151203"
+## [1] "20150817" "20150820" "20150824" "20150825" "20150826" "20150827"
+## [7] "20150831" "20150901" "20150903"
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -1372,12 +1373,12 @@ So, on the first day:
 \end{alltt}
 \begin{verbatim}
 ##        lat       lon       time
-## 1 42.35458 -71.05811 1449014852
-## 2 42.35458 -71.05811 1449014852
-## 3 42.35458 -71.05811 1449014852
-## 4 42.35458 -71.05811 1449014852
-## 5 42.35458 -71.05811 1449014852
-## 6 42.35458 -71.05811 1449014852
+## 1 42.35349 -71.05190 1439817349
+## 2 42.35273 -71.05531 1439817410
+## 3 42.35183 -71.05594 1439817440
+## 4 42.35192 -71.05589 1439817501
+## 5 42.35261 -71.05546 1439817561
+## 6 42.35127 -71.04459 1439817719
 \end{verbatim}
 \begin{alltt}
 \hlstd{tripShape} \hlkwb{<-} \hlkwd{plotShape}\hlstd{(sID, mbta)}
@@ -1679,12 +1680,12 @@ From the MBTA feed we can get block information, so:
 \end{alltt}
 \begin{verbatim}
 ##   block_id  trip_id route_id shape_id departure_time
-## 1 L459-133 28882062      439  4390024       07:10:00
-## 2 L459-133 28882175      439  4390026       07:30:00
-## 3 L459-133 28882247      456  4560025       08:30:00
-## 4 L459-133 28882225      459  4590011       09:30:00
-## 5 L459-133 28882231      459  4590010       11:20:00
-## 6 L459-133 28882226      459  4590011       13:05:00
+## 1  S742-84 27638243      746  7460006       06:04:00
+## 2  S742-84 27638234      742  7420013       06:11:00
+## 3  S742-84 26206548      746  7460006       06:31:00
+## 4  S742-84 27647452      746  7460006       06:31:00
+## 5  S742-84 27638233      742  7420015       06:32:00
+## 6  S742-84 26206544      742  7420013       06:38:00
 \end{verbatim}
 \begin{alltt}
 \hlkwd{plot}\hlstd{(block)}
@@ -2222,6 +2223,8 @@ Using the previous example, we can use the first trip's schedule to demonstrate:
     \hlstd{xx} \hlkwb{<-} \hlkwd{unique}\hlstd{(t0)}
     \hlstd{yy} \hlkwb{<-} \hlkwd{tapply}\hlstd{(d, t0, min)}
 
+    \hlstd{schedule}\hlopt{$}\hlstd{block_dist_traveled} \hlkwb{<-} \hlstd{d}
+
     \hlcom{## function from distance to time:}
     \hlstd{f1} \hlkwb{<-} \hlkwd{splinefun}\hlstd{(yy, xx,} \hlkwc{method} \hlstd{=} \hlstr{"hyman"}\hlstd{)}
     \hlcom{## function from time to distance:}
@@ -2533,13 +2536,13 @@ That is,
 \hlkwd{integrate}\hlstd{(time2dist,} \hlnum{0}\hlstd{,} \hlnum{780}\hlstd{,} \hlkwc{deriv} \hlstd{=} \hlnum{1}\hlstd{)}
 \end{alltt}
 \begin{verbatim}
-## 4253.554 with absolute error < 0.5
+## 6632.004 with absolute error < 0.69
 \end{verbatim}
 \begin{alltt}
 \hlstd{block.speed}\hlopt{$}\hlstd{schedule[}\hlnum{25}\hlstd{,} \hlstr{"shape_dist_traveled"}\hlstd{]}
 \end{alltt}
 \begin{verbatim}
-## [1] 6276.381
+## [1] 6632.102
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -2718,8 +2721,64 @@ That sort of worked, but then it didn't.
 Further modifying the model, we can use acceleration estimates from the schedule (the
 second derivative of the distance versus time spline curve). The model becomes:
 
+
+\begin{equation}
+  \label{eq:model-formula-acc}
+  \bx_k = \bF\left(\bx_{k-1}, \bu_k\right) + \bw\left(\bu_k, \sigma_a^2\right),
+\end{equation}
+where $\bx_k$ is the \emph{state-vector},
+$\bu_k$ is the \emph{control-vector},
+and $\bw_k$ is the error vector corresponding to observation $k$.
+The function $\bF$ takes the state vector of the previous observation, $\bx_{k-1}$
+and the control vector of the current observation, $\bu_k$,
+to give the estimate of the state vector $\hat \bx_k$.
+The function $\bw$ defines the error associated with the estimates.
+
+
+The state vector now has three components,
+\begin{equation}
+  \label{eq:state-vector-acc}
+  \bx_k =
+  \begin{bmatrix}
+    d_k & v_k & a_k
+  \end{bmatrix}^T,
+\end{equation}
+where $d_k$ is the distance-into-block ($m$),
+$v_k$ is the velocity ($m/s$),
+and $a_k$ is the acceleration ($m/s^2$) for observation $k$.
+The control vector remains the same,
+\begin{equation}
+  \label{eq:control-vector-acc}
+  \bu_k =
+  \begin{bmatrix}
+    \delta_k & t_k
+  \end{bmatrix}^T,
+\end{equation}
+where $\delta_k$ is the elapsed time ($s$) since the last observation,
+and $t_k$ is the time of observation $k$ in \emph{seconds since the first scheduled departure in the block}.
+The latter is only used for restricting the possible positions of the bus based on schedule
+adherance.
+
+
+The function $\bF$ applies constant-acceleration based mechanics model to predict the distance and
+velocity based on the scheduled acceleration:
+\begin{equation}
+  \label{eq:state-function-acc}
+  \bF\left(\bx_{k-1}, \bu_k\right) =
+  \begin{bmatrix}
+    f_1 \\ f_2 \\ f_3
+  \end{bmatrix} =
+  \begin{bmatrix}
+    d_{k-1} + v_{k-1} \delta_k + \frac{1}{2} a_{k-1} \delta_k^2 \\
+    v_{k-1} + a_{k-1} \delta_k \\
+    s'\left(d_{k}\right)
+  \end{bmatrix}.
+\end{equation}
+Of course, we don't know $d_k$ yet, so we will need to compute $a_k$ as required.
+
+
 \begin{align*}
-  \hat X_{k+1}
+  \hat \bx_{k+1}
   &=
     \begin{bmatrix}
       \hat d_{k+1} \\ \hat v_{k+1} \\ \hat a_{k+1}
@@ -2730,7 +2789,7 @@ second derivative of the distance versus time spline curve). The model becomes:
     v_k + a_k \delta_k \\
     s'\left(d_{k+1}\right)
   \end{bmatrix} \\
-  X_{k+1} &= \hat X_{k+1} + W_k \\
+  \bx_{k+1} &= \hat \bx_{k+1} + W_k \\
   &=
     \begin{bmatrix}
       \hat d_{k+1} \\ \hat v_{k+1} \\ \hat a_{k+1}
@@ -2742,6 +2801,11 @@ second derivative of the distance versus time spline curve). The model becomes:
   \end{bmatrix},\quad
   \varepsilon_k \sim \mathcal{N}\left(0, \sigma_a\right)
 \end{align*}
+
+
+
+
+
 
 
 \end{document}
