@@ -2233,7 +2233,11 @@ accelPF <- function(block,
     for (i in 1:M) {
         xxhat[,,i+1] <- fn(xx[,,i], list(delta=Delta[i], t=TIME[i+1]), pw(N, sig.e), 
                            fun = speed, trips = trips, shape = shape)
-        weights <- apply(xxhat[,,i+1], 2, function(xi) lhood(y[,i+1], xi, GPS.error))
+        weights <- try(apply(xxhat[,,i+1], 2, function(xi) lhood(y[,i+1], xi, GPS.error, shape)))
+        if (inherits(weights, "try-error")) {
+            print(xx[,,i])
+            print(xxhat[,,i+1])
+        }
         qi <- weights / sum(weights)
         if (any(is.na(qi)))
             qi <- NULL
@@ -2241,8 +2245,8 @@ accelPF <- function(block,
         ii <- sample(N, N, TRUE, qi)
         xx[,,i+1] <- xxhat[,ii,i+1]
         
-        hxhat[,,i+1] <- apply(xxhat[,,i+1], 2, h)
-        hx[,,i+1] <- apply(xx[,,i+1], 2, h)
+        hxhat[,,i+1] <- apply(xxhat[,,i+1], 2, h, shape = shape)
+        hx[,,i+1] <- apply(xx[,,i+1], 2, h, shape = shape)
         if (progress) setTxtProgressBar(pb, i)
     }
     if (progress) close(pb)
@@ -2259,25 +2263,26 @@ accelPF <- function(block,
 }
 
 ## These stay the same:
-h <- function(x) {
+h <- function(x, shape) {
+    if (any(is.na(x))) print (x)
+    
     if (x[1] <= 0) return(c(0, 0))
     if (x[1] > max(shape$distance)) return(as.numeric(shape[nrow(shape), 1:2]))
     j <- which.min(x[1] > shape$distance) - 1
     sj <- shape[j, ]
     Psi <- sj$bearing
     d <- x[1] - sj$distance
-    
+       
     ## only do the calculations if we need to!
     if (d == 0) return(as.numeric(sj[1:2]))
     partialSegment(as.numeric(sj[1:2]), Psi, d)
 }
 ## ------------------------------------------------- The likelihood ##
-lhood <- function(y, x, sig) {
-                                        # y: GPS observation
-                                        # x: a distance-into-trip
-    dnorm(distanceFlat(y, h(x)), 0, sd = sig) * 
+lhood <- function(y, x, sig, shape) {
+    ## y: GPS observation
+    ## x: a distance-into-trip
+    dnorm(distanceFlat(y, h(x, shape)), 0, sd = sig) * 
         ifelse(x[2] <= 0, 0.000001, 1)
-    
 }
 @ 
 
@@ -2292,12 +2297,16 @@ pw <- function(n, sig.e)
 ## ---------------------------------------------------------------- ##
 fn <- function(x, u, w, fun, trips, shape) { ## x: [distance, velocity]; u: [delta, time]; w: [error]
     s <- function(d, deriv, fn = fun)
-        fn$t2d(fn$d2t(d), deriv = deriv + 1)
+       fn$t2d(fn$d2t(d), deriv = deriv + 1)
         
     Xhat <- structure(rbind(x[1, ] + x[2, ] * u[[1]] + 0.5 * s(x[1, ], 1) * u[[1]]^2,
-                            x[2, ] + s(x[1, ], 1) * u[[1]],
-                            0),
-                   .Dimnames = list(c("distance", "speed", "acceleration"), NULL))
+                           x[2, ] + s(x[1, ], 1) * u[[1]],
+                           0),
+                     .Dimnames = list(c("distance", "speed", "acceleration"), NULL))
+    ## Xhat <- structure(rbind(x[1, ] + x[2, ] * u[[1]] + 0.5 * x[3, ] * u[[1]]^2,
+    ##                         x[2, ] + x[3, ] * u[[1]],
+    ##                         x[3, ]),
+    ##                   .Dimnames = list(c("distance", "speed", "acceleration"), NULL))
     W <- rbind(0.5 * w * u[[1]]^2,
                w * u[[1]],
                w)
@@ -2322,7 +2331,13 @@ fn <- function(x, u, w, fun, trips, shape) { ## x: [distance, velocity]; u: [del
 
 Now we try running it:
 <<acceleration_run>>=
-fit <- accelPF(block.speed, N = 4, sig.e = 0.5, progress = TRUE, h = h, lhood = lhood, pw = pw, fn = fn)
+past <- hist.blocks[[3]][["y6010"]]
+block.speed2 <- getBlock(past$trip_id, past$trip_start_date[1], mbta)
+plot(block.speed2)
+block.speed2 <- getBlockData(block.speed2$date, block = block.speed2, conn = mbta)
+plot(block.speed2)
+points(block.speed2)
+fit <- accelPF(block.speed2, N = 200, start.obs = 900, sig.e = 0.2, progress = TRUE, h = h, lhood = lhood, pw = pw, fn = fn)
 @ 
 
 
