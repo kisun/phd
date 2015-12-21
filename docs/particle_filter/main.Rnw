@@ -1670,10 +1670,22 @@ getBlock <- function(ids, date, conn) {
     schedule$block_dist_traveled <- d
     
     ## function from distance to time:
-    f1 <- splinefun(yy, xx, method = "hyman")
+    f1 <- try(splinefun(yy, xx, method = "hyman"), TRUE)
     ## function from time to distance:
-    f2 <- splinefun(xx, yy, method = "hyman")
-    speedFns <- list(d2t = f1, t2d = f2)
+    f2 <- try(splinefun(xx, yy, method = "hyman"), TRUE)
+    
+    if (inherits(f1, "try-error")) 
+        f1 <- try(splinefun(yy, xx, method = "monoH.FC"), TRUE)
+    
+    if (inherits(f2, "try-error"))
+        f2 <- try(splinefun(xx, yy, method = "monoH.FC"), TRUE)
+        
+    if (inherits(f1, "try-error") | inherits(f2, "try-error")) {
+        speedFns <- NULL
+        warning("Cannot fit splines.")
+    } else {
+        speedFns <- list(d2t = f1, t2d = f2)
+    }
     
     out <- list(trips = blockInfo,
                 shapes = blockShapes,
@@ -2330,15 +2342,46 @@ fn <- function(x, u, w, fun, trips, shape) { ## x: [distance, velocity]; u: [del
 @ 
 
 Now we try running it:
-<<acceleration_run>>=
-past <- hist.blocks[[3]][["y6010"]]
+<<acceleration_run, cache=TRUE>>=
+past <- hist.blocks[[3]][[12]]
 block.speed2 <- getBlock(past$trip_id, past$trip_start_date[1], mbta)
 plot(block.speed2)
 block.speed2 <- getBlockData(block.speed2$date, block = block.speed2, conn = mbta)
-plot(block.speed2)
 points(block.speed2)
-fit <- accelPF(block.speed2, N = 200, start.obs = 900, sig.e = 0.2, progress = TRUE, h = h, lhood = lhood, pw = pw, fn = fn)
+fit <- accelPF(block.speed2, N = 200, start.obs = 00, sig.e = 0.2, 
+               progress = FALSE, h = h, lhood = lhood, pw = pw, fn = fn)
 @ 
+
+
+<<plot_new_fit4,fig.width=10,fig.height=12,out.width="0.8\\textwidth",cache=TRUE,echo=FALSE,results="hide">>=
+unlink("FIGS/anim*.jpg")
+jpeg("FIGS/anim%04d.jpg", width = 400, height = 300)
+for(i in 2:length(fit$HX[1,1,]))
+    plot(fit, i, main = " ")
+dev.off()
+
+unlink("figure/animated_block_history4.gif")
+system("convert -delay 30 FIGS/anim*.jpg figure/animated_block_history4.gif")
+unlink("FIGS/*.jpg")
+@ 
+
+
+
+<<examine>>=
+with(block.speed2$schedule, plot(time.seconds, block_dist_traveled, type = "l"))
+start.time <- hms(block.speed2$schedule$time[1])
+start.second <- (hour(start.time) * 60 + minute(start.time)) * 60 + 
+    as.numeric(as.POSIXct(block.speed2$date, "EDT5EST", format = "%Y%m%d"))
+obs.t <- block.speed2$history$time - start.second
+mod.d <- fit$Xhat[1,,]
+for (i in 1:nrow(mod.d)) {
+    points(obs.t, fit$Xhat[1, i, ], pch = 19, cex = 0.2, col = "#00009930")
+    points(obs.t, fit$X[1, i, ], pch = 19, cex = 0.2, col = "#00990070")
+}
+
+@ 
+
+
 
 
 

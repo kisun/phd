@@ -1004,7 +1004,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##   1.004   0.000   1.002
+##   1.477   0.000   1.489
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1193,7 +1193,7 @@ And, yes, now all of them!
 
 \begin{kframe}\begin{verbatim}
 ##    user  system elapsed 
-##   2.764   0.000   2.765
+##   4.192   0.006   4.277
 \end{verbatim}
 \begin{alltt}
 \hlkwd{rowMeans}\hlstd{(xx)}
@@ -1214,6 +1214,10 @@ How about speed over  time?
 \hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(t),} \hlkwc{ylim} \hlstd{=} \hlkwd{range}\hlstd{(speed.hist, speedhat.hist),}
      \hlkwc{xlab} \hlstd{=} \hlstr{"Time (s)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Speed (m/s)"}\hlstd{)}
 \hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{M) \{}
+    \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i}\hlopt{+}\hlnum{1}\hlstd{], N), speedhat.hist[, i],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{)}
+    \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i}\hlopt{+}\hlnum{1}\hlstd{], N), speed.hist[, i],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
+\hlstd{\}}
 \end{alltt}
 \end{kframe}
 
@@ -1222,17 +1226,7 @@ How about speed over  time?
 }
 
 
-\begin{kframe}\begin{alltt}
-\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{M) \{}
-    \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i}\hlopt{+}\hlnum{1}\hlstd{], N), speedhat.hist[, i],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{)}
-    \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i}\hlopt{+}\hlnum{1}\hlstd{], N), speed.hist[, i],} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
-\hlstd{\}}
-\end{alltt}
 
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in points(rep(t[i + 1], N), speedhat.hist[, i], pch = 4, col = "{}\#00009930"{}): internal error -3 in R\_decompress1}}
-
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in points(rep(t[i + 1], N), speedhat.hist[, i], pch = 4, col = "{}\#00009930"{}): lazy-load database '/home/tell029/Documents/uni/phd/docs/particle\_filter/cache/simulation\_init\_sched\_9b52d8c2c4c2996a54256ac971826a2a.rdb' is corrupt}}\end{kframe}
 \end{knitrout}
 
 From that, it looks like we need to put a positive-speed constraint on the proposal distribution;
@@ -1293,17 +1287,17 @@ And the historical data can be sorted through nicely:
 \end{alltt}
 \begin{verbatim}
 ##    trip_id shape_id    n
-## 1 28879378  4590011 2050
-## 2 28879368  4590011 1855
-## 3 28878719  4490019 1754
-## 4 28878715  4480014 1744
-## 5 28879374  4590011 1744
-## 6 28879364  4590011 1647
+## 1 27638244  7420013 2399
+## 2 27638190  7420013 2205
+## 3 27508685  5530028 1393
+## 4 27936496  4490021 1275
+## 5 27937019  4590008 1211
+## 6 27501654   660056 1202
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
 
-So, trip \verb+28879365+ looks pretty popular. We'll get some useful information for that.
+So, trip \verb+27638244+ looks pretty popular. We'll get some useful information for that.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -1338,8 +1332,8 @@ our way through---hopefully we will be able to start generating priors and stuff
 \hlstd{(dates} \hlkwb{<-} \hlstd{all.dates}\hlopt{$}\hlstd{trip_start_date)}
 \end{alltt}
 \begin{verbatim}
-## [1] "20151202" "20151203" "20151207" "20151208" "20151209" "20151210"
-## [7] "20151214" "20151215"
+## [1] "20150817" "20150820" "20150824" "20150825" "20150826" "20150827"
+## [7] "20150831" "20150901" "20150903"
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -1379,12 +1373,12 @@ So, on the first day:
 \end{alltt}
 \begin{verbatim}
 ##        lat       lon       time
-## 1 42.45621 -70.97292 1449056349
-## 2 42.45845 -70.97030 1449056410
-## 3 42.45845 -70.97030 1449056410
-## 4 42.46074 -70.96780 1449056470
-## 5 42.46074 -70.96780 1449056470
-## 6 42.46356 -70.96440 1449056530
+## 1 42.35349 -71.05190 1439817349
+## 2 42.35273 -71.05531 1439817410
+## 3 42.35183 -71.05594 1439817440
+## 4 42.35192 -71.05589 1439817501
+## 5 42.35261 -71.05546 1439817561
+## 6 42.35127 -71.04459 1439817719
 \end{verbatim}
 \begin{alltt}
 \hlstd{tripShape} \hlkwb{<-} \hlkwd{plotShape}\hlstd{(sID, mbta)}
@@ -1520,11 +1514,21 @@ Previously we've just copy+pasted the necessary code. Now we'll make a function 
 \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{day1.results}\hlopt{$}\hlstd{M)}
     \hlkwd{plot}\hlstd{(day1.results, sID, i}\hlopt{+}\hlnum{1}\hlstd{, mbta)}
 \end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/plot_first_day-1} 
+
+}
 
 
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning: internal error -3 in R\_decompress1}}
 
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in eval(expr, envir, enclos): lazy-load database '/home/tell029/Documents/uni/phd/docs/particle\_filter/cache/first\_day\_model\_b02d25c8ba227750ed4f685177503d60.rdb' is corrupt}}\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/plot_first_day-2} 
+
+}
+
+
+
 \end{knitrout}
 
 Clearly, the randomness isn't corrently being modelled---but this makes sense! We are using a
@@ -1676,12 +1680,12 @@ From the MBTA feed we can get block information, so:
 \end{alltt}
 \begin{verbatim}
 ##   block_id  trip_id route_id shape_id departure_time
-## 1 L459-132 28885378      424  4240026       05:51:00
-## 2 L459-132 28886061   441442  4420072       06:27:00
-## 3 L459-132 28879378      459  4590011       07:05:00
-## 4 L459-132 28886204      459  4590011       07:05:00
-## 5 L459-132 28884339      439  4390024       07:10:00
-## 6 L459-132 28884452      439  4390026       07:30:00
+## 1  S742-84 27638243      746  7460006       06:04:00
+## 2  S742-84 27638234      742  7420013       06:11:00
+## 3  S742-84 26206548      746  7460006       06:31:00
+## 4  S742-84 27647452      746  7460006       06:31:00
+## 5  S742-84 27638233      742  7420015       06:32:00
+## 6  S742-84 26206544      742  7420013       06:38:00
 \end{verbatim}
 \begin{alltt}
 \hlkwd{plot}\hlstd{(block)}
@@ -1885,11 +1889,14 @@ Alright, so let's just cross our fingers and apply the particle filter!
 \begin{alltt}
 \hlkwd{plot}\hlstd{(pfit,} \hlkwc{obs} \hlstd{=} \hlnum{30}\hlstd{,} \hlkwc{highlight} \hlstd{=} \hlnum{2}\hlstd{)}
 \end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/manual_fit_explore-1} 
+
+}
 
 
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in plot(pfit, obs = 30, highlight = 2): internal error -3 in R\_decompress1}}
 
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in plot(pfit, obs = 30, highlight = 2): lazy-load database '/home/tell029/Documents/uni/phd/docs/particle\_filter/cache/manual\_block\_particleFilter\_3abdea2dc0c5ac666e2ca2c1aa55a78a.rdb' is corrupt}}\end{kframe}
 \end{knitrout}
 
 Matching is wrong. Need to restrict distance by time.
@@ -2219,10 +2226,22 @@ Using the previous example, we can use the first trip's schedule to demonstrate:
     \hlstd{schedule}\hlopt{$}\hlstd{block_dist_traveled} \hlkwb{<-} \hlstd{d}
 
     \hlcom{## function from distance to time:}
-    \hlstd{f1} \hlkwb{<-} \hlkwd{splinefun}\hlstd{(yy, xx,} \hlkwc{method} \hlstd{=} \hlstr{"hyman"}\hlstd{)}
+    \hlstd{f1} \hlkwb{<-} \hlkwd{try}\hlstd{(}\hlkwd{splinefun}\hlstd{(yy, xx,} \hlkwc{method} \hlstd{=} \hlstr{"hyman"}\hlstd{),} \hlnum{TRUE}\hlstd{)}
     \hlcom{## function from time to distance:}
-    \hlstd{f2} \hlkwb{<-} \hlkwd{splinefun}\hlstd{(xx, yy,} \hlkwc{method} \hlstd{=} \hlstr{"hyman"}\hlstd{)}
-    \hlstd{speedFns} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{d2t} \hlstd{= f1,} \hlkwc{t2d} \hlstd{= f2)}
+    \hlstd{f2} \hlkwb{<-} \hlkwd{try}\hlstd{(}\hlkwd{splinefun}\hlstd{(xx, yy,} \hlkwc{method} \hlstd{=} \hlstr{"hyman"}\hlstd{),} \hlnum{TRUE}\hlstd{)}
+
+    \hlkwa{if} \hlstd{(}\hlkwd{inherits}\hlstd{(f1,} \hlstr{"try-error"}\hlstd{))}
+        \hlstd{f1} \hlkwb{<-} \hlkwd{try}\hlstd{(}\hlkwd{splinefun}\hlstd{(yy, xx,} \hlkwc{method} \hlstd{=} \hlstr{"monoH.FC"}\hlstd{),} \hlnum{TRUE}\hlstd{)}
+
+    \hlkwa{if} \hlstd{(}\hlkwd{inherits}\hlstd{(f2,} \hlstr{"try-error"}\hlstd{))}
+        \hlstd{f2} \hlkwb{<-} \hlkwd{try}\hlstd{(}\hlkwd{splinefun}\hlstd{(xx, yy,} \hlkwc{method} \hlstd{=} \hlstr{"monoH.FC"}\hlstd{),} \hlnum{TRUE}\hlstd{)}
+
+    \hlkwa{if} \hlstd{(}\hlkwd{inherits}\hlstd{(f1,} \hlstr{"try-error"}\hlstd{)} \hlopt{|} \hlkwd{inherits}\hlstd{(f2,} \hlstr{"try-error"}\hlstd{)) \{}
+        \hlstd{speedFns} \hlkwb{<-} \hlkwa{NULL}
+        \hlkwd{warning}\hlstd{(}\hlstr{"Cannot fit splines."}\hlstd{)}
+    \hlstd{\}} \hlkwa{else} \hlstd{\{}
+        \hlstd{speedFns} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{d2t} \hlstd{= f1,} \hlkwc{t2d} \hlstd{= f2)}
+    \hlstd{\}}
 
     \hlstd{out} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{trips} \hlstd{= blockInfo,}
                 \hlkwc{shapes} \hlstd{= blockShapes,}
@@ -2529,13 +2548,13 @@ That is,
 \hlkwd{integrate}\hlstd{(time2dist,} \hlnum{0}\hlstd{,} \hlnum{780}\hlstd{,} \hlkwc{deriv} \hlstd{=} \hlnum{1}\hlstd{)}
 \end{alltt}
 \begin{verbatim}
-## 4253.554 with absolute error < 0.5
+## 6632.004 with absolute error < 0.69
 \end{verbatim}
 \begin{alltt}
 \hlstd{block.speed}\hlopt{$}\hlstd{schedule[}\hlnum{25}\hlstd{,} \hlstr{"shape_dist_traveled"}\hlstd{]}
 \end{alltt}
 \begin{verbatim}
-## [1] 6276.381
+## [1] 6632.102
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -2863,7 +2882,11 @@ We'll be more efficient now (finally!) and define the likelihood and other funci
     \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{M) \{}
         \hlstd{xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{fn}\hlstd{(xx[,,i],} \hlkwd{list}\hlstd{(}\hlkwc{delta}\hlstd{=Delta[i],} \hlkwc{t}\hlstd{=TIME[i}\hlopt{+}\hlnum{1}\hlstd{]),} \hlkwd{pw}\hlstd{(N, sig.e),}
                            \hlkwc{fun} \hlstd{= speed,} \hlkwc{trips} \hlstd{= trips,} \hlkwc{shape} \hlstd{= shape)}
-        \hlstd{weights} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood}\hlstd{(y[,i}\hlopt{+}\hlnum{1}\hlstd{], xi, GPS.error))}
+        \hlstd{weights} \hlkwb{<-} \hlkwd{try}\hlstd{(}\hlkwd{apply}\hlstd{(xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{xi}\hlstd{)} \hlkwd{lhood}\hlstd{(y[,i}\hlopt{+}\hlnum{1}\hlstd{], xi, GPS.error, shape)))}
+        \hlkwa{if} \hlstd{(}\hlkwd{inherits}\hlstd{(weights,} \hlstr{"try-error"}\hlstd{)) \{}
+            \hlkwd{print}\hlstd{(xx[,,i])}
+            \hlkwd{print}\hlstd{(xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{])}
+        \hlstd{\}}
         \hlstd{qi} \hlkwb{<-} \hlstd{weights} \hlopt{/} \hlkwd{sum}\hlstd{(weights)}
         \hlkwa{if} \hlstd{(}\hlkwd{any}\hlstd{(}\hlkwd{is.na}\hlstd{(qi)))}
             \hlstd{qi} \hlkwb{<-} \hlkwa{NULL}
@@ -2871,8 +2894,8 @@ We'll be more efficient now (finally!) and define the likelihood and other funci
         \hlstd{ii} \hlkwb{<-} \hlkwd{sample}\hlstd{(N, N,} \hlnum{TRUE}\hlstd{, qi)}
         \hlstd{xx[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlstd{xxhat[,ii,i}\hlopt{+}\hlnum{1}\hlstd{]}
 
-        \hlstd{hxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{, h)}
-        \hlstd{hx[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{apply}\hlstd{(xx[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{, h)}
+        \hlstd{hxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{apply}\hlstd{(xxhat[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape)}
+        \hlstd{hx[,,i}\hlopt{+}\hlnum{1}\hlstd{]} \hlkwb{<-} \hlkwd{apply}\hlstd{(xx[,,i}\hlopt{+}\hlnum{1}\hlstd{],} \hlnum{2}\hlstd{, h,} \hlkwc{shape} \hlstd{= shape)}
         \hlkwa{if} \hlstd{(progress)} \hlkwd{setTxtProgressBar}\hlstd{(pb, i)}
     \hlstd{\}}
     \hlkwa{if} \hlstd{(progress)} \hlkwd{close}\hlstd{(pb)}
@@ -2889,7 +2912,9 @@ We'll be more efficient now (finally!) and define the likelihood and other funci
 \hlstd{\}}
 
 \hlcom{## These stay the same:}
-\hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) \{}
+\hlstd{h} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{shape}\hlstd{) \{}
+    \hlkwa{if} \hlstd{(}\hlkwd{any}\hlstd{(}\hlkwd{is.na}\hlstd{(x)))} \hlkwd{print} \hlstd{(x)}
+
     \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{<=} \hlnum{0}\hlstd{)} \hlkwd{return}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{))}
     \hlkwa{if} \hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlkwd{max}\hlstd{(shape}\hlopt{$}\hlstd{distance))} \hlkwd{return}\hlstd{(}\hlkwd{as.numeric}\hlstd{(shape[}\hlkwd{nrow}\hlstd{(shape),} \hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]))}
     \hlstd{j} \hlkwb{<-} \hlkwd{which.min}\hlstd{(x[}\hlnum{1}\hlstd{]} \hlopt{>} \hlstd{shape}\hlopt{$}\hlstd{distance)} \hlopt{-} \hlnum{1}
@@ -2902,12 +2927,11 @@ We'll be more efficient now (finally!) and define the likelihood and other funci
     \hlkwd{partialSegment}\hlstd{(}\hlkwd{as.numeric}\hlstd{(sj[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{]), Psi, d)}
 \hlstd{\}}
 \hlcom{## ------------------------------------------------- The likelihood ##}
-\hlstd{lhood} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{x}\hlstd{,} \hlkwc{sig}\hlstd{) \{}
-                                        \hlcom{# y: GPS observation}
-                                        \hlcom{# x: a distance-into-trip}
-    \hlkwd{dnorm}\hlstd{(}\hlkwd{distanceFlat}\hlstd{(y,} \hlkwd{h}\hlstd{(x)),} \hlnum{0}\hlstd{,} \hlkwc{sd} \hlstd{= sig)} \hlopt{*}
+\hlstd{lhood} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{y}\hlstd{,} \hlkwc{x}\hlstd{,} \hlkwc{sig}\hlstd{,} \hlkwc{shape}\hlstd{) \{}
+    \hlcom{## y: GPS observation}
+    \hlcom{## x: a distance-into-trip}
+    \hlkwd{dnorm}\hlstd{(}\hlkwd{distanceFlat}\hlstd{(y,} \hlkwd{h}\hlstd{(x, shape)),} \hlnum{0}\hlstd{,} \hlkwc{sd} \hlstd{= sig)} \hlopt{*}
         \hlkwd{ifelse}\hlstd{(x[}\hlnum{2}\hlstd{]} \hlopt{<=} \hlnum{0}\hlstd{,} \hlnum{0.000001}\hlstd{,} \hlnum{1}\hlstd{)}
-
 \hlstd{\}}
 \end{alltt}
 \end{kframe}
@@ -2925,17 +2949,17 @@ Now, implementing what we had above:
 \hlcom{## The formal model ...}
 \hlcom{## ---------------------------------------------------------------- ##}
 \hlstd{fn} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{u}\hlstd{,} \hlkwc{w}\hlstd{,} \hlkwc{fun}\hlstd{,} \hlkwc{trips}\hlstd{,} \hlkwc{shape}\hlstd{) \{} \hlcom{## x: [distance, velocity]; u: [delta, time]; w: [error]}
-    \hlcom{#s <- function(d, deriv, fn = fun)}
-    \hlcom{#    fn$t2d(fn$d2t(d), deriv = deriv + 1)}
+    \hlstd{s} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{,} \hlkwc{deriv}\hlstd{,} \hlkwc{fn} \hlstd{= fun)}
+       \hlstd{fn}\hlopt{$}\hlkwd{t2d}\hlstd{(fn}\hlopt{$}\hlkwd{d2t}\hlstd{(d),} \hlkwc{deriv} \hlstd{= deriv} \hlopt{+} \hlnum{1}\hlstd{)}
 
-    \hlcom{#Xhat <- structure(rbind(x[1, ] + x[2, ] * u[[1]] + 0.5 * s(x[1, ], 1) * u[[1]]^2,}
-    \hlcom{#                        x[2, ] + s(x[1, ], 1) * u[[1]],}
-    \hlcom{#                        0),}
-    \hlcom{#                  .Dimnames = list(c("distance", "speed", "acceleration"), NULL))}
-    \hlstd{Xhat} \hlkwb{<-} \hlkwd{structure}\hlstd{(}\hlkwd{rbind}\hlstd{(x[}\hlnum{1}\hlstd{, ]} \hlopt{+} \hlstd{x[}\hlnum{2}\hlstd{, ]} \hlopt{*} \hlstd{u[[}\hlnum{1}\hlstd{]]} \hlopt{+} \hlnum{0.5} \hlopt{*} \hlstd{x[}\hlnum{3}\hlstd{, ]} \hlopt{*} \hlstd{u[[}\hlnum{1}\hlstd{]]}\hlopt{^}\hlnum{2}\hlstd{,}
-                            \hlstd{x[}\hlnum{2}\hlstd{, ]} \hlopt{+} \hlstd{x[}\hlnum{3}\hlstd{, ]} \hlopt{*} \hlstd{u[[}\hlnum{1}\hlstd{]],}
-                            \hlstd{x[}\hlnum{3}\hlstd{, ]),}
-                      \hlkwc{.Dimnames} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"distance"}\hlstd{,} \hlstr{"speed"}\hlstd{,} \hlstr{"acceleration"}\hlstd{),} \hlkwa{NULL}\hlstd{))}
+    \hlstd{Xhat} \hlkwb{<-} \hlkwd{structure}\hlstd{(}\hlkwd{rbind}\hlstd{(x[}\hlnum{1}\hlstd{, ]} \hlopt{+} \hlstd{x[}\hlnum{2}\hlstd{, ]} \hlopt{*} \hlstd{u[[}\hlnum{1}\hlstd{]]} \hlopt{+} \hlnum{0.5} \hlopt{*} \hlkwd{s}\hlstd{(x[}\hlnum{1}\hlstd{, ],} \hlnum{1}\hlstd{)} \hlopt{*} \hlstd{u[[}\hlnum{1}\hlstd{]]}\hlopt{^}\hlnum{2}\hlstd{,}
+                           \hlstd{x[}\hlnum{2}\hlstd{, ]} \hlopt{+} \hlkwd{s}\hlstd{(x[}\hlnum{1}\hlstd{, ],} \hlnum{1}\hlstd{)} \hlopt{*} \hlstd{u[[}\hlnum{1}\hlstd{]],}
+                           \hlnum{0}\hlstd{),}
+                     \hlkwc{.Dimnames} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"distance"}\hlstd{,} \hlstr{"speed"}\hlstd{,} \hlstr{"acceleration"}\hlstd{),} \hlkwa{NULL}\hlstd{))}
+    \hlcom{## Xhat <- structure(rbind(x[1, ] + x[2, ] * u[[1]] + 0.5 * x[3, ] * u[[1]]^2,}
+    \hlcom{##                         x[2, ] + x[3, ] * u[[1]],}
+    \hlcom{##                         x[3, ]),}
+    \hlcom{##                   .Dimnames = list(c("distance", "speed", "acceleration"), NULL))}
     \hlstd{W} \hlkwb{<-} \hlkwd{rbind}\hlstd{(}\hlnum{0.5} \hlopt{*} \hlstd{w} \hlopt{*} \hlstd{u[[}\hlnum{1}\hlstd{]]}\hlopt{^}\hlnum{2}\hlstd{,}
                \hlstd{w} \hlopt{*} \hlstd{u[[}\hlnum{1}\hlstd{]],}
                \hlstd{w)}
@@ -2964,10 +2988,28 @@ Now we try running it:
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{fit} \hlkwb{<-} \hlkwd{accelPF}\hlstd{(block.speed,} \hlkwc{N} \hlstd{=} \hlnum{500}\hlstd{,} \hlkwc{sig.e} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{progress} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{h} \hlstd{= h,} \hlkwc{lhood} \hlstd{= lhood,} \hlkwc{pw} \hlstd{= pw,} \hlkwc{fn} \hlstd{= fn)}
+\hlstd{past} \hlkwb{<-} \hlstd{hist.blocks[[}\hlnum{3}\hlstd{]][[}\hlnum{12}\hlstd{]]}
+\hlstd{block.speed2} \hlkwb{<-} \hlkwd{getBlock}\hlstd{(past}\hlopt{$}\hlstd{trip_id, past}\hlopt{$}\hlstd{trip_start_date[}\hlnum{1}\hlstd{], mbta)}
+\hlkwd{plot}\hlstd{(block.speed2)}
+\hlstd{block.speed2} \hlkwb{<-} \hlkwd{getBlockData}\hlstd{(block.speed2}\hlopt{$}\hlstd{date,} \hlkwc{block} \hlstd{= block.speed2,} \hlkwc{conn} \hlstd{= mbta)}
+\hlkwd{points}\hlstd{(block.speed2)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/acceleration_run-1} 
+
+}
+
+
+\begin{kframe}\begin{alltt}
+\hlstd{fit} \hlkwb{<-} \hlkwd{accelPF}\hlstd{(block.speed2,} \hlkwc{N} \hlstd{=} \hlnum{200}\hlstd{,} \hlkwc{start.obs} \hlstd{=} \hlnum{00}\hlstd{,} \hlkwc{sig.e} \hlstd{=} \hlnum{0.2}\hlstd{,}
+               \hlkwc{progress} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{h} \hlstd{= h,} \hlkwc{lhood} \hlstd{= lhood,} \hlkwc{pw} \hlstd{= pw,} \hlkwc{fn} \hlstd{= fn)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
+
+
+
 
 
 
