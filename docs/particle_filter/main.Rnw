@@ -2382,7 +2382,12 @@ for (i in 1:nrow(mod.d)) {
 @ 
 
 
-
+<<>>=
+plot(NULL, xlim = range(fit$t - min(fit$t)), ylim = range(fit$Xhat[1,,], na.rm= TRUE))t in (fit$t - min(fit$t))
+for (i in 1:dim(fit$X)[3]) {
+    points(rep(fit$t[i], dim(fit$X)[2]) - min(fit$t), fit$Xhat[1,,i], pch = 4, cex = 0.4)
+}
+@ 
 
 
 

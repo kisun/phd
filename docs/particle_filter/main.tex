@@ -2318,6 +2318,10 @@ We need one final function to obtain the scheduled speed at a given \emph{distan
      \hlkwc{labels} \hlstd{=} \hlkwd{c}\hlstd{(}\hlkwd{par}\hlstd{()}\hlopt{$}\hlstd{xaxp[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{],} \hlkwd{expression}\hlstd{(t[k])))}
 \hlkwd{axis}\hlstd{(}\hlnum{2}\hlstd{,} \hlkwc{at} \hlstd{=} \hlkwd{c}\hlstd{(}\hlkwd{par}\hlstd{()}\hlopt{$}\hlstd{yaxp[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{], sk),}
      \hlkwc{labels} \hlstd{=} \hlkwd{c}\hlstd{(}\hlkwd{par}\hlstd{()}\hlopt{$}\hlstd{yaxp[}\hlnum{1}\hlopt{:}\hlnum{2}\hlstd{],} \hlkwd{expression}\hlstd{(}\hlkwd{s}\hlstd{(d[k]))),} \hlkwc{las} \hlstd{=} \hlnum{2}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in axis(2, at = c(par()\$yaxp[1:2], sk), labels = c(par()\$yaxp[1:2], : object 'sk' not found}}\begin{alltt}
 \hlstd{sk} \hlkwb{<-} \hlstd{fn1}\hlopt{$}\hlkwd{t2d}\hlstd{(tk,} \hlnum{1}\hlstd{)}
 \hlkwd{lines}\hlstd{(}\hlkwd{c}\hlstd{(}\hlkwd{rep}\hlstd{(tk,} \hlnum{3}\hlstd{), sk),} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{rep}\hlstd{(sk,} \hlnum{3}\hlstd{)),} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
 \end{alltt}
@@ -3008,6 +3012,34 @@ Now we try running it:
 \end{kframe}
 \end{knitrout}
 
+
+
+
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{with}\hlstd{(block.speed2}\hlopt{$}\hlstd{schedule,} \hlkwd{plot}\hlstd{(time.seconds, block_dist_traveled,} \hlkwc{type} \hlstd{=} \hlstr{"l"}\hlstd{))}
+\hlstd{start.time} \hlkwb{<-} \hlkwd{hms}\hlstd{(block.speed2}\hlopt{$}\hlstd{schedule}\hlopt{$}\hlstd{time[}\hlnum{1}\hlstd{])}
+\hlstd{start.second} \hlkwb{<-} \hlstd{(}\hlkwd{hour}\hlstd{(start.time)} \hlopt{*} \hlnum{60} \hlopt{+} \hlkwd{minute}\hlstd{(start.time))} \hlopt{*} \hlnum{60} \hlopt{+}
+    \hlkwd{as.numeric}\hlstd{(}\hlkwd{as.POSIXct}\hlstd{(block.speed2}\hlopt{$}\hlstd{date,} \hlstr{"EDT5EST"}\hlstd{,} \hlkwc{format} \hlstd{=} \hlstr{"%Y%m%d"}\hlstd{))}
+\hlstd{obs.t} \hlkwb{<-} \hlstd{block.speed2}\hlopt{$}\hlstd{history}\hlopt{$}\hlstd{time} \hlopt{-} \hlstd{start.second}
+\hlstd{mod.d} \hlkwb{<-} \hlstd{fit}\hlopt{$}\hlstd{Xhat[}\hlnum{1}\hlstd{,,]}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(mod.d)) \{}
+    \hlkwd{points}\hlstd{(obs.t, fit}\hlopt{$}\hlstd{Xhat[}\hlnum{1}\hlstd{, i, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.2}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00009930"}\hlstd{)}
+    \hlkwd{points}\hlstd{(obs.t, fit}\hlopt{$}\hlstd{X[}\hlnum{1}\hlstd{, i, ],} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.2}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"#00990070"}\hlstd{)}
+\hlstd{\}}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/examine-1} 
+
+}
+
+
+
+\end{knitrout}
 
 
 
