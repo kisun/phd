@@ -10,6 +10,8 @@
  \usepackage{natbib}    % For BibTeX
  \usepackage{graphicx}  % To import .pdf files
 %\usepackage{times}
+ \usepackage{setspace}
+ \onehalfspacing
 
  \oddsidemargin  -10mm
  \evensidemargin -10mm
@@ -210,13 +212,51 @@ and finally removed from the board without the bus having gone past.
 % Don't put anything new in this section.
 
 
-Describe AVL.
+Accurate prediction of bus arrival (or departure) time from bus stops is dependent on many components.
+The primary component is the AVL system used to track the real-time positions of vehicles.
+A statistical model is then applied that uses this AVL data to model the movement of the bus over time. 
+Using this model, predictions of arrival/departure time can be made.
 
 
-Kalman Filter - how? why? examples, pros \& cons.
+There are many forms of AVL, although the most common (and the one we will be working with) is GPS.
+In this, each AVL report contains the time, vehicle information (identification, possibly trip and/or ``block'' ID,
+and the GPS coordinates).
+
+Google has standardised the AVL system into GTFS \cite{}, which means any applications should be transferrable to any 
+public transport system using GTFS (Auckland Transport does, along with $M$ other companies worldwide).
+GTFS has two components: \emph{realtime} (live positioning information) and \emph{static} (schedule information,
+route shapes, timetables, etc).
 
 
-Particle Filtering.
+With an accessible\footnote{so long as AT makes the data available} data format, the main focus will be on algorithms
+used to model and predict arrival times. The Kalman Filter is one commonly used method for this, and has been used
+in many applications such as \cite{cathey-dailey:2003}, \cite{}, and \cite{}.
+The main idea behind this algorithm is that it is \emph{fast}: it only involves matrix operations and works with 
+the mean and variance of a normal distribution.
+No complex integrations of MCMC sampling is required.
+
+
+The KF algorithm works as follows \ldots
+
+While the KF algorithm is fast and easy to use, it is limited in its assumption of normality. 
+There are multiple extensions of the KF, including the Extended Kalman Filter for using general functions, 
+and Particle Filters, which are far more flexible but require significantly more computational power.
+
+
+Particle Filtering, in the simplest of terms, requires a set of ``imaginary'' points---let's call them imaginary busses.
+Each of these is manipulated using the likelihood information to complete the \emph{prediction} step,
+which is easy enough.
+After prediction, the data is obtained and the likelihood of each virtual bus is computed,
+and a new sample is taken (with replacement) with sampling probability proportional to likelihood.
+That is, the imaginary busses closes to the real bus are sampled more often, 
+and those far away are samples less (or not at all).
+
+The PF can get very computationlly demanding, but it has one great advantage:
+the KF filter requires the reported GPS location to be mapped to the trip shape;
+the PF does not.
+The PF can compare imaginary GPS locations to the true GPS location, and use a bivariate normal distribution
+to estimate the likelihood (GPS's have an associated error, so we can use this or estimate it from the data).
+
 
 
 
@@ -288,6 +328,33 @@ Particle Filtering.
 
 
 
+\begin{enumerate}
+\item 
+  We're going to implement a Particle Filter to model the busses,
+  and compare it to the KF (and other methods we can get working or compare with).
+
+
+\item 
+  Then we're going to investigate better summary statistics.
+  The mean is great, but only if the posterior is normal.
+  It probably wont be, so maybe the median, or mode, or something else, will be better.
+  Also, prediction \emph{intervals}! Is the bus 2--3~minutes away, or 2--10~minutes away???
+
+\item 
+  Then we will use as much data as possible and see if it improves predictions 
+  (like, ``realtime'' congestion data from other busses, historical data, \ldots).
+
+\item 
+  Then we want to apply the methods to a real data set (Auckland Transport PTS).
+
+\item 
+  And then make it available via the web and/or a phone app.
+
+\end{enumerate}
+
+
+
+
 
 
 
@@ -352,7 +419,19 @@ Particle Filtering.
 
 
 
+We will need access to a GTFS realtime feed.
+There a plenty of these, but we would particulary like access to Auckland Transport's.
+It's on its way, apparently, otherwise we might need to sign confidentiality agreements which would be less 
+fun that using open, publically accessble data.
 
+
+We will eventually need a dedicated machine to run the computations continuously to provide the predictions
+for the apps.
+Hopefully, a low-spec machine will be enough if we can write the algorithms efficiently enough 
+(a lot of the historical data can be computed at night while the busses are sleeping).
+However, if more power is needed, we will cross that bridge when we get to it.
+Ideally, the final ``product'' will be easy to implement on a system so can ``pass it on''
+to another user (like AT) and anyone who wants it for them to maintain.
 
 
 
@@ -417,6 +496,26 @@ Particle Filtering.
 
 % \end{enumerate}
 
+
+\begin{enumerate}
+\item 
+  Implement a Particle Filter on a data set and make predictions that are on par with those currently available.
+
+\item 
+  Investigate ways of using other live and historical data to improve the accuracy of estimates.
+
+\item 
+  Look at different summary statistics for better point-estimates, and look into providing useful prediction intervals.
+
+\item 
+  Implement a large-scale version of the model for a (subset of) the AT PTS, and see how well it runs.
+
+\item 
+  Create a web/phone app to access the predictions.
+
+\item
+  Package the system so that it is distributable to other feeds to remove its dependency on us.
+\end{enumerate}
 
 
 
@@ -626,7 +725,7 @@ Particle Filtering.
 
 
 
-
+We're gunna make people happy.
 
 
 
