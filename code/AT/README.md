@@ -1,5 +1,4 @@
-MBTA GTFS
-=========
+# Auckland Transport GTFS
 
 To download the GTFS static (schedule) data, run
 ```
