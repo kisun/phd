@@ -9,6 +9,7 @@
 
  \usepackage{natbib}    % For BibTeX
  \usepackage{graphicx}  % To import .pdf files
+ \usepackage{booktabs}
 %\usepackage{times}
  \usepackage{setspace}
  \onehalfspacing
@@ -25,6 +26,7 @@
 %\textwidth=450pt
 %\hoffset=-2cm
 
+\usepackage[hidelinks]{hyperref}
 
 \begin{document}
 
@@ -222,7 +224,8 @@ There are many forms of AVL, although the most common (and the one we will be wo
 In this, each AVL report contains the time, vehicle information (identification, possibly trip and/or ``block'' ID,
 and the GPS coordinates).
 
-Google has standardised the AVL system into GTFS \cite{}, which means any applications should be transferrable to any 
+Google has standardised the AVL system into GTFS\footnote{\url{https://developers.google.com/transit/gtfs/}}, 
+which means any applications should be transferrable to any 
 public transport system using GTFS (Auckland Transport does, along with $M$ other companies worldwide).
 GTFS has two components: \emph{realtime} (live positioning information) and \emph{static} (schedule information,
 route shapes, timetables, etc).
@@ -230,7 +233,7 @@ route shapes, timetables, etc).
 
 With an accessible\footnote{so long as AT makes the data available} data format, the main focus will be on algorithms
 used to model and predict arrival times. The Kalman Filter is one commonly used method for this, and has been used
-in many applications such as \cite{cathey-dailey:2003}, \cite{}, and \cite{}.
+in many applications such as \cite{cathey-dailey:2003}, \cite{cn}, and \cite{cn}.
 The main idea behind this algorithm is that it is \emph{fast}: it only involves matrix operations and works with 
 the mean and variance of a normal distribution.
 No complex integrations of MCMC sampling is required.
@@ -238,10 +241,14 @@ No complex integrations of MCMC sampling is required.
 
 The KF algorithm works as follows \ldots
 
+Other modelling methods have been used, such as
+nearest neighbour regression \citep{chang-etal:2010},
+artificial neural network (AVN) \citep{jeong-rilett:2005}, and
+support vector machines (SVN) \citep{yu-etal:2006,yu-etal:2010,yu-etal:2011}.
+
 While the KF algorithm is fast and easy to use, it is limited in its assumption of normality. 
 There are multiple extensions of the KF, including the Extended Kalman Filter for using general functions, 
 and Particle Filters, which are far more flexible but require significantly more computational power.
-
 
 Particle Filtering, in the simplest of terms, requires a set of ``imaginary'' points---let's call them imaginary busses.
 Each of these is manipulated using the likelihood information to complete the \emph{prediction} step,
@@ -529,8 +536,7 @@ to another user (like AT) and anyone who wants it for them to maintain.
 
 % \begin{table}[hh]
 % \caption{
-% Timeline for my thesis.
-% Here are \textit{some} activities---fill in more.
+% Timeline of my privisional year.
 % }
 % \centering
 % \ ~~~~ \\
@@ -562,44 +568,43 @@ to another user (like AT) and anyone who wants it for them to maintain.
 
 
 
-% I have fulfulled all my first year requirements.
-% These are:
-% \begin{enumerate}
+I have fulfulled all my first year requirements.
+These are:
+\begin{enumerate}
 
-% \item
-% All EoI provisional goals:
-% \begin{enumerate}
+\item
+All EoI provisional goals:
+\begin{enumerate}
 
-% \item
-% \textit{Full thesis proposal normally completed within 6 months}:
-% Here it is!
+\item
+\textit{Full thesis proposal normally completed within 6 months}:
+Here it is!
 
-% \item
-% \textit{Completion of one substantial piece of written work within
-% 12 months}: Wrote 90~percent of Chapter~1 of my thesis, submitted
-% one journal article, wrote 50~percent of Chapter~2 of my thesis.
+\item
+\textit{Completion of one substantial piece of written work within
+12 months}: ??
 
 
-% \item
-% \textit{Presentation of research progress to a departmental seminar}:
-% 2011-05-01.
+\item
+\textit{Presentation of research progress to a departmental seminar}:
+YYYY-MM-DD.
 
-% \item
-% \textit{Approval of the full thesis proposal by the appropriate
-% departmental/faculty postgraduate committee}:
-% Being done.
+\item
+\textit{Approval of the full thesis proposal by the appropriate
+departmental/faculty postgraduate committee}:
+Being done.
 
-% \item
-% \textit{Ethics approval(s)/permissions obtained for the research
-% (if required)}:
-% Not necessary.
+\item
+\textit{Ethics approval(s)/permissions obtained for the research
+(if required)}:
+Not necessary??
 
-% \item
-% \textit{Attendance at one of the Doctoral Skills Programme's
-% Induction Days}:
-% 2010-05-20.
+\item
+\textit{Attendance at one of the Doctoral Skills Programme's
+Induction Days}:
+2015-11-04
 
-% \end{enumerate}
+\end{enumerate}
 
 
 
@@ -633,7 +638,7 @@ to another user (like AT) and anyone who wants it for them to maintain.
 
 
 
-% \end{enumerate}
+\end{enumerate}
 
 
 
@@ -645,72 +650,38 @@ to another user (like AT) and anyone who wants it for them to maintain.
 
 
 
-% \begin{table}[hh]
-% \caption{
-% Departmental seminars I have attended (top part of the table).
-% Talks from another UoA department are in the middle tier.
-% Conferences and workshops are in the bottom tier,
-% e.g., 2010-05-29 event was an all-day workshop.
-% }
-% \centering
-% \ ~~~~ \\
-% \label{tab:seminars}
-% \begin{tabular}{|c|l|l|}
-% \hline
-% Date & Speaker & Title \\
-% \hline
-% 2010-04-08 & David Brillinger &
-% Random trajectories, some theory and applications \\
-% %
-% 2010-02-30 & David Cox &
-% Frequentist statistics as a theory of inductive inference \\
-% %
-% 2009-10-08 & David Matthews &
-% Estimating diagnostic test likelihood ratios \\
-% %
-% yyyy-mm-dd & Speaker Name &
-% Title of Talk \\
-% %
-% yyyy-mm-dd & Speaker Name &
-% Title of Talk \\
-% %
-% yyyy-mm-dd & Speaker Name &
-% Title of Talk \\
-% %
-% yyyy-mm-dd & Speaker Name &
-% Title of Talk \\
-% %
-% yyyy-mm-dd & Speaker Name &
-% Title of Talk \\
-% %
-% yyyy-mm-dd & Speaker Name &
-% Title of Talk \\
-% %
-% yyyy-mm-dd & Speaker Name &
-% Title of Talk \\
-% %
-% yyyy-mm-dd & Speaker Name &
-% Title of Talk \\
-% %
-% yyyy-mm-dd & Speaker Name &
-% Title of Talk \\
-% %
-% yyyy-mm-dd & Speaker Name &
-% Title of Talk \\
-% %
-% \hline
+\begin{table}[hh]
+\caption{
+Departmental seminars I have attended.% (top part of the table).
+%Talks from another UoA departments are in the middle tier.
+%Conferences and workshops are in the bottom tier.
+}
+\centering
+\ ~~~~ \\
+\label{tab:seminars}
+\begin{tabular}{cll}
+\toprule
+Date & Speaker & Title \\
+\midrule
+2015-09-02 & Moshe Haviv &
+Queues \& Cooperative Games \\
+%
+2015-11-18 & Hadley Wickham &
+Pure, predictable, pipeable: creating fluid interfaces with R \\
+%
+% \midrule
 % 2010-06-16 & James B.~Conant &
 % ``Geography is not a university subject'' (geo Department) \\
 % %
 % yyyy-mm-dd & Speaker Name &
 % Title of Talk \\
-% \hline
+% \midrule
 % 2010-05-29 & David Siegmund &
 % Workshop on `Genetic Mapping' at UoA. \\
-% %
-% \hline
-% \end{tabular}
-% \end{table}
+%
+\bottomrule
+\end{tabular}
+\end{table}
 
 
 
