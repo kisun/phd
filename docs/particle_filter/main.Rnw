@@ -2382,12 +2382,39 @@ for (i in 1:nrow(mod.d)) {
 @ 
 
 
-<<>>=
-plot(NULL, xlim = range(fit$t - min(fit$t)), ylim = range(fit$Xhat[1,,], na.rm= TRUE))t in (fit$t - min(fit$t))
-for (i in 1:dim(fit$X)[3]) {
-    points(rep(fit$t[i], dim(fit$X)[2]) - min(fit$t), fit$Xhat[1,,i], pch = 4, cex = 0.4)
-}
+
+
+
+
+
+
+
+
+
+
+
+
+\section{Auckland Transport GTFS Feed}
+
+Finally, as of Wednesday 13 January, 2015, we have data from Auckland Transport!
+
+<<at_connection>>=
+atcon <- dbConnect(SQLite(), "at_gtfsrt.db")
 @ 
+
+<<at_history>>=
+library(iNZightMaps)
+athist <- dbGetQuery("select distinct * from vehicle_positions", con = atcon)
+head(athist)
+
+trip090 <- athist[athist$trip_id == athist$trip_id[grep("^090", athist$route_id)[1]], ]
+obj <- iNZightMap(lat=~position_latitude, lon=~position_longitude, data = trip090,
+                  name = "Route 090 Journey")
+plot(obj, pch = 4, cex.pt = 0.5, map.opacity = 0.4, join = TRUE)
+
+@ 
+
+
 
 
 
