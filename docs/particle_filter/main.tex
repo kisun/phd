@@ -3117,43 +3117,11 @@ Finally, as of Wednesday 13 January, 2015, we have data from Auckland Transport!
 \begin{alltt}
 \hlkwd{library}\hlstd{(iNZightMaps)}
 \hlstd{athist} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}\hlstr{"select distinct * from vehicle_positions"}\hlstd{,} \hlkwc{con} \hlstd{= atcon)}
-\hlkwd{head}\hlstd{(athist)}
-\end{alltt}
-\begin{verbatim}
-##   oid                           trip_id                    route_id
-## 1   1 12839014582-20151224100745_v36.10 83901-20151224100745_v36.10
-## 2   2 12879014307-20151224100745_v36.10 87901-20151224100745_v36.10
-## 3   3  1983016733-20151224100745_v36.10 98301-20151224100745_v36.10
-## 4   4 12858014717-20151224100745_v36.10 85803-20151224100745_v36.10
-## 5   5  1987016515-20151224100745_v36.10 98701-20151224100745_v36.10
-## 6   6 12881005589-20151224100745_v36.10 88104-20151224100745_v36.10
-##   trip_start_time trip_start_date vehicle_id vehicle_label
-## 1        11:47:00                       3071              
-## 2        12:00:00                       3072              
-## 3        12:35:00                       3073              
-## 4        11:20:00                       3075              
-## 5        11:35:00                       3079              
-## 6        11:30:00                       3080              
-##   vehicle_license_plate position_latitude position_longitude
-## 1                               -36.83823           174.7418
-## 2                               -36.76852           174.7487
-## 3                               -36.62754           174.7652
-## 4                               -36.84997           174.7615
-## 5                               -36.61037           174.6601
-## 6                               -36.77284           174.7361
-##   position_bearing position_speed  timestamp
-## 1              130              0 1452728491
-## 2              156              0 1452728484
-## 3                0              0 1452728500
-## 4              107              0 1452728469
-## 5                0              0 1452728464
-## 6                0              0 1452728363
-\end{verbatim}
-\begin{alltt}
-\hlstd{trip881} \hlkwb{<-} \hlstd{athist[athist}\hlopt{$}\hlstd{trip_id} \hlopt{==} \hlstr{"12881005589-20151224100745_v36.10"}\hlstd{, ]}
-\hlstd{obj} \hlkwb{<-} \hlkwd{iNZightMap}\hlstd{(}\hlkwc{lat}\hlstd{=}\hlopt{~}\hlstd{position_latitude,} \hlkwc{lon}\hlstd{=}\hlopt{~}\hlstd{position_longitude,} \hlkwc{data} \hlstd{= trip881,}
-                  \hlkwc{name} \hlstd{=} \hlstr{"Route 881 Journey"}\hlstd{)}
-\hlkwd{plot}\hlstd{(obj,} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex.pt} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{map.opacity} \hlstd{=} \hlnum{0.4}\hlstd{)}
+
+\hlstd{trip090} \hlkwb{<-} \hlstd{athist[athist}\hlopt{$}\hlstd{trip_id} \hlopt{==} \hlstd{athist}\hlopt{$}\hlstd{trip_id[}\hlkwd{grep}\hlstd{(}\hlstr{"^090"}\hlstd{, athist}\hlopt{$}\hlstd{route_id)[}\hlnum{1}\hlstd{]], ]}
+\hlstd{obj} \hlkwb{<-} \hlkwd{iNZightMap}\hlstd{(}\hlkwc{lat}\hlstd{=}\hlopt{~}\hlstd{position_latitude,} \hlkwc{lon}\hlstd{=}\hlopt{~}\hlstd{position_longitude,} \hlkwc{data} \hlstd{= trip090,}
+                  \hlkwc{name} \hlstd{=} \hlstr{"Route 090 Journey"}\hlstd{)}
+\hlkwd{plot}\hlstd{(obj,} \hlkwc{pch} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{cex.pt} \hlstd{=} \hlnum{0.5}\hlstd{,} \hlkwc{map.opacity} \hlstd{=} \hlnum{0.4}\hlstd{,} \hlkwc{join} \hlstd{=} \hlnum{TRUE}\hlstd{)}
 \end{alltt}
 \end{kframe}
 
@@ -3163,6 +3131,33 @@ Finally, as of Wednesday 13 January, 2015, we have data from Auckland Transport!
 
 
 
+\end{knitrout}
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{history} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}
+    \hlstd{atcon,}
+    \hlkwd{paste0}\hlstd{(}\hlstr{"SELECT DISTINCT vp.trip_id, vp.vehicle_id, vp.trip_start_date,
+                            st.departure_time AS trip_start_time
+            FROM vehicle_positions AS vp, stop_times AS st, trips AS tr, routes AS rt
+            WHERE vp.trip_id=st.trip_id AND st.stop_sequence=1
+            AND vp.trip_id=tr.trip_id AND tr.route_id=rt.route_id
+            ORDER BY vp.trip_start_date, vp.vehicle_id, trip_start_time"}\hlstd{)}
+    \hlstd{)}
+
+\hlstd{hist.dates} \hlkwb{<-} \hlkwd{tapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(history), history}\hlopt{$}\hlstd{trip_start_date,}
+                     \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{) history[i, ])}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in tapply(1:nrow(history), history\$trip\_start\_date, function(i) history[i, : arguments must have same length}}\begin{alltt}
+\hlstd{hist.blocks} \hlkwb{<-} \hlkwd{lapply}\hlstd{(hist.dates,} \hlkwa{function}\hlstd{(}\hlkwc{h}\hlstd{) \{}
+                          \hlkwd{tapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(h), h}\hlopt{$}\hlstd{vehicle_id,} \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{) h[i, ])}
+\hlstd{\})}
+\end{alltt}
+\end{kframe}
 \end{knitrout}
 
 
