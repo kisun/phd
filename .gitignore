@@ -22,6 +22,7 @@
 
 # R + LaTeX #
 #############
+.Rlibrary/*/*
 .Rhistory
 .project
 .Rapp.history
