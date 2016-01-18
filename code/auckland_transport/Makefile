@@ -1,6 +1,7 @@
 default:
 	@echo Downloading GTFS schedule files ...
 	@echo
+	@mkdir _data
 	@curl -o _data/gtfs.zip https://cdn01.at.govt.nz/data/gtfs.zip
 
 	@echo
