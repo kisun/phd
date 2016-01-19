@@ -10,6 +10,13 @@ The first step is to add the API key:
 $ echo API_KEY > apikey.txt
 ```
 
+Necessary python tools:
+```{bash}
+sudo apt-get install python-pip python-sqlalchemy
+pip install -U pip setuptools
+```
+Install Google Protobuf from https://github.com/google/protobuf (both C++ and python).
+
 Then run `make` to download the necessary components of the GTFS feed, create a database, and fill it out.
 
 ***

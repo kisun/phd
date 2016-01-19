@@ -1,4 +1,5 @@
 default:
+	@echo sudo apt-get update && sudo apt-get -y install inotify-tools
 	@echo Downloading GTFS schedule files ...
 	@echo
 	@mkdir -p _data
@@ -27,6 +28,11 @@ database:
 	@cp db/gtfs-static.db db/gtfs-realtime.db
 
 saveRT:
-	@echo Saving historical data to database ... cancel with CTRC + C
+	@echo Saving historical data to database ... cancel with CTRL + C
 	@echo
-	@bin/gtfsrdb/gtfsrdb.py -p https://api.at.govt.nz/v1/public/realtime/vehiclelocations?api_key=$(shell cat apikey.txt) --accept="application/x-protobuf" -d sqlite:///db/gtfs-realtime.db -c
+	@bin/gtfsrdb/gtfsrdb.py -p https://api.at.govt.nz/v1/public/realtime/vehiclelocations?api_key=$(shell cat apikey.txt) --accept="application/x-protobuf" -d sqlite:///db/gtfs-history.db -c
+
+getLatest:
+	@echo Getting latest vehicle locations ... cancel with CTRL + C
+	@echo
+	@bin/gtfsrdb/gtfsrdb.py -p https://api.at.govt.nz/v1/public/realtime/vehiclelocations?api_key=$(shell cat apikey.txt) --accept="application/x-protobuf" -d sqlite:///db/gtfs-realtime.db -c -o -w 10
