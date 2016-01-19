@@ -4,9 +4,10 @@ lib = ".Rlibrary"
 ## Packages to install from CRAN:
 
 packages = c(
-  "RSQLite"
+  "DBI", "RSQLite"
 )
 
 install.packages(packages,
                  lib = lib,
-                 repos = "http://cran.stat.auckland.ac.nz")
+                 repos = "http://cran.stat.auckland.ac.nz",
+                 dependencies = c("Depends", "Imports"))

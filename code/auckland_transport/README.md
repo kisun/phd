@@ -16,8 +16,8 @@ Then run `make` to download the necessary components of the GTFS feed, create a 
 
 ### To-do list
 
-- extract GTFS data from files and add to database (preferably using `gtfsdb-load` or similar)
-- save latest GTFS real-time data to a database (preferably using `gtfsrdb` or similar)
+- ~~~extract GTFS data from files and add to database (preferably using `gtfsdb-load` or similar)~~~
+- ~~~save latest GTFS real-time data to a database (preferably using `gtfsrdb` or similar)~~~
   - `trip_start_date` needs calculating manually by the looks of things ...
 - set up a block (either by using the `block_id` column, or manually creating one using historical data), and write a function to automate it for a given `vehicle_id`/`trip_id` and `date`/`timestamp`
 - implement a simple __Particle Filter__ to replicate the standard Kalman Filter used in previous studies
