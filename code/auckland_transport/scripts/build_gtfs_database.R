@@ -31,18 +31,16 @@ for (file in files) {
         y = y[!sapply(y, is.null)]
         if (length(y))
             f$id_version = apply(do.call(cbind, y), 1, max, na.rm = TRUE)
-        
+
         f[, idcols] = lapply(f[, idcols, drop = FALSE], function(x) {
                                  if (!all(is.na(x)))
                                      gsub("-.+", "", as.character(x))
                                  else x
                              })
     }
-    
+
     if (dbWriteTable(con, table, f, append = FALSE, overwrite = TRUE))
         cat(" complete")
     else
         cat(" failed")
 }
-
-cat("\n\nDone.\n\n")
