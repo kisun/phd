@@ -8,10 +8,11 @@ packages = c(
   "BH", "devtools"
 )
 
-#install.packages(packages,
-#                 lib = lib,
-#                 repos = "http://cran.stat.auckland.ac.nz",
-#                 dependencies = c("Depends", "Imports"))
+options(repos = "http://cran.stat.auckland.ac.nz")
+
+install.packages(packages,
+                 lib = lib,
+                 dependencies = c("Depends", "Imports"))
 
 
 ## Packages to install from GitHub:

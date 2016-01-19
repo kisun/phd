@@ -1,17 +1,27 @@
 ## functions for reading GTFS database
 
-getPositions <- function(con, route.id, ...) {
+getPositions <- function(con, route.id, vehicle.id, date,
+                         order = "timestamp", verbose = TRUE, ...) {
     ## SQL preparation ...
     where <- character()
     sql <- "SELECT * FROM vehicle_positions"
 
     if (!missing(route.id))
         where <- c(where, sprintf("route_id LIKE '%s%s'", route.id, "%"))
+    if (!missing(vehicle.id))
+        where <- c(where, sprintf("vehicle_id = '%s'", vehicle.id))
+    if (!missing(date)) {
+        ## convert it to MIN and MAX timestamp
+        datets <- as.numeric(format(as.POSIXct(date), format = "%s")) + c(0, 86400)
+        where <- c(where, sprintf("timestamp >= %s AND timestamp < %s", datets[1], datets[2]))
+    }
 
     if (length(where))
-        sql <- paste0(sql, " WHERE ", paste0(where, collapse = ","))
+        sql <- paste0(sql, " WHERE ", paste0(where, collapse = " AND "))
 
-    print(sql)
+    if (verbose)
+        cat(sql, "\n")
+
     ## SQL call 
     pos <- dbGetQuery(con, sql)
 
@@ -20,7 +30,26 @@ getPositions <- function(con, route.id, ...) {
                                   tsDate(pos$timestamp),
                                   pos$trip_start_date)
     strip.cols <- c("trip_id", "route_id")
+    versions <- lapply(pos[, strip.cols], function(x) gsub(".+_v", "", x))
+    print(do.call(cbind, versions))
     pos[, strip.cols] <- lapply(pos[, strip.cols], function(x) gsub("-.+", "", x))
 
     pos
+}
+
+
+
+getTrips <- function(ids, con = "db/gtfs-static.db", verbose = TRUE,
+                     ...,
+                     .con = dbConnect(SQLite(), con)) {
+    ## Get all of the information for a bunch of trips:
+    sql <- sprintf("SELECT DISTINCT t.trip_id, route_id, shape_id, trip_headsign, service_id, departure_time
+FROM trips as t, stop_times as s
+WHERE t.trip_id=s.trip_id AND t.trip_id IN ('%s') AND s.stop_sequence=1
+ORDER BY departure_time",
+                   paste(ids, collapse = "','"))
+    
+    if (verbose) cat(sql, '\n')
+
+    dbGetQuery(.con, sql)
 }

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+sqlite3 db/gtfs-history.db "DELETE FROM vehicle_positions WHERE oid NOT IN (SELECT MAX(oid) FROM vehicle_positions GROUP BY vehicle_id, timestamp);"
