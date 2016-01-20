@@ -30,8 +30,8 @@ getPositions <- function(con, route.id, vehicle.id, date,
                                   tsDate(pos$timestamp),
                                   pos$trip_start_date)
     strip.cols <- c("trip_id", "route_id")
-    versions <- lapply(pos[, strip.cols], function(x) gsub(".+_v", "", x))
-    print(do.call(cbind, versions))
+    #versions <- lapply(pos[, strip.cols], function(x) gsub(".+_v", "", x))
+    #print(do.call(cbind, versions))
     pos[, strip.cols] <- lapply(pos[, strip.cols], function(x) gsub("-.+", "", x))
 
     pos
@@ -52,4 +52,32 @@ ORDER BY departure_time",
     if (verbose) cat(sql, '\n')
 
     dbGetQuery(.con, sql)
+}
+
+
+getBlocksA <- function(date, con = "db/gtfs-history.db", verbose = TRUE,
+                       ...,
+                       .con = dbConnect(SQLite(), con)) {
+    ## Grab all vehicle-blocks on a given date:
+
+    datets <- as.numeric(format(as.POSIXct(date), format = "%s")) + c(0, 86400)
+    
+    sql <- sprintf("SELECT DISTINCT vehicle_id, trip_id, min(trip_start_time) AS start FROM vehicle_positions
+WHERE timestamp >= %s AND timestamp < %s
+GROUP BY vehicle_id, trip_id
+ORDER BY vehicle_id, start", datets[1], datets[2])
+
+    if (verbose) cat(sql, '\n')
+
+    blocks <- dbGetQuery(.con, sql)
+    blocks$trip_id <- gsub("-.+", "", blocks$trip_id)
+
+    ## also get route numbers ...
+    trps <- paste(blocks$trip_id, collapse = "','")
+    sql <- sprintf("SELECT trip_id, route_id, trip_headsign, shape_id, service_id
+FROM trips WHERE trip_id IN ('%s') GROUP BY trip_id", trps)
+
+    trips <- dbGetQuery(dbConnect(SQLite(), "db/gtfs-static.db"), sql)
+
+    merge(blocks, trips, by = "trip_id", all.x = TRUE, all.y = FALSE, sort = FALSE)
 }
