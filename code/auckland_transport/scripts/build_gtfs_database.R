@@ -5,13 +5,29 @@
 require("RSQLite")
 con = dbConnect(SQLite(), "db/gtfs-static.db")
 
-## Creates the GTFS database:
-files = list.files("_data/gtfs", full.names = TRUE)
+require("jsonlite")
 
-for (file in files) {
-    table = gsub("_data/gtfs/|.txt", "", file)
+## Creates the GTFS database:
+##files = gsub(".txt", "", list.files("_data/gtfs"))
+files =
+    list(agency = "agency",
+         calendar = "calendar",
+         calendar_dates = "calendarDate",
+         routes = "routes",
+         shapes = "shapes",
+         stops = "stops",
+         stop_times = "stopTimes",
+         trips = "trips")
+
+api <- readLines("apikey.txt")
+
+for (i in seq_along(files)) {
+    table = names(files)[i]
+    url = sprintf("https://api.at.govt.nz/v1/gtfs/%s?api_key=%s", files[[i]], api)
+    print(url)
     cat("\nWriting table", table, "...")
-    f = read.csv(file, header = TRUE, stringsAsFactors = FALSE)
+    ##f = read.csv(file, header = TRUE, stringsAsFactors = FALSE)
+    f = fromJSON(url)$response
 
     ## decimals as strings
     dec.cols = !sapply(f, is.integer) & sapply(f, is.numeric)

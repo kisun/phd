@@ -54,6 +54,19 @@ ORDER BY departure_time",
     dbGetQuery(.con, sql)
 }
 
+getSchedule <- function(id,  con = "db/gtfs-static.db", verbose = TRUE,
+                        ...,
+                        .con = dbConnect(SQLite(), con)) {
+    ## Get the stop schedule for a trip:
+    sql <- sprintf("SELECT st.trip_id, st.arrival_time, st.departure_time, st.stop_id, s.stop_lon, s.stop_lat, st.stop_sequence
+FROM stop_times AS st, stops AS s
+WHERE st.stop_id = s.stop_id AND st.trip_id = '%s'
+ORDER BY stop_sequence", id)
+
+    if (verbose) cat(sql, '\n')
+
+    dbGetQuery(.con, sql)
+}
 
 getBlocksA <- function(date, con = "db/gtfs-history.db", verbose = TRUE,
                        ...,
@@ -80,4 +93,42 @@ FROM trips WHERE trip_id IN ('%s') GROUP BY trip_id", trps)
     trips <- dbGetQuery(dbConnect(SQLite(), "db/gtfs-static.db"), sql)
 
     merge(blocks, trips, by = "trip_id", all.x = TRUE, all.y = FALSE, sort = FALSE)
+}
+
+getBlock <- function(id,  con = "db/gtfs-static.db", verbose = TRUE,
+                     ...,
+                     .con = dbConnect(SQLite(), con)) {
+    ## Take a series of trip_id's and return the block information:
+    tids <- paste(id, collapse = "','")
+    sql <- sprintf("SELECT t.trip_id, t.route_id, t.shape_id,
+         CASE WHEN arrival_time IS NULL
+              THEN departure_time 
+              ELSE arrival_time END AS time,
+         st.stop_id, s.stop_lon, s.stop_lat, st.stop_sequence
+FROM trips AS t, stop_times AS st, stops AS s
+WHERE t.trip_id IN ('%s') AND t.trip_id = st.trip_id AND st.stop_id = s.stop_id
+  AND t.id_version = '35.34' AND st.id_version = '35.34'
+ORDER BY time, stop_sequence DESC", tids)
+
+    if (verbose) cat(sql, '\n')
+    
+    dbGetQuery(.con, sql)
+}
+
+
+getPattern <- function(id,  con = "db/gtfs-static.db", verbose = TRUE,
+                       ...,
+                       .con = dbConnect(SQLite(), con)) {
+    ## Take a series of trip_id's and return the block information:
+    tids <- paste(id, collapse = "','")
+    sql <- sprintf("SELECT DISTINCT t.trip_id, st.departure_time, t.route_id, t.shape_id,
+       s.shape_pt_lat, s.shape_pt_lon, s.shape_pt_sequence
+FROM trips AS t, stop_times AS st, shapes AS s
+WHERE t.trip_id IN ('%s') AND t.trip_id = st.trip_id AND st.stop_sequence = 1 AND t.shape_id = s.shape_id
+  AND t.id_version = '35.34' AND s.id_version = '35.34' AND st.id_version = '35.34'
+ORDER BY st.departure_time, s.shape_pt_sequence", tids)
+
+    if (verbose) cat(sql, '\n')
+    
+    dbGetQuery(.con, sql)
 }

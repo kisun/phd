@@ -1,14 +1,14 @@
 default:
 	@echo sudo apt-get update && sudo apt-get -y install inotify-tools
-	@echo Downloading GTFS schedule files ...
+	#@echo Downloading GTFS schedule files ...
 	@echo
 	@mkdir -p _data
-	@curl -o _data/gtfs.zip https://cdn01.at.govt.nz/data/gtfs.zip
+	#@curl -o _data/gtfs.zip https://cdn01.at.govt.nz/data/gtfs.zip
 
 	@echo
-	@echo Extracting files from ZIP archive ...
-	@rm -rf _data/gtfs
-	@unzip _data/gtfs.zip -d _data/gtfs
+	#@echo Extracting files from ZIP archive ...
+	#@rm -rf _data/gtfs
+	#@unzip _data/gtfs.zip -d _data/gtfs
 
 	@echo
 	@echo Creating GTFS database ...
