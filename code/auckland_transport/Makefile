@@ -1,14 +1,14 @@
 default:
 	@echo sudo apt-get update && sudo apt-get -y install inotify-tools
-	@echo Downloading GTFS schedule files ...
+	#@echo Downloading GTFS schedule files ...
 	@echo
 	@mkdir -p _data
-#	@curl -o _data/gtfs.zip https://cdn01.at.govt.nz/data/gtfs.zip
+	#@curl -o _data/gtfs.zip https://cdn01.at.govt.nz/data/gtfs.zip
 
 	@echo
-	@echo Extracting files from ZIP archive ...
-	@rm -rf _data/gtfs
-	@unzip _data/gtfs.zip -d _data/gtfs
+	#@echo Extracting files from ZIP archive ...
+	#@rm -rf _data/gtfs
+	#@unzip _data/gtfs.zip -d _data/gtfs
 
 	@echo
 	@echo Creating GTFS database ...
@@ -22,10 +22,9 @@ database:
 	@echo Adding GTFS schedule data to SQLite database ...
 	@echo
 	@mkdir -p db
+	-@mv db/gtfs-static.db db/gtfs-static-old.db
 	-@touch db/gtfs-static.db
 	@R -f scripts/build_gtfs_database.R --slave
-
-	@cp db/gtfs-static.db db/gtfs-realtime.db
 
 saveRT:
 	@echo Saving historical data to database ... cancel with CTRL + C

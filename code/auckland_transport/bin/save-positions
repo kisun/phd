@@ -1,0 +1,3 @@
+#!/bin/bash
+
+bin/gtfsrdb/gtfsrdb.py -p https://api.at.govt.nz/v1/public/realtime/vehiclelocations?api_key=$(cat apikey.txt) --accept="application/x-protobuf" -d sqlite:///db/gtfs-history.db -c
