@@ -22,17 +22,17 @@ getPositions <- function(con, route.id, vehicle.id, date,
     if (verbose)
         cat(sql, "\n")
 
-    ## SQL call 
+    ## SQL call
     pos <- dbGetQuery(con, sql)
 
     ## Value fixes
     pos$trip_start_date <- ifelse(nchar(pos$trip_start_date) == 0,
                                   tsDate(pos$timestamp),
                                   pos$trip_start_date)
-    strip.cols <- c("trip_id", "route_id")
+    #strip.cols <- c("trip_id", "route_id")
     #versions <- lapply(pos[, strip.cols], function(x) gsub(".+_v", "", x))
     #print(do.call(cbind, versions))
-    pos[, strip.cols] <- lapply(pos[, strip.cols], function(x) gsub("-.+", "", x))
+    #pos[, strip.cols] <- lapply(pos[, strip.cols], function(x) gsub("-.+", "", x))
 
     pos
 }
@@ -48,10 +48,33 @@ FROM trips as t, stop_times as s
 WHERE t.trip_id=s.trip_id AND t.trip_id IN ('%s') AND s.stop_sequence=1
 ORDER BY departure_time",
                    paste(ids, collapse = "','"))
-    
+
     if (verbose) cat(sql, '\n')
 
-    dbGetQuery(.con, sql)
+    resp <- dbGetQuery(.con, sql)
+
+    if (nrow(resp) == 0) {
+      api <- readLines("apikey.txt")
+      # Stop Times
+      url <- sapply(ids, function(id) sprintf("http://api.at.govt.nz/v1/gtfs/stopTimes/tripId/%s?api_key=%s", id, api))
+
+      l <- list()
+      pb <- txtProgressBar(0, length(url), style=3)
+      for (i in seq_along(url)) {
+        l[[i]] <- jsonlite::fromJSON(url[i])$response
+        setTxtProgressBar(pb, i)
+      }
+      close(pb)
+
+      f <- as.data.frame(do.call(rbind, l))
+      if (dbWriteTable(.con, "stop_times", f, append = TRUE)) {
+          resp <- dbGetQuery(.con, sql)
+      } else {
+          stop("\nUnable to get the associated stop times ...\n")
+      }
+    }
+
+    resp
 }
 
 getSchedule <- function(id,  con = "db/gtfs-static.db", verbose = TRUE,
@@ -65,7 +88,25 @@ ORDER BY stop_sequence", id)
 
     if (verbose) cat(sql, '\n')
 
-    dbGetQuery(.con, sql)
+    resp <- dbGetQuery(.con, sql)
+
+    if (nrow(resp) == 0) {
+      api <- readLines("apikey.txt")
+      ## no entries for that ID in the database - download new ones
+      url <-
+    if (verbose) cat(sql, '\n')
+
+      f <- as.data.frame(jsonlite::fromJSON(url[1])$response)
+
+      if (dbWriteTable(.con, "stop_times", f, append = TRUE)) {
+          resp <- dbGetQuery(.con, sql)
+      } else {
+          stop("\nUnable to get the associated stop times ...\n")
+      }
+
+    }
+
+    resp
 }
 
 getBlocksA <- function(date, con = "db/gtfs-history.db", verbose = TRUE,
@@ -74,7 +115,7 @@ getBlocksA <- function(date, con = "db/gtfs-history.db", verbose = TRUE,
     ## Grab all vehicle-blocks on a given date:
 
     datets <- as.numeric(format(as.POSIXct(date), format = "%s")) + c(0, 86400)
-    
+
     sql <- sprintf("SELECT DISTINCT vehicle_id, trip_id, min(trip_start_time) AS start FROM vehicle_positions
 WHERE timestamp >= %s AND timestamp < %s
 GROUP BY vehicle_id, trip_id
@@ -102,16 +143,15 @@ getBlock <- function(id,  con = "db/gtfs-static.db", verbose = TRUE,
     tids <- paste(id, collapse = "','")
     sql <- sprintf("SELECT t.trip_id, t.route_id, t.shape_id,
          CASE WHEN arrival_time IS NULL
-              THEN departure_time 
+              THEN departure_time
               ELSE arrival_time END AS time,
          st.stop_id, s.stop_lon, s.stop_lat, st.stop_sequence
 FROM trips AS t, stop_times AS st, stops AS s
 WHERE t.trip_id IN ('%s') AND t.trip_id = st.trip_id AND st.stop_id = s.stop_id
-  AND t.id_version = '35.34' AND st.id_version = '35.34'
 ORDER BY time, stop_sequence DESC", tids)
 
     if (verbose) cat(sql, '\n')
-    
+
     dbGetQuery(.con, sql)
 }
 
@@ -125,10 +165,40 @@ getPattern <- function(id,  con = "db/gtfs-static.db", verbose = TRUE,
        s.shape_pt_lat, s.shape_pt_lon, s.shape_pt_sequence
 FROM trips AS t, stop_times AS st, shapes AS s
 WHERE t.trip_id IN ('%s') AND t.trip_id = st.trip_id AND st.stop_sequence = 1 AND t.shape_id = s.shape_id
-  AND t.id_version = '35.34' AND s.id_version = '35.34' AND st.id_version = '35.34'
 ORDER BY st.departure_time, s.shape_pt_sequence", tids)
 
     if (verbose) cat(sql, '\n')
-    
-    dbGetQuery(.con, sql)
+
+    resp <- dbGetQuery(.con, sql)
+
+    if (any(!id %in% unique(resp$trip_id))) {
+      ID <- id[!id %in% unique(resp$trip_id)]
+      cat("\nDownloading shape files ...\n")
+      print(ID)
+
+      api <- readLines("apikey.txt")
+      # Shape files
+      url <- sapply(ID, function(id) sprintf("http://api.at.govt.nz/v1/gtfs/shapes/tripId/%s?api_key=%s", id, api))
+
+      l <- list()
+      pb <- txtProgressBar(0, length(ID), style = 3)
+      for (i in seq_along(ID)) {
+        l[[i]] <- try(jsonlite::fromJSON(url[i])$response, TRUE)
+        if (inherits(l[[i]], "try-error")) {
+          l[[i]] <- NULL
+          warning("Error downloading shape ", ID[i])
+        }
+        setTxtProgressBar(pb, i)
+      }
+      close(pb)
+
+      f <- as.data.frame(do.call(rbind, l))
+      if (dbWriteTable(.con, "shapes", f, append = TRUE)) {
+          resp <- dbGetQuery(.con, sql)
+      } else {
+          stop("\nUnable to get the associated shape files ...\n")
+      }
+    }
+
+    resp
 }

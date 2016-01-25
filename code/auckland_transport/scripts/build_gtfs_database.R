@@ -78,7 +78,7 @@ table = "stop_times"
 cat("\nCreating table stop_times ...")
 trip.ids = unique(.trips$trip_id)
 url = sapply(trip.ids, function(id)
-    sprintf("http://api.at.govt.nz/v1/gtfs/stops/tripId/%s?api_key=%s", id, api))
+    sprintf("http://api.at.govt.nz/v1/gtfs/stopTimes/tripId/%s?api_key=%s", id, api))
 
 ## only use the first one to create the DB
 f =  fromJSON(url[1])$response
@@ -89,4 +89,3 @@ if (dbWriteTable(con, table, f, append = FALSE, overwrite = TRUE)) {
 }
 
 cat("\n\n")
-

@@ -22,7 +22,7 @@ database:
 	@echo Adding GTFS schedule data to SQLite database ...
 	@echo
 	@mkdir -p db/backups
-	-@mv db/gtfs-static.db db/backup/gtfs-static_$(shell date +%Y%m%d%H%M%S).db
+	-@mv db/gtfs-static.db db/backups/gtfs-static_$(shell date +%Y%m%d%H%M%S).db
 	-@touch db/gtfs-static.db
 	@R -f scripts/build_gtfs_database.R --slave
 

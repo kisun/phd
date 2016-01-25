@@ -30,18 +30,18 @@ plot(vehicle.map, pch = 19, cex.pt = 0.5, col.pt = "black", g1 = trip_start_time
      main = sprintf("Journey of Bus %s on %s", vehicleid, dateFmt))
 
 
-
 loadall()
 trips <- getTrips(unique(positions2$trip_id))
+
 trips
 
 
 
 ## let's watch a movie ...
-dat <- positions2[-(1:14), ]
-mp <- iNZightMap(~position_latitude, ~position_longitude, data = dat, name = "Auckland Busses")
-xyT <- latlon.xy(data.frame(x=dat$position_latitude, y=dat$position_longitude), map = global.objects$maps$map)
-plot(mp, pch = 4, cex.pt = 0.4)
+## dat <- positions2[-(1:14), ]
+## mp <- iNZightMap(~position_latitude, ~position_longitude, data = dat, name = "Auckland Busses")
+## xyT <- latlon.xy(data.frame(x=dat$position_latitude, y=dat$position_longitude), map = global.objects$maps$map)
+## plot(mp, pch = 4, cex.pt = 0.4)
 
 ## install.packages("animation")
 ## library(animation)
@@ -64,9 +64,10 @@ plot(mp, pch = 4, cex.pt = 0.4)
 
 ## Manual fix:
 ## 12:15 trip -> 14:15 trip
-dat$trip_id[dat$trip_start_time == "12:15:00"] <- (dat$trip_id[dat$trip_start_time == "14:15:00"])[1]
-dat$trip_start_time[dat$trip_start_time == "12:15:00"] <- "14:15:00"
+#dat$trip_id[dat$trip_start_time == "12:15:00"] <- (dat$trip_id[dat$trip_start_time == "14:15:00"])[1]
+#dat$trip_start_time[dat$trip_start_time == "12:15:00"] <- "14:15:00"
 
+dat <- positions2
 
 ## Get stop info:
 loadall()
@@ -92,19 +93,15 @@ pattern <- getPattern(unique(dat$trip_id))
 head(pattern)
 
 
-devAskNewPage(TRUE)
-for (id in unique(pattern$shape_id)) {
-    plot(dat$position_longitude, dat$position_latitude)
-    with(pattern[pattern$shape_id == id, ], lines(shape_pt_lon, shape_pt_lat, pch = 4, col = "red", cex = 0.4))
-}
-devAskNewPage(FALSE)
+## devAskNewPage(TRUE)
+## for (id in unique(pattern$trip_id)) {
+##     plot(dat$position_longitude, dat$position_latitude)
+##     with(pattern[pattern$trip_id == id, ], lines(shape_pt_lon, shape_pt_lat, pch = 4, col = "red", cex = 0.4))
+## }
+## devAskNewPage(FALSE)
 
-plot(vehicle.map, pch = 4, cex.pt = 0.5, colby = started, col.pt = c("red", "gray50"),
-     main = sprintf("Journey of Bus %s on %s", vehicleid, dateFmt))
-xyT <- latlon.xy(data.frame(x=as.numeric(pattern$shape_pt_lon),
-                            y=as.numeric(pattern$shape_pt_lat)), map = global.objects$maps$map)
-tmp = iNZightMaps:::map.xylim(grid::current.viewport()$yscale, grid::current.viewport()$xscale, SCALE = 2)$window.lim
-grid::pushViewport(grid::viewport(xscale = tmp[1:2], yscale = tmp[3:4]))
-grid::grid.points(xyT$newX, xyT$newY, pch = 19, gp = grid::gpar(col = "#ff000040"))
 
-unique(pattern$shape_id)
+
+### Implement some model ... :D
+
+
