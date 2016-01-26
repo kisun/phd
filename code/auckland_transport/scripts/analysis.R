@@ -103,5 +103,8 @@ head(pattern)
 
 
 ### Implement some model ... :D
+library(R6)
 
+loadall()
+v001 = vehicle$new(001, c(-36, 173))
 
