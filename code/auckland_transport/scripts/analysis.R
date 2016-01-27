@@ -61,13 +61,7 @@ trips
 ##          ani.height = 600, ani.width = 800)
 
 
-
-## Manual fix:
-## 12:15 trip -> 14:15 trip
-#dat$trip_id[dat$trip_start_time == "12:15:00"] <- (dat$trip_id[dat$trip_start_time == "14:15:00"])[1]
-#dat$trip_start_time[dat$trip_start_time == "12:15:00"] <- "14:15:00"
-
-dat <- positions2
+dat <- positions2[-c(1:14), ]
 
 ## Get stop info:
 loadall()
@@ -103,8 +97,13 @@ head(pattern)
 
 
 ### Implement some model ... :D
-library(R6)
-
 loadall()
-v001 = vehicle$new(001, c(-36, 173))
+v001 = vehicle$new(dat$vehicle_id[1],
+                   dat[1, c("position_latitude", "position_longitude", "timestamp")],
+                   dat$trip_id[1], pattern = pattern)
+v001$plot()
+v001$update()$plot()
+v001$update(dat[2, c("position_latitude", "position_longitude", "timestamp")])$plot()
 
+i <- 2
+i <- i + 1; v001$update(dat[i, c("position_latitude", "position_longitude", "timestamp")])$plot()
