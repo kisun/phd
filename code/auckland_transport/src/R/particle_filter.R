@@ -1,7 +1,7 @@
 require(R6)
 vehicle = R6Class("vehicle",
                   public = list(
-                      sig.a = 2.3,
+                      sig.a = 1.5,
                       sig.gps = 50,
                       initialize = function(id, position, trip, pattern, N.particles = 200) {
                           private$vehicle.id <- id
@@ -79,7 +79,13 @@ vehicle = R6Class("vehicle",
                           if (update) {
                               wt <- private$particleLikelihood()
                               wi <- sample(length(wt), length(wt), replace = TRUE, prob = wt)
+
+                              private$history$x <- abind::abind(private$history$x,
+                                                                private$particles, along = 3)
+                              
                               private$particles <- private$particles[, wi]
+                              private$history$xhat <- abind::abind(private$history$xhat,
+                                                                   private$particles, along = 3)
                           }
                           
                           
@@ -104,11 +110,21 @@ vehicle = R6Class("vehicle",
                               self$plotParticles(xlim = range(private$pattern$shape_pt_lon),
                                                  ylim = range(private$pattern$shape_pt_lat),
                                                  ...)
+                              if (length(dim(private$history$x)) == 3) {
+                                  d2 <- apply(private$history$x[,,dim(private$history$x)[3]], 2, h, shape = private$pattern)
+                                  addPoints(d2[2, ], d2[1, ], pch = 3,
+                                            gp = list(cex = 0.4, col = "#009900"))
+                              }
+                              
                               addPoints(private$position[2], private$position[1],
                                         pch = 4, gp = list(cex = 0.7, col = "#FF0000"))
                           }
                           
                           invisible(self)
+                      },
+
+                      getParticles = function() {
+                          return(private$history)
                       }
                   ),
 
@@ -121,6 +137,8 @@ vehicle = R6Class("vehicle",
                       
                       N.particles = NA,
                       particles = NULL,
+                      history =
+                          list(x = NULL, xhat = NULL),
 
                       initParticles = function() {
                           if (is.null(private$pattern)) stop("Please add a pattern.")
@@ -135,6 +153,9 @@ vehicle = R6Class("vehicle",
                           rownames(tmp) <- c("distance", "velocity", "acceleration")
 
                           private$particles <- tmp
+
+                          private$history$x <- tmp
+                          private$history$xhat <- matrix(NA, nrow = nrow(tmp), ncol = ncol(tmp))
 
                           invisible(self)
                       },
@@ -167,12 +188,13 @@ vehicle = R6Class("vehicle",
                           ## this is the model!
                           x <- private$particles
                           a <- rnorm(private$N.particles, 0, self$sig.a)
-                          v <- pmin(30, pmax(0, x[2, ] + delta * x[3, ]))
-                          d <- x[1, ] + delta * x[2, ] + delta^2 / 2 * x[3, ]
+                          ## hard code the fact that the bus isn't going to to backwards ... 
+                          v <- pmin(30, pmax(0, x[2, ] + delta * a))
+                          d <- x[1, ] + pmax(0, delta * x[2, ] + delta^2 / 2 * a)
                           private$particles <- rbind(distance = d,
                                                      velocity = v,
                                                      acceleration = a)
-                          
+
                           invisible(self)
                       }
                   )

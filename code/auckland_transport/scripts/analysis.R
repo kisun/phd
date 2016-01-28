@@ -5,8 +5,8 @@ loadall <- function()
 
 
 loadall()
-con <- dbConnect(SQLite(), "db/gtfs-history.db")
-positions <- getPositions(con, route.id = "09001")
+con <- dbConnect(SQLite(), "db/backups/gtfs-history.db")
+positions <- getPositions(con, route.id = "090")
 latest.map <- iNZightMap(~position_latitude, ~position_longitude, data = positions,
                          name = "Auckland Busses")
 plot(latest.map, pch = 19, cex.pt = 0.1, col.pt = "#00000040")
@@ -61,7 +61,7 @@ trips
 ##          ani.height = 600, ani.width = 800)
 
 
-dat <- positions2[-c(1:14), ]
+dat <- positions2[-c(1:36), ]
 
 ## Get stop info:
 loadall()
@@ -104,6 +104,11 @@ v001 = vehicle$new(dat$vehicle_id[1],
 v001$plot()
 v001$update()$plot()
 v001$update(dat[2, c("position_latitude", "position_longitude", "timestamp")])$plot()
+v001$update(dat[3, c("position_latitude", "position_longitude", "timestamp")])$plot()
 
-i <- 2
-i <- i + 1; v001$update(dat[i, c("position_latitude", "position_longitude", "timestamp")])$plot()
+
+
+for (i in 2:nrow(dat)) {
+    v001$update(dat[i, c("position_latitude", "position_longitude", "timestamp")])$plot()
+    grid::grid.locator()
+}
