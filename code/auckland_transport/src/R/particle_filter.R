@@ -1,7 +1,7 @@
 require(R6)
 vehicle = R6Class("vehicle",
                   public = list(
-                      sig.a = 1.5,
+                      sig.a = 1.2,
                       sig.gps = 50,
                       initialize = function(id, position, trip, pattern, N.particles = 200) {
                           private$vehicle.id <- id
@@ -60,7 +60,7 @@ vehicle = R6Class("vehicle",
                           invisible(self)
                       },
                       
-                      update = function(pos) { 
+                      update = function(pos, trip) { 
                           ## updates the POSITION of the vehicle, and runs another iteration
                           #private$position <- as.numeric(pos[1], pos[2], pos[3])
 
@@ -69,6 +69,9 @@ vehicle = R6Class("vehicle",
                           if (!missing(pos)) {
                               r <- private$position
                               delta <- pos[3] - r[3]
+                              if (!missing(trip))
+                                  private$current.trip <- trip
+                              
                               if (delta > 0) {
                                   ## new data! run filter
                                   private$position <- as.numeric(pos)
@@ -191,7 +194,12 @@ vehicle = R6Class("vehicle",
                           ## hard code the fact that the bus isn't going to to backwards ... 
                           v <- pmin(30, pmax(0, x[2, ] + delta * a))
                           d <- x[1, ] + pmax(0, delta * x[2, ] + delta^2 / 2 * a)
-                          private$particles <- rbind(distance = d,
+
+                          ## need to limit the distance!\
+                          dist.max <- max(private$pattern$distance_into_pattern[
+                              which(private$pattern$trip_id == private$current.trip) + 1])
+                          
+                          private$particles <- rbind(distance = pmin(dist.max, d),
                                                      velocity = v,
                                                      acceleration = a)
 

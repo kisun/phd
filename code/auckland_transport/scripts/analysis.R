@@ -5,7 +5,7 @@ loadall <- function()
 
 
 loadall()
-con <- dbConnect(SQLite(), "db/backups/gtfs-history.db")
+con <- dbConnect(SQLite(), "db/gtfs-history.db")
 positions <- getPositions(con, route.id = "090")
 latest.map <- iNZightMap(~position_latitude, ~position_longitude, data = positions,
                          name = "Auckland Busses")
@@ -61,7 +61,7 @@ trips
 ##          ani.height = 600, ani.width = 800)
 
 
-dat <- positions2[-c(1:36), ]
+dat <- positions2[-c(1:13), ]
 
 ## Get stop info:
 loadall()
@@ -107,8 +107,21 @@ v001$update(dat[2, c("position_latitude", "position_longitude", "timestamp")])$p
 v001$update(dat[3, c("position_latitude", "position_longitude", "timestamp")])$plot()
 
 
-
+pb <- txtProgressBar(2, nrow(dat), style = 3)
 for (i in 2:nrow(dat)) {
-    v001$update(dat[i, c("position_latitude", "position_longitude", "timestamp")])$plot()
-    grid::grid.locator()
+    v001$update(dat[i, c("position_latitude", "position_longitude", "timestamp")],
+                dat[i, "trip_id"])
+    setTxtProgressBar(pb, i)
+#    grid::grid.locator()
 }
+close(pb)
+
+
+hist <- v001$getParticles()
+
+histX <- hist$x
+dX <- histX[1,,]
+
+plot(NA, xlim = range(dat$timestamp), ylim = range(dX, na.rm = TRUE),
+     xlab = "Time", ylab = "Distance into Block (m)")
+for (i in 1:ncol(dX)) points(rep(dat$timestamp[i], nrow(dX)), dX[, i], pch = 4)
