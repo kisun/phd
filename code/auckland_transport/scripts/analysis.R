@@ -108,17 +108,18 @@ v001 = vehicle$new(dat$vehicle_id[1],
                    dat$trip_id[1], pattern = pattern)
 v001$plot()
 v001$update()$plot()
-v001$update(dat[2, c("position_latitude", "position_longitude", "timestamp")])$plot()
-v001$update(dat[3, c("position_latitude", "position_longitude", "timestamp")])$plot()
+#v001$update(dat[2, c("position_latitude", "position_longitude", "timestamp")])$plot()
+#v001$update(dat[3, c("position_latitude", "position_longitude", "timestamp")])$plot()
 
+v001$plotSchedule("a")
 
 pb <- txtProgressBar(2, nrow(dat), style = 3)
 for (i in 2:nrow(dat)) {
     v001$update(dat[i, c("position_latitude", "position_longitude", "timestamp")],
-                dat[i, "trip_id"])$plot()
+                dat[i, "trip_id"])#$plot()
     setTxtProgressBar(pb, i)
-    #v001$info()
-    grid::grid.locator()
+#    v001$info()
+#    grid::grid.locator()
 }
 close(pb)
 
@@ -130,6 +131,10 @@ dX <- histX[1,,]
 
 plot(NA, xlim = range(dat$timestamp), ylim = range(dX, na.rm = TRUE),
      xlab = "Time", ylab = "Distance into Block (m)")
-for (i in 1:ncol(dX)) points(rep(dat$timestamp[i], nrow(dX)), dX[, i], pch = 4)
+for (i in 1:ncol(dX)) points(rep(dat$timestamp[i], nrow(dX)), dX[, i], pch = 4,
+                             col = "#00990040")
 for (i in 1:ncol(dX)) points(rep(dat$timestamp[i], nrow(dX)), hist$xhat[1,,i],
-                             pch = 4, col="red", cex=0.5)
+                             pch = 4, col="#00009940", cex=0.5)
+
+
+## Use schedule info??

@@ -7,7 +7,8 @@ vehicle = R6Class("vehicle",
                           private$vehicle.id <- id
                           private$position <- as.numeric(position)
                           private$current.trip <- trip
-
+                          private$setSchedule()
+                          
                           private$N.particles <- N.particles
                           
                           if (!missing(pattern)) {
@@ -69,8 +70,13 @@ vehicle = R6Class("vehicle",
                           if (!missing(pos)) {
                               r <- private$position
                               delta <- pos[3] - r[3]
-                              if (!missing(trip))
-                                  private$current.trip <- trip
+                              if (!missing(trip)) {
+                                  if (trip != private$current.trip ||
+                                      is.null(private$schedule$distance_into_trip)) {
+                                      private$current.trip <- trip
+                                      private$setSchedule()
+                                  }
+                              }
                               
                               if (delta > 0) {
                                   ## new data! run filter
@@ -130,6 +136,39 @@ vehicle = R6Class("vehicle",
                           return(private$history)
                       },
 
+                      getSchedule = function() {
+                          return(private$schedule)
+                      },
+
+                      plotSchedule = function(which = c("distance", "speed", "acceleration")) {
+                          which <- match.arg(which)
+                          switch(which,
+                                 "distance" = {
+                                     curve(private$schedule.fn(x, deriv = 0),
+                                           from = min(private$schedule$time),
+                                           to = max(private$schedule$time),
+                                           n = 101,
+                                           xlab = "Time (s)",
+                                           ylab = "Distance (m)")
+                                 },
+                                 "speed" = {
+                                     curve(private$schedule.fn(x, deriv = 1),
+                                           from = min(private$schedule$time),
+                                           to = max(private$schedule$time),
+                                           n = 101,
+                                           xlab = "Time (s)",
+                                           ylab = "Speed (m/s)")
+                                 },
+                                 "acceleration" = {
+                                     curve(private$schedule.fn(x, deriv = 2),
+                                           from = min(private$schedule$time),
+                                           to = max(private$schedule$time),
+                                           n = 101,
+                                           xlab = "Time (s)",
+                                           ylab = "Speed (m/s/s)")
+                                 })
+                      },
+
                       info = function() {
                           cat("\n\nVehicle ID:", private$vehicle.id,
                               "\n   Trip ID:", private$current.trip,
@@ -147,6 +186,10 @@ vehicle = R6Class("vehicle",
                       current.trip = NA,
                       pattern = NULL,
                       pattern.length = NA,
+                      schedule = NULL,
+                      schedule.fn = NULL,
+                      schedule.fnD = NULL,
+                      acc.sd = NA,
                       
                       N.particles = NA,
                       particles = NULL,
@@ -171,6 +214,59 @@ vehicle = R6Class("vehicle",
                           private$history$xhat <- matrix(NA, nrow = nrow(tmp), ncol = ncol(tmp))
 
                           invisible(self)
+                      },
+                      
+                      setSchedule = function() {
+                          private$schedule <- getSchedule(private$current.trip, verbose = FALSE)
+
+                          ## Times, in seconds:
+                          time <- ifelse(is.na(private$schedule$arrival_time),
+                                         private$schedule$departure_time,
+                                         private$schedule$arrival_time)
+                          time.sec <- t(sapply(time, function(x)
+                              as.numeric(unlist(strsplit(x, ":"))))) %*% c(60 * 60, 60, 1)
+                          private$schedule$time <- time.sec - min(time.sec)
+
+                          ## Distance:
+                          if (!is.na(private$current.trip)) {
+                              if (is.null(private$pattern)) {
+                                  suppressWarnings({
+                                      private$schedule$distance_into_trip <-
+                                          getShapeDist(private$schedule,
+                                                       getPattern(private$current.trip,
+                                                                  verbose = FALSE))
+                                  })
+                              } else {
+                                  private$schedule$distance_into_trip <-
+                                      suppressWarnings({
+                                          getShapeDist(private$schedule,
+                                                       private$pattern[private$pattern$trip_id ==
+                                                                       private$current.trip, ])
+                                      })
+                              }
+                          }
+
+                          schedule.fn <- try({
+                              splinefun(private$schedule$time,
+                                        private$schedule$distance_into_trip,
+                                        method = "hyman", ties = min)
+                          }, silent = TRUE)
+                          if (inherits(schedule.fn, "try-error")) {
+                              warning("Error fitting speed function.")
+                              private$schedule.fn <- NULL
+                          } else {
+                              private$schedule.fn <- schedule.fn
+                              private$acc.sd <- sd(schedule.fn(seq(min(private$schedule$time),
+                                                                   max(private$schedule$time),
+                                                                   length = 1001), deriv = 2))
+                          }
+
+                          private$schedule.fnD <- function(d, deriv = 1) {
+                              ## convert distance to time, time to ["speed", "acceleration"]
+                              t <- optimize(function(x) (private$schedule.fn(x) - d)^2,
+                                            interval = range(private$schedule$time))$minimum
+                              private$schedule.fn(t, deriv = deriv)
+                          }
                       },
 
                       particlePositions = function() {
@@ -200,7 +296,14 @@ vehicle = R6Class("vehicle",
                           delta <- as.numeric(delta)
                           ## this is the model!
                           x <- private$particles
-                          a <- rnorm(private$N.particles, x[3, ], self$sig.a)
+                          if (is.null(private$schedule.fn)) {
+                              a <- rnorm(private$N.particles, x[3, ], self$sig.a)
+                          } else {
+                              a <- rnorm(private$N.particles,
+                                         sapply(x[1, ], private$schedule.fnD, deriv = 2),
+                                         private$acc.sd * 1.5)
+                          }
+                          
                           ## hard code the fact that the bus isn't going to to backwards ... 
                           v <- pmax(0, x[2, ] + delta * a)
                           d <- x[1, ] + pmax(0, delta * x[2, ] + delta^2 / 2 * a)

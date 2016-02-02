@@ -202,3 +202,81 @@ ORDER BY st.departure_time, s.shape_pt_sequence", tids)
 
     resp
 }
+
+
+getShapeDist <- function(sched, shape) {
+    sched <- sched[, c("stop_lon", "stop_lat")]
+    shape <- shape[, c("shape_pt_lon", "shape_pt_lat")]
+    
+    z <- t(shape[,1:2])
+    di <- distanceFlat(z[, -ncol(z)], z[, -1])
+    shape$distance <- c(0, cumsum(di))
+    shape$length <- c(di, NA)
+    shape$bearing <- c(bearing(z[, -ncol(z)], z[, -1]), NA)
+    shape <- shape[shape$length > 0 | is.na(shape$length), ]
+    
+    ## Convert to FLAT XY
+    shape$lam <- as.numeric(shape$shape_pt_lon) * pi / 180
+    shape$phi <- as.numeric(shape$shape_pt_lat) * pi / 180
+    sched$lam <- as.numeric(sched$stop_lon) * pi / 180
+    sched$phi <- as.numeric(sched$stop_lat) * pi / 180
+    
+    phi1 <- mean(shape$phi)
+    shape$x <- shape$lam * cos(phi1)
+    shape$y <- shape$phi
+    sched$x <- sched$lam * cos(phi1)
+    sched$y <- sched$phi
+    
+    #plot(shape$x, shape$y, type = "l", asp = 1)
+    
+    d <- numeric(nrow(sched))
+    J <- 1
+    nr <- nrow(shape)
+    nr1 <- nr - 1
+    for (i in 1:nrow(sched)) {
+        p <- as.numeric(sched[i, c("x", "y")])
+        
+        di <- ri <- numeric(nr - J)
+        pxy <- matrix(NA, nrow = nr - J, ncol = 2)
+        for (j in J:nr1) {
+            ji <- j - J + 1
+            q1 <- as.numeric(shape[j, c("x", "y")])
+            q2 <- as.numeric(shape[j + 1, c("x", "y")])
+            
+            v <- q2 - q1
+            w <- p - q1
+        
+            wv <- w %*% v
+            vv <- v %*% v
+            ww <- w %*% w
+                        
+            if (wv < 0) {
+                r2 <- ww
+                di[ji] <- 0
+                ri[ji] <- sqrt(r2)
+            } else if (wv <= vv) {
+                d2 <- wv^2 / vv
+                r2 <- ww - d2
+                ri[ji] <- sqrt(r2)
+                di[ji] <- sqrt(d2)
+            } else {
+                r2 <- (w - v) %*% (w - v)
+                d2 <- vv
+                ri[ji] <- sqrt(r2)
+                di[ji] <- sqrt(d2)
+            }
+            
+            pxy[ji, ] <- q1 + di[ji] / sqrt(vv) * v
+        }
+        
+        wi <- which.min(ri)
+        J <- J + wi - 1
+        
+        ## convert it:
+        ## points(pxy[1], pxy[2], cex = 0.5, pch = 4, col = "blue")
+        pll <- c(pxy[wi, 1] / cos(phi1), pxy[wi, 2]) * 180 / pi
+        d[i] <- shape[J, "distance"] + distanceFlat(pll, as.numeric(shape[J, c("shape_pt_lon", "shape_pt_lat")]))
+    }
+
+    d
+}
