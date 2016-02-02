@@ -13,7 +13,7 @@ plot(latest.map, pch = 19, cex.pt = 0.1, col.pt = "#00000040")
 
 
 tab <- table(positions$vehicle_id)
-vehicleid <- names(tab)[which.max(tab)]
+vehicleid <- names(tab)[which.max(tab) +1 ]
 
 tab2 <- table(positions$trip_start_date[positions$vehicle_id == vehicleid])
 date <- names(tab2)[which.max(tab2)]
@@ -61,7 +61,7 @@ trips
 ##          ani.height = 600, ani.width = 800)
 
 
-dat <- positions2[-c(1:13), ]
+dat <- positions2[-c(1:15), ]
 
 ## Get stop info:
 loadall()
@@ -76,6 +76,11 @@ vehicle.map <- iNZightMap(~position_latitude, ~position_longitude, data = dat,
                           name = "Bus 090")
 plot(vehicle.map, pch = 4, cex.pt = 0.5, g1 = trip_start_time, colby = started, col.pt = c("red", "gray50"),
      main = sprintf("Journey of Bus %s on %s", vehicleid, dateFmt))
+
+plot(vehicle.map,  cex.pt = 0.5, g1 = trip_start_time, colby = started, col.pt = c("red", "gray50"),
+     g1.level = 10, sizeby = timestamp,
+     main = sprintf("Journey of Bus %s on %s", vehicleid, dateFmt))
+
 
 
 ## --- now the data is filtered and basically ready to analyse!
@@ -110,9 +115,10 @@ v001$update(dat[3, c("position_latitude", "position_longitude", "timestamp")])$p
 pb <- txtProgressBar(2, nrow(dat), style = 3)
 for (i in 2:nrow(dat)) {
     v001$update(dat[i, c("position_latitude", "position_longitude", "timestamp")],
-                dat[i, "trip_id"])
+                dat[i, "trip_id"])$plot()
     setTxtProgressBar(pb, i)
-#    grid::grid.locator()
+    #v001$info()
+    grid::grid.locator()
 }
 close(pb)
 
@@ -125,3 +131,5 @@ dX <- histX[1,,]
 plot(NA, xlim = range(dat$timestamp), ylim = range(dX, na.rm = TRUE),
      xlab = "Time", ylab = "Distance into Block (m)")
 for (i in 1:ncol(dX)) points(rep(dat$timestamp[i], nrow(dX)), dX[, i], pch = 4)
+for (i in 1:ncol(dX)) points(rep(dat$timestamp[i], nrow(dX)), hist$xhat[1,,i],
+                             pch = 4, col="red", cex=0.5)

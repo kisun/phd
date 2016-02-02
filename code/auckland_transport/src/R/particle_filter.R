@@ -1,8 +1,8 @@
 require(R6)
 vehicle = R6Class("vehicle",
                   public = list(
-                      sig.a = 1.2,
-                      sig.gps = 50,
+                      sig.a = sqrt(3),
+                      sig.gps = 30,
                       initialize = function(id, position, trip, pattern, N.particles = 200) {
                           private$vehicle.id <- id
                           private$position <- as.numeric(position)
@@ -128,7 +128,17 @@ vehicle = R6Class("vehicle",
 
                       getParticles = function() {
                           return(private$history)
+                      },
+
+                      info = function() {
+                          cat("\n\nVehicle ID:", private$vehicle.id,
+                              "\n   Trip ID:", private$current.trip,
+                              "\n Particles: mean =", rowMeans(private$particles),
+                              "\n            sd   =", apply(private$particles, 1, sd))
+
+                          invisible(self)
                       }
+                      
                   ),
 
                   private = list(
@@ -190,14 +200,16 @@ vehicle = R6Class("vehicle",
                           delta <- as.numeric(delta)
                           ## this is the model!
                           x <- private$particles
-                          a <- rnorm(private$N.particles, 0, self$sig.a)
+                          a <- rnorm(private$N.particles, x[3, ], self$sig.a)
                           ## hard code the fact that the bus isn't going to to backwards ... 
-                          v <- pmin(30, pmax(0, x[2, ] + delta * a))
+                          v <- pmax(0, x[2, ] + delta * a)
                           d <- x[1, ] + pmax(0, delta * x[2, ] + delta^2 / 2 * a)
 
-                          ## need to limit the distance!\
-                          dist.max <- max(private$pattern$distance_into_pattern[
-                              which(private$pattern$trip_id == private$current.trip) + 1])
+                          ## need to limit the distance!
+                          w <- which(private$pattern$trip_id == private$current.trip)
+                          if (max(w) < nrow(private$pattern))
+                              w <- w + 1
+                          dist.max <- max(private$pattern$distance_into_pattern[w], na.rm = TRUE)
                           
                           private$particles <- rbind(distance = pmin(dist.max, d),
                                                      velocity = v,
@@ -264,7 +276,8 @@ partialSegment <- function(x, theta, d, R = 6371000) {
 h <- function(x, shape) {
     ## Calculate Lat/Lon position of point(s) a given distance (x)
     ## into a pattern/shape
-   
+
+    if (is.na(x[1])) print(x)
     if (x[1] <= 0) return(c(0, 0))
     if (x[1] > max(shape$distance_into_pattern))
         return(as.numeric(shape[nrow(shape), c("shape_pt_lat", "shape_pt_lon")]))
