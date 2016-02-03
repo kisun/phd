@@ -127,7 +127,7 @@ close(pb)
 hist <- v001$getParticles()
 
 histX <- hist$x
-dX <- histX[1,,]
+dX <- histX[1,]
 
 plot(NA, xlim = range(dat$timestamp), ylim = range(dX, na.rm = TRUE),
      xlab = "Time", ylab = "Distance into Block (m)")
@@ -137,4 +137,33 @@ for (i in 1:ncol(dX)) points(rep(dat$timestamp[i], nrow(dX)), hist$xhat[1,,i],
                              pch = 4, col="#00009940", cex=0.5)
 
 
-## Use schedule info??
+## No schedule??
+loadall()
+v002 = vehicle$new(dat$vehicle_id[1],
+                   dat[1, c("position_latitude", "position_longitude", "timestamp")],
+                   dat$trip_id[1])
+v002$setInits()
+v002$plot()
+v002$update()$plot()
+
+pb <- txtProgressBar(2, nrow(dat), style = 3)
+for (i in 2:nrow(dat)) {
+    v002$update(dat[i, c("position_latitude", "position_longitude", "timestamp")],
+                dat[i, "trip_id"])$plot()
+    setTxtProgressBar(pb, i)
+#    v001$info()
+    grid::grid.locator()
+}
+close(pb)
+
+hist <- v002$getParticles()
+
+histX <- hist$x
+dX <- histX[1,]
+
+plot(NA, xlim = range(dat$timestamp), ylim = range(dX, na.rm = TRUE),
+     xlab = "Time", ylab = "Distance into Block (m)")
+for (i in 1:ncol(dX)) points(rep(dat$timestamp[i], nrow(dX)), dX[, i], pch = 4,
+                             col = "#00990040")
+for (i in 1:ncol(dX)) points(rep(dat$timestamp[i], nrow(dX)), hist$xhat[1,,i],
+                             pch = 4, col="#00009940", cex=0.5)

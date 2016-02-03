@@ -14,6 +14,9 @@ vehicle = R6Class("vehicle",
                           if (!missing(pattern)) {
                               self$setPattern(pattern)
                               private$initParticles()
+                          } else if (!missing(trip)) {
+                              self$setPattern(getPattern(trip, verbose = FALSE))
+                              private$initParticles()
                           }
                           
                           cat("New vehicle instantiated.\n")
@@ -56,7 +59,10 @@ vehicle = R6Class("vehicle",
                       },
 
                       setInits = function() {
-                          if (!is.null(private$pattern)) private$initParticles()
+                          if (is.null(private$pattern))
+                              private$setPattern(getPattern(private$current.trip, verbose = FALSE))
+                          
+                          private$initParticles()
 
                           invisible(self)
                       },
@@ -73,8 +79,17 @@ vehicle = R6Class("vehicle",
                               if (!missing(trip)) {
                                   if (trip != private$current.trip ||
                                       is.null(private$schedule$distance_into_trip)) {
+
+                                      if (trip != private$current.trip) {
+                                          private$resetParticles()
+                                          print("OK")
+                                      }
+
                                       private$current.trip <- trip
+                                      
                                       private$setSchedule()
+
+
                                   }
                               }
                               
@@ -199,7 +214,7 @@ vehicle = R6Class("vehicle",
                       initParticles = function() {
                           if (is.null(private$pattern)) stop("Please add a pattern.")
                           ## Set the initial values (initial positions of the particles)
-                          tid <- private$current.trip                          
+                          tid <- private$current.trip
                           max.dist <- private$pattern.length[[tid]]
                           min.dist <- min(private$pattern$distance_into_pattern[
                               private$pattern$trip_id == tid])
@@ -214,6 +229,14 @@ vehicle = R6Class("vehicle",
                           private$history$xhat <- matrix(NA, nrow = nrow(tmp), ncol = ncol(tmp))
 
                           invisible(self)
+                      },
+
+                      resetParticles = function() {
+                          tmp <- private$particles
+                          tmp[1, ] <- 0
+                          private$particles <- tmp
+
+                          print(tmp)
                       },
                       
                       setSchedule = function() {
@@ -240,8 +263,8 @@ vehicle = R6Class("vehicle",
                                   private$schedule$distance_into_trip <-
                                       suppressWarnings({
                                           getShapeDist(private$schedule,
-                                                       private$pattern[private$pattern$trip_id ==
-                                                                       private$current.trip, ])
+                                                       getPattern(private$current.trip,
+                                                                  verbose = FALSE))
                                       })
                               }
                           }
@@ -309,10 +332,11 @@ vehicle = R6Class("vehicle",
                           d <- x[1, ] + pmax(0, delta * x[2, ] + delta^2 / 2 * a)
 
                           ## need to limit the distance!
-                          w <- which(private$pattern$trip_id == private$current.trip)
-                          if (max(w) < nrow(private$pattern))
-                              w <- w + 1
-                          dist.max <- max(private$pattern$distance_into_pattern[w], na.rm = TRUE)
+                          #w <- which(private$pattern$trip_id == private$current.trip)
+                          #if (max(w) < nrow(private$pattern))
+                          #    w <- w + 1
+                          ##dist.max <- max(private$pattern$distance_into_pattern[w], na.rm = TRUE)
+                          dist.max <- max(private$pattern$distance_into_pattern, na.rm = TRUE)
                           
                           private$particles <- rbind(distance = pmin(dist.max, d),
                                                      velocity = v,
