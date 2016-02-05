@@ -93,8 +93,9 @@ ORDER BY stop_sequence", id)
     if (nrow(resp) == 0) {
       api <- readLines("apikey.txt")
       ## no entries for that ID in the database - download new ones
-      url <-
-    if (verbose) cat(sql, '\n')
+      url <- sprintf("http://api.at.govt.nz/v1/gtfs/stopTimes/tripId/%s?api_key=%s", id, api)
+      
+      if (verbose) cat(sql, '\n')
 
       f <- as.data.frame(jsonlite::fromJSON(url[1])$response)
 
@@ -183,17 +184,22 @@ ORDER BY st.departure_time, s.shape_pt_sequence", tids)
       l <- list()
       pb <- txtProgressBar(0, length(ID), style = 3)
       for (i in seq_along(ID)) {
-        l[[i]] <- try(jsonlite::fromJSON(url[i])$response, TRUE)
-        if (inherits(l[[i]], "try-error")) {
-          l[[i]] <- NULL
-          warning("Error downloading shape ", ID[i])
-        }
-        setTxtProgressBar(pb, i)
+          ## ensure schedule available:
+          ZZ <- getSchedule(ID[i], con = con, verbose = verbose)                            
+          l[[i]] <- try(jsonlite::fromJSON(url[i])$response, TRUE)
+          if (inherits(l[[i]], "try-error")) {
+              l[[i]] <- NULL
+              warning("Error downloading shape ", ID[i])
+          }
+          setTxtProgressBar(pb, i)
       }
       close(pb)
 
       f <- as.data.frame(do.call(rbind, l))
+
+
       if (dbWriteTable(.con, "shapes", f, append = TRUE)) {
+          cat(sql)
           resp <- dbGetQuery(.con, sql)
       } else {
           stop("\nUnable to get the associated shape files ...\n")

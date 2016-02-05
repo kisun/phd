@@ -105,23 +105,24 @@ head(pattern)
 loadall()
 v001 = vehicle$new(dat$vehicle_id[1],
                    dat[1, c("position_latitude", "position_longitude", "timestamp")],
-                   dat$trip_id[1], pattern = pattern)
+                   dat$trip_id[1])
 v001$plot()
 v001$update()$plot()
 #v001$update(dat[2, c("position_latitude", "position_longitude", "timestamp")])$plot()
 #v001$update(dat[3, c("position_latitude", "position_longitude", "timestamp")])$plot()
 
-v001$plotSchedule("a")
+v001$plotSchedule("d")
 
-pb <- txtProgressBar(2, nrow(dat), style = 3)
+#pb <- txtProgressBar(2, nrow(dat), style = 3)
 for (i in 2:nrow(dat)) {
     v001$update(dat[i, c("position_latitude", "position_longitude", "timestamp")],
-                dat[i, "trip_id"])#$plot()
-    setTxtProgressBar(pb, i)
+                dat[i, "trip_id"])$plot()
+    #setTxtProgressBar(pb, i)
 #    v001$info()
-#    grid::grid.locator()
+    grid::grid.locator()
 }
-close(pb)
+
+#close(pb)
 
 
 hist <- v001$getParticles()
@@ -148,8 +149,7 @@ v002$update()$plot()
 
 pb <- txtProgressBar(2, nrow(dat), style = 3)
 for (i in 2:nrow(dat)) {
-    v002$update(dat[i, c("position_latitude", "position_longitude", "timestamp")],
-                dat[i, "trip_id"])$plot()
+    v002$update(dat[i, c("position_latitude", "position_longitude", "timestamp", "trip_id")])$plot()
     setTxtProgressBar(pb, i)
 #    v001$info()
     grid::grid.locator()
@@ -167,3 +167,22 @@ for (i in 1:ncol(dX)) points(rep(dat$timestamp[i], nrow(dX)), dX[, i], pch = 4,
                              col = "#00990040")
 for (i in 1:ncol(dX)) points(rep(dat$timestamp[i], nrow(dX)), hist$xhat[1,,i],
                              pch = 4, col="#00009940", cex=0.5)
+
+
+
+
+
+## Let's do it REAL TIME
+loadall()
+con <- dbConnect(SQLite(), "db/gtfs-realtime.db")
+(all <- getPositions(con, route.id="0900"))
+(dd <- getPositions(con, vehicle.id = "5850"))
+v <- vehicle$new(dd$vehicle_id,
+                 dd[1, c("position_latitude", "position_longitude", "timestamp")],
+                 dd$trip_id)
+v$plot()
+
+while (TRUE) {
+    v$update(con = con)$plot()
+    Sys.sleep(10)
+}

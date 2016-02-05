@@ -3,19 +3,15 @@ vehicle = R6Class("vehicle",
                   public = list(
                       sig.a = sqrt(3),
                       sig.gps = 30,
-                      initialize = function(id, position, trip, pattern, N.particles = 200) {
+                      initialize = function(id, position, trip, N.particles = 200) {
                           private$vehicle.id <- id
                           private$position <- as.numeric(position)
-                          private$current.trip <- trip
-                          private$setSchedule()
-                          
                           private$N.particles <- N.particles
                           
-                          if (!missing(pattern)) {
-                              self$setPattern(pattern)
-                              private$initParticles()
-                          } else if (!missing(trip)) {
+                          if (!missing(trip)) {
+                              private$current.trip <- trip
                               self$setPattern(getPattern(trip, verbose = FALSE))
+                              private$setSchedule()
                               private$initParticles()
                           }
                           
@@ -60,43 +56,54 @@ vehicle = R6Class("vehicle",
 
                       setInits = function() {
                           if (is.null(private$pattern))
-                              private$setPattern(getPattern(private$current.trip, verbose = FALSE))
+                              self$setPattern(getPattern(private$current.trip, verbose = FALSE))
                           
                           private$initParticles()
 
                           invisible(self)
                       },
                       
-                      update = function(pos, trip) { 
+                      update = function(position, con) { 
                           ## updates the POSITION of the vehicle, and runs another iteration
                           #private$position <- as.numeric(pos[1], pos[2], pos[3])
 
+                          if (!missing(con)) {
+                              pos <- getPositions(con, vehicle.id = private$vehicle.id)
+                              trip <- pos$trip_id
+                          } else if (!missing(position)) {
+                              pos <- position
+                          } else {
+                              pos <- NULL
+                          }
+
+                          pos <- pos[, c("position_latitude", "position_longitude", "timestamp")]
+                          #private$position <- as.numeric(pos[1], pos[2], pos[3])
                           update <- TRUE
-                          
-                          if (!missing(pos)) {
+
+                          if (!is.null(pos)) {
                               r <- private$position
                               delta <- pos[3] - r[3]
-                              if (!missing(trip)) {
-                                  if (trip != private$current.trip ||
-                                      is.null(private$schedule$distance_into_trip)) {
-
-                                      if (trip != private$current.trip) {
-                                          private$resetParticles()
-                                          print("OK")
-                                      }
-
-                                      private$current.trip <- trip
-                                      
-                                      private$setSchedule()
-
-
+                              
+                              if (trip != private$current.trip ||
+                                  is.null(private$schedule$distance_into_trip)) {
+                                  
+                                  if (trip != private$current.trip) {
+                                      private$resetParticles()
+                                      self$setPattern(getPattern(trip, verbose = FALSE))
                                   }
+                                  
+                                  private$current.trip <- trip
+                                  
+                                  private$setSchedule()
+                                  
                               }
+                              
                               
                               if (delta > 0) {
                                   ## new data! run filter
-                                  private$position <- as.numeric(pos)
+                                  private$position <- as.numeric(pos)[1:3]
                                   private$moveParticles(delta)
+                                  print("moving")
                               } else update <- FALSE
                           }
 
@@ -110,6 +117,8 @@ vehicle = R6Class("vehicle",
                               private$particles <- private$particles[, wi]
                               private$history$xhat <- abind::abind(private$history$xhat,
                                                                    private$particles, along = 3)
+
+                              self$info()
                           }
                           
                           
@@ -137,7 +146,7 @@ vehicle = R6Class("vehicle",
                               if (length(dim(private$history$x)) == 3) {
                                   d2 <- apply(private$history$x[,,dim(private$history$x)[3]], 2, h, shape = private$pattern)
                                   addPoints(d2[2, ], d2[1, ], pch = 3,
-                                            gp = list(cex = 0.4, col = "#009900"))
+                                            gp = list(cex = 0.4, col = "#00990030"))
                               }
                               
                               addPoints(private$position[2], private$position[1],
@@ -235,8 +244,6 @@ vehicle = R6Class("vehicle",
                           tmp <- private$particles
                           tmp[1, ] <- 0
                           private$particles <- tmp
-
-                          print(tmp)
                       },
                       
                       setSchedule = function() {
@@ -251,23 +258,22 @@ vehicle = R6Class("vehicle",
                           private$schedule$time <- time.sec - min(time.sec)
 
                           ## Distance:
-                          if (!is.na(private$current.trip)) {
-                              if (is.null(private$pattern)) {
-                                  suppressWarnings({
-                                      private$schedule$distance_into_trip <-
-                                          getShapeDist(private$schedule,
-                                                       getPattern(private$current.trip,
-                                                                  verbose = FALSE))
-                                  })
-                              } else {
-                                  private$schedule$distance_into_trip <-
-                                      suppressWarnings({
-                                          getShapeDist(private$schedule,
-                                                       getPattern(private$current.trip,
-                                                                  verbose = FALSE))
-                                      })
-                              }
-                          }
+                          ## if (!is.na(private$current.trip)) {
+                          ##     if (is.null(private$pattern)) {
+                          ##         suppressWarnings({
+                          ##             private$schedule$distance_into_trip <-
+                          ##                 getShapeDist(private$schedule,
+                          ##                              getPattern(private$current.trip,
+                          ##                                         verbose = FALSE))
+                          ##         })
+                          ##     } else {
+                          private$schedule$distance_into_trip <-
+                              suppressWarnings({
+                                  getShapeDist(private$schedule,
+                                               private$pattern)
+                              })
+                          ##   }
+                          ## }
 
                           schedule.fn <- try({
                               splinefun(private$schedule$time,
