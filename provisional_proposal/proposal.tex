@@ -151,7 +151,21 @@ Confirmed PhD registration is now sought.
 % There is a close relationship between EndNote and {BibTeX}.
 
 
+Public transport is central to city planning and traffic management in large cities.
+There are various forms, including trains, trams, ferries, and of particular interest to us, buses.
+Over the years, the technologies involves in these systems has become ever more complex,
+one evident example being the introduction of cashless payment systems such as Auckland Transport's HOP cards \citep{cn}.
 
+Another piece of technology that has been introduced the public transport vehicles is positioning devices,
+referred to in the literature as automatic vehicle location (AVL) systems.
+The frontrunner of these uses a global positioning system (GPS) to relay the location of vehicles to a central server.
+
+
+
+
+\vspace{1cm}
+\hrule
+\vspace{1cm}
 
 In many cities, public transport is important to management and traffic etc.
 For commuters, knowledge of expected waiting times is useful for both trip planning,
@@ -171,8 +185,7 @@ Notable methods are the Kalman Filter \citep{cathey-dailey:2003}, \ldots
 The main problem is efficiency.
 The resulting algorithm must be able to update the predictions quickly, 
 to reduce the time between receiving a vehicle location, and getting predictions to commuters.
-This can be difficult when there are a lot of busses (the Auckland Transport service has up to $N$ 
-busses operating simultaneously at peak traffic times).
+This can be difficult when there are a lot of busses (the Auckland Transport service can have upwards of 800 busses operating simultaneously at peak traffic times).
 Additionally, new locations are recieved every 10--30~seconds, 
 so the predictions will constantly need updating as new information arrives.
 
@@ -180,7 +193,7 @@ so the predictions will constantly need updating as new information arrives.
 
 Additionally, the predictions supplied to commuters can be terribly inaccurate.
 In the Auckland Transport system, common phenomena include ``time travelling busses'', 
-where the ETA increses significantly (from, for example, 5~minutes to 15~minutes), 
+where the ETA increses significantly (from, for example, five~minutes to 15~minutes), 
 or ``disappearing busses'' that display a realistic ETA, leading to ``DUE'', 
 and finally removed from the board without the bus having gone past.
 
@@ -212,6 +225,153 @@ and finally removed from the board without the bus having gone past.
 
 
 % Don't put anything new in this section.
+
+\textbf{What are we trying to do? }
+Predict arrival times of busses.
+
+\textbf{Why are we trying to do it?}
+So commuters can plan their journeys, or at least have a good idea of how long they have wait.
+
+\textbf{How are we going to make predictions?}
+We'll fit state-space models to real time GPS location data,
+and then use this to make predictions about the time of arrival at future locations.
+We'll be using GPS data provided through Google's general transit feed specification (GTFS).
+
+
+\textbf{What's already out there?}
+Kalman Filter, ANN, SVN, and many others \ldots
+They use real time location data and predict arrival using normal distributions (KF anyway).
+
+\textbf{What can we do better?}
+Use more relevant data (congestion, historical, etc).
+Make more useful predictions (different point estimate, prediction intervals, \ldots).
+Better models that don't have fewer assumptions and overcome some problems 
+(e.g., particle filter for better use of GPS data, etc.).
+
+
+Predicting the arrival time of a bus at a future stop is done in two stages:
+a \emph{modeling phase}, and a \emph{prediction phase}.
+The modeling phase uses the real time location data to estimate a dynamic system.
+That is, the \emph{true} location and velocity of the vehicle in question,
+accounting for measurement error.
+The prediction phase uses the information from the model, and any other sources of useful information,
+to forecast the state of the system and make predictions about the arrival time at future locations (i.e., stops).
+
+
+There are several ways to model the system, the most common of these being the \emph{Kalman Filter}.
+
+
+
+\subsection{Modeling AVL Data}
+
+To model transit vehicle location, we use a state-space model.
+This is dynamic in position, velocity, and acceleration.
+Early models map the reported location of a vehicle from two dimensions into one,
+by estimating the ``distance into trip''.
+This distance can then be modeled using various techniques, 
+and use the state of the vehicle at the previous time point to predict and update the model.
+The Kalman Filter is the most popular example of this, and is useful for real time applications
+because it is fast: only a single iteration is required for each new observation, and requires only matrix manipulation
+\citep{cathey-dailey:2003,cn}.
+The details of the KF are given in \S\ref{sec:kalman_filter}.
+
+
+Other methods of modeling have been used and compared over the last decade.
+These include regression models \citep{cn}, 
+K-nearest-neighbour \citep{cn}, 
+artificial neural networks (ANNs) \citep{cn},
+scaled vector machines (SVMs) \citep{cn}, 
+and others.
+
+
+An extension of the KF that hasn't been used in transit predictions is the particle filter (PF),
+likely due to the computational requirements of the model.
+However, we believe it may be a viable alternative that will provide a more flexible model that
+makes fewer assumptions (such as normality).
+The workings of the PF are detailed in \S\ref{sec:particle_filter}.
+
+
+
+\subsubsection{Kalman Filter}
+\label{sec:kalman_filter}
+
+The KF is at its root a recursive application of Bayes' rule.
+The idea is that, instead of fitting the model to the full set of data,
+the model is fit using one observation at a time.
+This is obviously advantageous when it comes to modeling real time data,
+as we want to \emph{update} the current sate (which contains the information from all previous observations)
+when new data is obtained.
+
+\begin{equation}
+  \label{eq:kalman_filter}
+  m = ec^2
+\end{equation}
+
+The filter works in two stages: first, predict where the state will be at time $k$, given the previous information.
+Then, update the predictions using the newest observation, account for measurement error.
+Everything is (multivariate) normal, which can be specified as a mean and (co)varaince.
+Thus, everythign simmers down to a few matrix equations:
+
+\subsubsection{Particle Filter}
+\label{sec:particle_filter}
+
+The PF is related to the KF, but rather than working with a distribution, it works with \emph{particles}.
+Each particle represents a plausible parameter value, and when new data is obtained the predicted positions of the
+particles is compared to the observation, and a new sample of particles is taken based on the likelihood of the current set of particles.
+It's like a bootstrap at each iteration, where the particles are sampled (with replacement) to generate a new sample that represents the posterior distribution.
+
+Theory ...
+
+Advantages ...
+
+Disadvantages ...
+
+How will it help us? ...
+
+
+\subsection{Predicting Arrival Times}
+\label{sec:predicting_arival_times}
+
+Modeling the dynamic state of the vehicle is only the first part of the problem.
+Next, this state needs to be projected into the future to make predictions about
+the arrival times at points in the future.
+
+In the KF implemented by \cite{cathey-dailey:2003}, 
+a prediction model is used that takes the dynamic state information and predicts the arrival times.
+Other methods use historical information to compare the current state with those observed before,
+and use that to predict arrival times.
+
+We want to investigate first using the PF's particles, and project each of them into the future, 
+and use that to infer predictions.
+
+There are also some specific problems we hope to address:
+
+- changes in ETA
+
+- missing buses
+
+- using data from other buses to improve predictions along a stretch of road/route 
+
+
+\subsection{Providing the Information to Commuters}
+\label{sec:information_to_commuters}
+
+Getting the information to commuters is also important.
+We have arrival time estimates along with the variabiltiy associated with them.
+We need to let commuters know how long they \emph{might} be waiting in best \emph{and} worst case scenarios.
+
+Web apps were used by \cite{cathey-dailey:2003}, and there are also phone apps to download.
+AT has a ``Where's My Bus?'' app that shows the GPS location of the bus you are waiting for.
+
+Journey planning, allowing commuters so provide a location and destination, 
+and get information about the best stop to walk to and bus to catch.
+
+
+
+
+\vspace{1cm}
+\hrule
+\vspace{1cm}
 
 
 Accurate prediction of bus arrival (or departure) time from bus stops is dependent on many components.
@@ -604,6 +764,12 @@ Not necessary??
 Induction Days}:
 2015-11-04
 
+\item
+\textit{Obtain a grade of B or higher in STATS 710}
+
+\item
+\textit{Obtain a grade of B or higher in STATS 7XX}
+
 \end{enumerate}
 
 
@@ -670,10 +836,14 @@ Queues \& Cooperative Games \\
 Pure, predictable, pipeable: creating fluid interfaces with R \\
 %
 2016-01-16 & Xudong Huang &
-Composite likelihood estimators, mixed models \& complex sampling \\
+Composite likelihood estimators, mixed models \& complex \\
+&&sampling \\
 %
 2016-01-27 & Kevin Knuth &
 Modern Probability Theory \\
+%
+2016-01-28 & Maartje an de Vrugt &
+Online appointment scheduling: a taxonomy and review \\
 %
 % \midrule
 % 2010-06-16 & James B.~Conant &
