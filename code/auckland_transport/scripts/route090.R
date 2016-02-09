@@ -240,8 +240,8 @@ collectHistory2 <- function(route, data.clean = list(), hist.db = dbConnect(SQLi
         tmp <- dat[dat$trip_start_date == day, ]
         
         trips <- unique(tmp$trip_id)
-        if (day %in% names(data.clean))
-            trips <- trips[!trips %in% data.clean[[day]]]
+        #if (day %in% names(data.clean))
+        #    trips <- trips[!trips %in% data.clean[[day]]]
         trips.schedule <- lapply(trips, getSchedule, verbose = FALSE)
         names(trips.schedule) <- trips
         trips.start <- sapply(trips.schedule, function(x) {
@@ -280,13 +280,67 @@ collectHistory2 <- function(route, data.clean = list(), hist.db = dbConnect(SQLi
             }
             
             tmp3 <- tmp2[tmp2$vehicle_id == vid, ]
-            t.start <- as.numeric(format(as.POSIXct(paste(tmp3$trip_start_date[1], tmp3$trip_start_time[1])),
+            t.start <- as.numeric(format(as.POSIXct(paste(tmp3$trip_start_date[1],
+                                                          tmp3$trip_start_time[1])),
                                          format = "%s"))
+
+            shape <- getPattern(trip)
+            p1 <- t(shape[-nrow(shape), c("shape_pt_lon", "shape_pt_lat")])
+            p2 <- t(shape[-1, c("shape_pt_lon", "shape_pt_lat")])
+            shape$length <- c(distanceFlat(p1, p2), 0)
+            shape$distance_into_pattern <- c(0, cumsum(shape$length[-nrow(shape)]))
+            shape$bearing <- c(bearing(p1, p2), 0)
             
-            data <- list(lat  = tmp3$position_latitude,
-                         lon  = tmp3$position_longitude,
-                         t    = tmp3$timestamp - t.start,
-                         dmax = )
+            data <- list(pos   = as.matrix(tmp3[, c("position_latitude", "position_longitude")]),
+                         t     = tmp3$timestamp - t.start,
+                         shape = shape,
+                         N     = nrow(tmp3))
+
+            n.iter <- 1000
+            pars <- list(x = matrix(NA, n.iter + 1, data$N))
+            
+            ## Initialise
+            ## pars$x[1, ] <- rep(max(data$shape$distance_into_pattern), data$N)
+            pars$x[1, ] <- sort(runif(data$N, 0, max(data$shape$distance_into_pattern)))
+            plot(data$t, pars$x[1, ], ylim = range(data$shape$distance_into_pattern))
+
+            ## Likelihood function:
+            lhood <- function(x) {
+                r <- sapply(x, h, shape = data$shape)
+                d <- distanceFlat(r, t(data$pos))
+                sum(dnorm(d, 0, 20, log = TRUE))
+            }
+            
+            for (i in 1:n.iter + 1) {
+                x.p <- pars$x[i - 1, ]
+                
+                for (j in 1:data$N) {
+                    if (j == 1)
+                        x.pj <- runif(200, 0, x.p[2])
+                    else if (j == data$N)
+                        x.pj <- runif(200, x.p[j - 1], max(shape$distance_into_pattern))
+                    else
+                        x.pj <- runif(200, x.p[j - 1], x.p[j + 1])
+                    
+                    Rhat <- sapply(x.pj, h, shape = data$shape)
+                    Dhat <- distanceFlat(as.numeric(data$pos[j, ]), Rhat)
+                    tmp <- x.p
+                    tmp[j] <- x.pj[which(Dhat == min(Dhat))[1]]
+                    lr <- lhood(tmp) - lhood(x.p)
+                    
+                    if (runif(1) < exp(lr)) x.p[j] <- x.pj
+                }
+
+                ## plot(data$t, pars$x[i - 1, ], ylim = range(data$shape$distance_into_pattern))
+                ## points(data$t, x.p, col = "red", pch = 4)
+                mm <- iNZightMap(~position_latitude, ~position_longitude, data = tmp3,
+                                 name = "Historical Route 090")
+                plot(mm, pch = 4, cex.pt = 0.6, col.pt = "#cc0000")
+                xy <- sapply(x.p, h, shape = data$shape)
+                addPoints(xy[2, ], xy[1, ])
+                
+                pars$x[i, ] <- x.p
+            }
         }
     }
 }
