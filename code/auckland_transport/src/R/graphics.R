@@ -41,7 +41,7 @@ addLines <- function(x, y, gpar, ...) {
     }
     
         
-    grid::grid.lines(xy$newX, xy$newY, gp = gpar, ...)
+    grid::grid.lines(xy$newX, xy$newY, default.units = "native", gp = gpar, ...)
 
     invisible(NULL)
 }

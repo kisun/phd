@@ -95,8 +95,6 @@ ORDER BY stop_sequence", id)
       ## no entries for that ID in the database - download new ones
       url <- sprintf("http://api.at.govt.nz/v1/gtfs/stopTimes/tripId/%s?api_key=%s", id, api)
       
-      if (verbose) cat(sql, '\n')
-
       f <- as.data.frame(jsonlite::fromJSON(url[1])$response)
 
       if (dbWriteTable(.con, "stop_times", f, append = TRUE)) {

@@ -1,9 +1,9 @@
 require(R6)
 vehicle = R6Class("vehicle",
                   public = list(
-                      sig.a = sqrt(3),
+                      sig.a = 3,
                       sig.gps = 30,
-                      initialize = function(id, position, trip, N.particles = 200) {
+                      initialize = function(id, position, trip, N.particles = 400) {
                           private$vehicle.id <- id
                           private$position <- as.numeric(position)
                           private$N.particles <- N.particles
@@ -72,6 +72,7 @@ vehicle = R6Class("vehicle",
                               trip <- pos$trip_id
                           } else if (!missing(position)) {
                               pos <- position
+                              trip <- position$trip_id
                           } else {
                               pos <- NULL
                           }
@@ -103,7 +104,6 @@ vehicle = R6Class("vehicle",
                                   ## new data! run filter
                                   private$position <- as.numeric(pos)[1:3]
                                   private$moveParticles(delta)
-                                  print("moving")
                               } else update <- FALSE
                           }
 
@@ -118,7 +118,7 @@ vehicle = R6Class("vehicle",
                               private$history$xhat <- abind::abind(private$history$xhat,
                                                                    private$particles, along = 3)
 
-                              self$info()
+                              #self$info()
                           }
                           
                           
@@ -325,17 +325,21 @@ vehicle = R6Class("vehicle",
                           delta <- as.numeric(delta)
                           ## this is the model!
                           x <- private$particles
-                          if (is.null(private$schedule.fn)) {
+                          ## if (is.null(private$schedule.fn)) {
                               a <- rnorm(private$N.particles, x[3, ], self$sig.a)
-                          } else {
-                              a <- rnorm(private$N.particles,
-                                         sapply(x[1, ], private$schedule.fnD, deriv = 2),
-                                         private$acc.sd * 1.5)
-                          }
+                          ## } else {
+                          ##     a <- rnorm(private$N.particles,
+                          ##                sapply(x[1, ], private$schedule.fnD, deriv = 2),
+                          ##                private$acc.sd * 1.5)
+                          ## }
                           
-                          ## hard code the fact that the bus isn't going to to backwards ... 
-                          v <- pmax(0, x[2, ] + delta * a)
-                          d <- x[1, ] + pmax(0, delta * x[2, ] + delta^2 / 2 * a)
+                          ## hard code the fact that the bus isn't going to to backwards ...
+                          ## ... actually, let it go backwards UNTIL it's been 0:
+                          p.back <- ifelse(runif(ncol(x)) < 0.1, -Inf, 0)
+                          v <- pmax(p.back, x[2, ] + delta * a)
+                          d <- pmax(0, x[1, ] + pmax(p.back, delta * x[2, ] + delta^2 / 2 * a))
+                          ## v <- x[2, ] + delta * a
+                          ## d <- x[1, ] + delta * x[2, ] + delta^2 / 2 * a
 
                           ## need to limit the distance!
                           #w <- which(private$pattern$trip_id == private$current.trip)
