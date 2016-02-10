@@ -4,7 +4,9 @@ getPositions <- function(con, route.id, vehicle.id, date,
                          order = "timestamp", verbose = TRUE, ...) {
     ## SQL preparation ...
     where <- character()
-    sql <- "SELECT * FROM vehicle_positions"
+    sql <- paste0("SELECT DISTINCT trip_id, route_id, trip_start_time, trip_start_date, vehicle_id,
+                                   position_latitude, position_longitude, position_bearing, position_speed,
+                                   timestamp FROM vehicle_positions")
 
     if (!missing(route.id))
         where <- c(where, sprintf("route_id LIKE '%s%s'", route.id, "%"))

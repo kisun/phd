@@ -19,11 +19,6 @@ collectHistory <- function(route, data.clean = list(), hist.db = dbConnect(SQLit
     ## plot(map090, pch = 19, cex.pt = 0.1, col.pt = "#00000040")
     
     
-    
-    
-    ## filter points
-    ## loadall()
-    
     ## "started" = logical, has the trip started? (according to the schedule)
     positions$started <- positions$timestamp -
         as.numeric(format(as.POSIXct(paste(positions$trip_start_date, positions$trip_start_time)), format = "%s")) >= 0
@@ -47,8 +42,8 @@ collectHistory <- function(route, data.clean = list(), hist.db = dbConnect(SQLit
         tmp <- dat[dat$trip_start_date == day, ]
         
         trips <- unique(tmp$trip_id)
-        if (day %in% names(data.clean))
-            trips <- trips[!trips %in% data.clean[[day]]]
+        ## if (day %in% names(data.clean))
+        ##     trips <- trips[!trips %in% data.clean[[day]]]
         trips.schedule <- lapply(trips, getSchedule, verbose = FALSE)
         names(trips.schedule) <- trips
         trips.start <- sapply(trips.schedule, function(x) {
@@ -59,7 +54,7 @@ collectHistory <- function(route, data.clean = list(), hist.db = dbConnect(SQLit
         
         for (trip in trips[trips.order]) {
             
-            ## trip <- trips[trips.order][6]
+            ## trip <- trips[trips.order][2]
             
             cat("============ Processing history trip:", trip, "\n")
             tmp2 <- tmp[tmp$trip_id == trip, ]
@@ -71,85 +66,146 @@ collectHistory <- function(route, data.clean = list(), hist.db = dbConnect(SQLit
             shape <- getPattern(trip, verbose = FALSE)
             ## addLines(shape$shape_pt_lon, shape$shape_pt_lat)
 
-            use <- "" ## readline("Use this trip? (Y/n)")
-            if (use %in% c("", "Y", "y")) {
-                if (length(unique(tmp2$vehicle_id)) > 1)
-                    cat("Multiple matches ... using the first.\n")
-                ## cat("Processing vehicles:", paste(unique(tmp2$vehicle_id), collapse = ", "), "\n")
-                
-                #for (vid in unique(tmp2$vehicle_id)) {
-                vid <- unique(tmp2$vehicle_id)[1]
-                
-                ## check to see if this day/trip is already in the database
-                if ("history" %in% dbListTables(hist.db)) {
-                    if (dbGetQuery(hist.db,
-                                   sprintf("SELECT count(*) AS count FROM history WHERE trip_start_date='%s' AND trip_id='%s'",
-                                           day, trip))$count > 0) {
-                        next
-                    }
-                }
-                
-                ## vid <- unique(tmp2$vehicle_id)[1]
-                tmp3 <- tmp2[tmp2$vehicle_id == vid, ]
-                
-                v <- vehicle$new(vid, tmp3[1, c("position_latitude", "position_longitude", "timestamp")], trip)
-                v$update()## $plot()
-                
-                pb <- txtProgressBar(1, nrow(tmp3), style = 3)
-                for (i in 2:nrow(tmp3)) {
-                    v$update(tmp3[i, ])
-                    ## if (i %% 5 == 0) v$plot()
-                    ## v$plot();grid::grid.locator()
-                    setTxtProgressBar(pb, i)
-                }
-                close(pb)
-                
-                
-                try({
-                    
-                    out <- data.frame(cbind(
-                        tmp3[, c("trip_id", "vehicle_id", "route_id", "timestamp", "trip_start_date", "trip_start_time")],
-                        t(apply(v$getParticles()$xhat, 3, function(x) apply(x, 1, median, na.rm = TRUE))[, -1])
-                        ))
-                    
-                    ## only grab the positive distances:
-                    out <- out[out$distance >= 0, ]
-                    
-                    ## pick out the top points
-                    SCHED <- v$getSchedule()
-                    MAX <- which(out$distance == max(out$distance))
-                    MAX <- MAX[c(1, which(diff(MAX) > 1) + 1)]
-                    
-                    ## pick ou the bottom points
-                    MIN <- which(out$distance == min(out$distance))
-                    if (length(MIN) == 1) {
-                        MAX <- MAX[MAX > MIN][1]
-                        out <- out[MIN:MAX, ]
-                    }
+            voffset <- sapply(unique(tmp2$vehicle_id), function(vid) {
+                                  tt <- tmp2[tmp2$vehicle_id == vid, ]
+                                  trip.start <- min(tt$timestamp)
+                                  trip.offset <- trip.start -
+                                      as.numeric(format(as.POSIXct(paste(tt$trip_start_date[1],
+                                                                         trips.schedule[[trip]]$departure_time[1])),
+                                                        format = "%s"))
+                                  trip.offset
+                              })
 
-                    print(range(out$distance))
-                    
-                    
-                    out$trip.timestamp <-
-                        out$timestamp - as.numeric(format(as.POSIXct(paste(tmp3$trip_start_date[1],
-                                                                           tmp3$trip_start_time[1])),
-                                                          format = "%s"))
-                    plot(distance_into_trip ~ time, data = SCHED)
-                    with(out, lines(trip.timestamp, distance))
-                    
-                    keep <- readline("Keep this record? (Y/n) ")
-                    if (keep %in% c("", "Y", "y")) {
+            ## Limit of 90 minutes
+            if (all(voffset > 90 * 60)) next
+
+            vs <- unique(tmp2$vehicle_id)
+            if (length(vs) > 1)
+                cat("Multiple matches ... using the vehicle starting closest to the schedule.\n")
+
+            valid.vs <- which(voffset < 90 * 60)
+            if (length(valid.vs) == 1) {
+                vid <- vs[valid.vs]
+            } else {
+                min <- min(abs(voffset))
+                vid <- vs[which(abs(voffset) == min)]
+            }
+            
+            ## check to see if this day/trip is already in the database
+            if ("history" %in% dbListTables(hist.db)) {
+                if (dbGetQuery(hist.db,
+                               sprintf("SELECT count(*) AS count FROM history WHERE trip_start_date='%s' AND trip_id='%s' AND vehicle_id='%s'",
+                                       day, trip, vid))$count > 0) {
+                    next
+                }
+            }
+            
+            ## do computations on the shape ...
+            p1 <- t(shape[-nrow(shape), c("shape_pt_lon", "shape_pt_lat")])
+            p2 <- t(shape[-1, c("shape_pt_lon", "shape_pt_lat")])
+            shape$length <- c(distanceFlat(p1, p2), 0)
+            shape$distance_into_pattern <- c(0, cumsum(shape$length[-nrow(shape)]))
+            shape$bearing <- c(bearing(p1, p2), 0)
                         
-                        res <- dbWriteTable(dbConnect(SQLite(), "db/historical-data.db"),
-                                            "history", out, append = TRUE)
-
-                        if (!res) stop("Unable to write to database ...")
-                    }                    
-                    
-                    
-                }, silent = TRUE)
+            tmp3 <- tmp2[tmp2$vehicle_id == vid, ]
+            
+            v <- vehicle$new(vid, tmp3[1, c("position_latitude", "position_longitude", "timestamp")], trip)
+            v$update()## $plot()
+            
+            pb <- txtProgressBar(1, nrow(tmp3), style = 3)
+            for (i in 2:nrow(tmp3)) {
+                v$update(tmp3[i, ])
+                ## if (i %% 5 == 0) v$plot()
+                ## v$plot();grid::grid.locator()
+                setTxtProgressBar(pb, i)
+            }; close(pb)
+            
+            
+            ##try({
                 
-            } else cat("Skipping ...\n")
+            out <- try(data.frame(cbind(
+                tmp3[, c("trip_id", "vehicle_id", "route_id", "timestamp", "trip_start_date", "trip_start_time")],
+                t(apply(v$getParticles()$xhat, 3, function(x) apply(x, 1, median, na.rm = TRUE))[, -1])
+                )))
+
+            if (inherits(out, "try-error")) {
+                print("Unable to extract info ... rows don't match???")
+                print(tail(v$getParticles()$xhat))
+                next
+            }
+            with(out, plot(timestamp, distance, type = "l",
+                           ylim = c(0, max(distance, SCHED$distance_into_trip)),
+                           main = "Unfiltered output"))
+
+            ## only grab the positive distances:
+            out <- out[out$distance >= 0, ]
+            
+            ## pick out the top points
+            SCHED <- v$getSchedule()
+            MAX <- which(out$distance == max(out$distance))
+            MAX <- MAX[c(1, which(diff(MAX) > 1) + 1)]
+            
+            ## pick out the bottom points
+            segs <- lapply(seq_along(MAX), function(i) {
+                               ii <- (c(1, MAX + 1)[i]):(c(1, MAX)[i + 1])
+                               if (any(diff(out$distance[ii]) < 0)) {
+                                   i2 <- which(diff(out$distance[ii]) < 0)
+                                   lapply(i2, function(j) {
+                                              if (j > 1 && j < (length(ii) - 1)) {
+                                                  ## just smooth it out ...
+                                                  out$distance[ii[j]] <<- NA
+                                              }
+                                          })
+                                   ii <- ii[!ii %in% which(is.na(out$distance))]
+                                        #out <- out[!is.na(out$distance), ]
+                                   ## then clear up any NAs
+                                   if (any(diff(out$distance[ii]) < 0))
+                                       ii <- ii[-(1:max(which(diff(out$distance[ii]) < 0)))]
+                               }
+                               ii
+                           })
+           
+            toffset <- sapply(segs, function(i) out[i[1], "timestamp"]) - 
+                as.numeric(format(as.POSIXct(paste(out$trip_start_date[1],
+                                                   SCHED$departure_time[1])),
+                                  format = "%s"))
+            segs[toffset > 90 * 60] <- NULL
+            out <- out[segs[[which.max(sapply(segs, function(i) diff(range(out$distance[i]))))]], ]
+            
+            out$trip.timestamp <-
+                out$timestamp - as.numeric(format(as.POSIXct(paste(tmp3$trip_start_date[1],
+                                                                   tmp3$trip_start_time[1])),
+                                                  format = "%s"))
+            
+            ## Provide a 90 minute window ...
+            ## ... and only keep history that spans > 90% of the route ...
+            plot(distance_into_trip ~ time, data = SCHED,
+                         xlim = range(SCHED$time, out$trip.timestamp),
+                         ylim = c(0, max(out$distance, SCHED$distance_into_trip)))
+                    with(out, lines(trip.timestamp, distance))
+
+            #cat("STARTS:", min(SCHED$time), ";   first observation:", out$trip.timestamp[1], "\n")
+
+            if (out$trip.timestamp[1] < min(SCHED$time) + 90 * 60) {
+                if (diff(range(out$distance)) > 0.9 * diff(range(SCHED$distance_into_trip))) {
+                    
+                    
+                    
+                    ## Some way of deciding whether to keep it or not ...
+                    keep <- TRUE  ## readline("Keep this record? (Y/n) ")
+                    ## if (keep %in% c("", "Y", "y")) {
+                    
+                    res <- dbWriteTable(dbConnect(SQLite(), "db/historical-data.db"),
+                                        "history", out, append = TRUE)
+                    
+                    if (!res) stop("Unable to write to database ...")
+                    ## }
+                    
+                } else cat("Range less than 90%; ignoring trip.\n")
+            } else cat("Route started too late; assuming driver error.\n")
+            
+            ##}, silent = TRUE) -> tryy
+            ##if (inherits(try, "try-error")) print(try)
         }
     }
 }
@@ -161,7 +217,7 @@ collectHistory("09001")
 
 
 
-HIST <- dbReadTable(dbConnect(SQLite(), "db/historical-data.db"), "historical")
+HIST <- dbReadTable(dbConnect(SQLite(), "db/historical-data.db"), "history")
 
 HIST$time.day <-
     HIST$timestamp - as.numeric(format(as.POSIXct(paste(HIST$trip_start_date, "00:00:00")), format = "%s"))
@@ -172,18 +228,21 @@ HIST$dvt <- as.factor(paste(HIST$trip_start_date, HIST$trip_id, HIST$vehicle_id,
 tapply(1:nrow(HIST), HIST$dvt, function(i) lines(HIST$time.hour[i], HIST$distance[i]))
 
 ## Clean history:
-which.keep <- character()
-tapply(1:nrow(HIST), HIST$dvt, function(i) {
-           with(HIST, plot(time.hour, distance, type = "n"))
-           lines(HIST$time.hour[i], HIST$distance[i])
-           keep <- readline("Keep this entry? (Y/n) ")
-           if (keep %in% c("", "Y", "y")) which.keep <<- c(which.keep, i)
-       })
+which.keep <- 
+    tapply(1:nrow(HIST), HIST$dvt, function(i) {
+               print(diff(range(HIST$time.day[i]))) > 60 * 60
+           })
+           #with(HIST, plot(time.hour, distance, type = "n"))
+           #lines(HIST$time.hour[i], HIST$distance[i])
+           #keep <- readline("Keep this entry? (Y/n) ")
+           #if (keep %in% c("", "Y", "y")) which.keep <<- c(which.keep, i)
+       #})
 
 nrow(HIST)
 KEEP <- HIST[which.keep, ]
 nrow(KEEP)
 
+with(KEEP, plot(time.hour, distance, type = "n"))
 KEEP$dvt <- as.factor(paste(KEEP$trip_start_date, KEEP$trip_id, KEEP$vehicle_id, sep = ":"))
 tapply(1:nrow(KEEP), KEEP$dvt, function(i) lines(KEEP$time.hour[i], KEEP$distance[i]))
 

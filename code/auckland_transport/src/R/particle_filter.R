@@ -335,7 +335,7 @@ vehicle = R6Class("vehicle",
                           
                           ## hard code the fact that the bus isn't going to to backwards ...
                           ## ... actually, let it go backwards UNTIL it's been 0:
-                          p.back <- ifelse(runif(ncol(x)) < 0.1, -Inf, 0)
+                          p.back <- ifelse(runif(ncol(x)) < 0.05, -Inf, 0)
                           v <- pmax(p.back, x[2, ] + delta * a)
                           d <- pmax(0, x[1, ] + pmax(p.back, delta * x[2, ] + delta^2 / 2 * a))
                           ## v <- x[2, ] + delta * a
