@@ -8,7 +8,7 @@ loadall <- function()
 
 loadall()
 collectHistory <- function(route, data.clean = list(), hist.db = dbConnect(SQLite(), "db/historical-data.db")) {
-    route = "09001"
+
     con <- dbConnect(SQLite(), "db/gtfs-history.db")
     positions <- getPositions(con, route.id = route)
     table(positions$route_id)  ## version number has updated! 
@@ -212,12 +212,13 @@ collectHistory <- function(route, data.clean = list(), hist.db = dbConnect(SQLit
 
 
 loadall()
-collectHistory("09001")
+collectHistory("09002")
 
 
 
 
-HIST <- dbReadTable(dbConnect(SQLite(), "db/historical-data.db"), "history")
+HIST <- dbGetQuery(dbConnect(SQLite(), "db/historical-data.db"),
+                   "SELECT * FROM history WHERE route_id LIKE '09002%'")
 
 HIST$time.day <-
     HIST$timestamp - as.numeric(format(as.POSIXct(paste(HIST$trip_start_date, "00:00:00")), format = "%s"))
@@ -228,28 +229,35 @@ HIST$dvt <- as.factor(paste(HIST$trip_start_date, HIST$trip_id, HIST$vehicle_id,
 tapply(1:nrow(HIST), HIST$dvt, function(i) lines(HIST$time.hour[i], HIST$distance[i]))
 
 ## Clean history:
+## which.keep <- 
+##     tapply(1:nrow(HIST), HIST$dvt, function(i) {
+##         with(HIST, plot(time.hour, distance, type = "n"))
+##         lines(HIST$time.hour[i], HIST$distance[i])
+##         keep <- readline("Keep this entry? (Y/n) ")
+##         if (keep %in% c("", "Y", "y")) which.keep <<- c(which.keep, i)
+##     })
+
+## visually, say max speed of 110km/h = 100 * 1000 / 60 / 60 = 28 m/s
 which.keep <- 
-    tapply(1:nrow(HIST), HIST$dvt, function(i) {
-               print(diff(range(HIST$time.day[i]))) > 60 * 60
-           })
-           #with(HIST, plot(time.hour, distance, type = "n"))
-           #lines(HIST$time.hour[i], HIST$distance[i])
-           #keep <- readline("Keep this entry? (Y/n) ")
-           #if (keep %in% c("", "Y", "y")) which.keep <<- c(which.keep, i)
-       #})
-
-nrow(HIST)
+    do.call(c,
+            invisible(tapply(1:nrow(HIST), HIST$dvt, function(i) {
+                d <- diff(range(HIST$time.day[i]))
+                ## max speed
+                dt <- diff(HIST$time.day[i])
+                dx <- diff(HIST$distance[i])
+                if (max(dx/dt) < 50) return(i) else numeric()
+            })))
 KEEP <- HIST[which.keep, ]
-nrow(KEEP)
-
-with(KEEP, plot(time.hour, distance, type = "n"))
+with(KEEP, plot(time.hour, distance, type = "n",
+                main = "History of Route 090\n(2016-01-14 -- 2016-02-10)",
+                xlab = "Time (h)", ylab = "Distance into Trip (m)"))
 KEEP$dvt <- as.factor(paste(KEEP$trip_start_date, KEEP$trip_id, KEEP$vehicle_id, sep = ":"))
-tapply(1:nrow(KEEP), KEEP$dvt, function(i) lines(KEEP$time.hour[i], KEEP$distance[i]))
+invisible(tapply(1:nrow(KEEP), KEEP$dvt, function(i) lines(KEEP$time.hour[i], KEEP$distance[i])))
 
 
-
-
-
+## stop locations:
+stops <- vehicle$new("1", c(1, 1), trip = KEEP$trip_id[1])$getSchedule()
+abline(h = stops$distance_into_trip, lty = 3, col = "gray50")
 
 
 
