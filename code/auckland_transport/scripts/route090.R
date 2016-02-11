@@ -7,12 +7,16 @@ loadall <- function()
     invisible(sapply(list.files("src/R", pattern = "R$", all.files = TRUE, full.names = TRUE), source))
 
 loadall()
-collectHistory <- function(route, data.clean = list(), hist.db = dbConnect(SQLite(), "db/historical-data.db")) {
+collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(SQLite(), "db/historical-data.db")) {
 
     con <- dbConnect(SQLite(), "db/gtfs-history.db")
-    positions <- getPositions(con, route.id = route)
-    table(positions$route_id)  ## version number has updated! 
-    table(positions$trip_id)
+
+    if (!missing(day))
+        positions <- getPositions(con, route.id = route, date = day)
+    else
+        positions <- getPositions(con, route.id = route)
+    ## table(positions$route_id)  ## version number has updated! 
+    ## table(positions$trip_id)
     
     ## map090 <- iNZightMap(~position_latitude, ~position_longitude, data = positions,
     ##                      name = "Auckland Busses")
@@ -21,25 +25,19 @@ collectHistory <- function(route, data.clean = list(), hist.db = dbConnect(SQLit
     
     ## "started" = logical, has the trip started? (according to the schedule)
     positions$started <- positions$timestamp -
-        as.numeric(format(as.POSIXct(paste(positions$trip_start_date, positions$trip_start_time)), format = "%s")) >= 0
+        as.numeric(format(as.POSIXct(paste(positions$trip_start_date, positions$trip_start_time)),
+                          format = "%s")) >= 0
     
     dat <- positions[positions$started, ]
     
-    ## map090 <- iNZightMap(~position_latitude, ~position_longitude, data = dat,
-    ##                      name = "Historical Route 090")
-    ## plot(map090, pch = 19, cex.pt = 0.1, col.pt = "#00000040")
-    ## plot(map090, pch = 19, cex.pt = 0.1, col.pt = "#00000040")#, g1 = trip_start_date, g2 = trip_id)#, g2.level = "_MULTI")
-    
-    ## loadall()
-    
-    
-    
     for (day in unique(dat$trip_start_date)) {
+    ## for (route in unique(dat$route_id)) {
         
         ## day <- unique(dat$trip_start_date)[1]
-        cat("\n\n========================== Processing history date:", day, "\n") 
+        cat("\n\n========================== Processing historical data:", day, "\n") 
         
         tmp <- dat[dat$trip_start_date == day, ]
+        ## tmp <- dat[dat$route_id == route, ]
         
         trips <- unique(tmp$trip_id)
         ## if (day %in% names(data.clean))
@@ -133,9 +131,7 @@ collectHistory <- function(route, data.clean = list(), hist.db = dbConnect(SQLit
                 print(tail(v$getParticles()$xhat))
                 next
             }
-            with(out, plot(timestamp, distance, type = "l",
-                           ylim = c(0, max(distance, SCHED$distance_into_trip)),
-                           main = "Unfiltered output"))
+            
 
             ## only grab the positive distances:
             out <- out[out$distance >= 0, ]
@@ -144,6 +140,10 @@ collectHistory <- function(route, data.clean = list(), hist.db = dbConnect(SQLit
             SCHED <- v$getSchedule()
             MAX <- which(out$distance == max(out$distance))
             MAX <- MAX[c(1, which(diff(MAX) > 1) + 1)]
+
+            ## with(out, plot(timestamp, distance, type = "l",
+                           ## ylim = c(0, max(distance, SCHED$distance_into_trip)),
+                           ## main = "Unfiltered output"))
             
             ## pick out the bottom points
             segs <- lapply(seq_along(MAX), function(i) {
@@ -170,7 +170,12 @@ collectHistory <- function(route, data.clean = list(), hist.db = dbConnect(SQLit
                                                    SCHED$departure_time[1])),
                                   format = "%s"))
             segs[toffset > 90 * 60] <- NULL
-            out <- out[segs[[which.max(sapply(segs, function(i) diff(range(out$distance[i]))))]], ]
+            out <- try(out[segs[[which.max(sapply(segs, function(i) diff(range(out$distance[i]))))]], ])
+            
+            if (inherits(out, "try-error")) {
+                cat("Error with this route ...\n")
+                next
+            }
             
             out$trip.timestamp <-
                 out$timestamp - as.numeric(format(as.POSIXct(paste(tmp3$trip_start_date[1],
@@ -180,9 +185,10 @@ collectHistory <- function(route, data.clean = list(), hist.db = dbConnect(SQLit
             ## Provide a 90 minute window ...
             ## ... and only keep history that spans > 90% of the route ...
             plot(distance_into_trip ~ time, data = SCHED,
-                         xlim = range(SCHED$time, out$trip.timestamp),
-                         ylim = c(0, max(out$distance, SCHED$distance_into_trip)))
-                    with(out, lines(trip.timestamp, distance))
+                 main = paste("Route:", route, "   Date:", day),
+                 xlim = range(SCHED$time, out$trip.timestamp),
+                 ylim = c(0, max(out$distance, SCHED$distance_into_trip)))
+            with(out, lines(trip.timestamp, distance))
 
             #cat("STARTS:", min(SCHED$time), ";   first observation:", out$trip.timestamp[1], "\n")
 
@@ -212,18 +218,31 @@ collectHistory <- function(route, data.clean = list(), hist.db = dbConnect(SQLit
 
 
 loadall()
-collectHistory("09002")
+days <- dbGetQuery(dbConnect(SQLite(), "db/gtfs-history.db"),
+                   "SELECT DISTINCT timestamp FROM vehicle_positions")
+days <- unique(tsDate(days$timestamp))
+
+collectHistory(route = "090")
 
 
 
+## tr <- as.numeric(format(as.POSIXct(days[1]), format = "%s")) + c(0, 60 * 60 * 24)
+allroutes <- unique(dbGetQuery(dbConnect(SQLite(), "db/historical-data.db"),
+                               "SELECT DISTINCT route_id FROM history")$route_id)
 
+##for (r in allroutes) {
+
+r <- allroutes[1]
 HIST <- dbGetQuery(dbConnect(SQLite(), "db/historical-data.db"),
-                   "SELECT * FROM history WHERE route_id LIKE '09002%'")
+                   ## "SELECT * FROM history WHERE route_id LIKE '09002%'")
+                   sprintf("SELECT * FROM history WHERE route_id='%s'", r))
+
+
 
 HIST$time.day <-
     HIST$timestamp - as.numeric(format(as.POSIXct(paste(HIST$trip_start_date, "00:00:00")), format = "%s"))
 HIST$time.hour <- HIST$time.day / 60 / 60
-with(HIST, plot(time.hour, distance, type = "n"))
+with(HIST, plot(time.hour, distance, type = "n", main = r))
 
 HIST$dvt <- as.factor(paste(HIST$trip_start_date, HIST$trip_id, HIST$vehicle_id, sep = ":"))
 tapply(1:nrow(HIST), HIST$dvt, function(i) lines(HIST$time.hour[i], HIST$distance[i]))
@@ -248,18 +267,33 @@ which.keep <-
                 if (max(dx/dt) < 50) return(i) else numeric()
             })))
 KEEP <- HIST[which.keep, ]
+
 with(KEEP, plot(time.hour, distance, type = "n",
-                main = "History of Route 090\n(2016-01-14 -- 2016-02-10)",
+                main = r,
+                ## xlim = c(6.2, 8), ylim = c(0, 10000),
                 xlab = "Time (h)", ylab = "Distance into Trip (m)"))
 KEEP$dvt <- as.factor(paste(KEEP$trip_start_date, KEEP$trip_id, KEEP$vehicle_id, sep = ":"))
-invisible(tapply(1:nrow(KEEP), KEEP$dvt, function(i) lines(KEEP$time.hour[i], KEEP$distance[i])))
-
-
+    invisible(tapply(1:nrow(KEEP), KEEP$dvt, function(i) {
+        lines(KEEP$time.hour[i], KEEP$distance[i], col = "#00000040")
+        points(KEEP$time.hour[i], KEEP$distance[i], cex = 0.3, pch = 10)
+    }))
 ## stop locations:
 stops <- vehicle$new("1", c(1, 1), trip = KEEP$trip_id[1])$getSchedule()
-abline(h = stops$distance_into_trip, lty = 3, col = "gray50")
+    abline(h = stops$distance_into_trip, lty = 3, col = "gray50")
 
+diffs <- invisible(tapply(1:nrow(KEEP), KEEP$dvt, function(i) {
+    diff(KEEP$time.day[i])
+}))
+diffs <- do.call(c, diffs)
+hist(diffs[diffs < 2 * 60])
 
+pings <- KEEP$distance
+pings <- round(pings / 10) * 10
+hist(pings, 1000)
+plot(table(pings))
+
+##grid::grid.locator()
+##}
 
 
 #### Need to fix Bayesian models to the full data once it's obtained:

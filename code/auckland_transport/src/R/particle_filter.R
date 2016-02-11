@@ -13,6 +13,8 @@ vehicle = R6Class("vehicle",
                               self$setPattern(getPattern(trip, verbose = FALSE))
                               private$setSchedule()
                               private$initParticles()
+
+                              private$loadHistory()
                           }
                           
                           cat("New vehicle instantiated.\n")
@@ -69,6 +71,8 @@ vehicle = R6Class("vehicle",
 
                           if (!missing(con)) {
                               pos <- getPositions(con, vehicle.id = private$vehicle.id)
+                              if (nrow(pos) == 0)
+                                  warning("Looks like the vehicle is done for the day ...")
                               trip <- pos$trip_id
                           } else if (!missing(position)) {
                               pos <- position
@@ -118,6 +122,9 @@ vehicle = R6Class("vehicle",
                               private$history$xhat <- abind::abind(private$history$xhat,
                                                                    private$particles, along = 3)
 
+                              print(private$particles["distance", ])
+                              abline(h = private$particles["distance", ], col = "#00009930")
+
                               #self$info()
                           }
                           
@@ -160,6 +167,10 @@ vehicle = R6Class("vehicle",
                           return(private$history)
                       },
 
+                      getCurrentState = function() {
+                          return(private$particles)
+                      },
+
                       getSchedule = function() {
                           return(private$schedule)
                       },
@@ -200,6 +211,91 @@ vehicle = R6Class("vehicle",
                               "\n            sd   =", apply(private$particles, 1, sd))
 
                           invisible(self)
+                      },
+
+                      loadHistory = function() {
+                          ## load history from the database:
+                          hist <- dbGetQuery(dbConnect(SQLite(), "db/historical-data.db"),
+                                             sprintf("SELECT * FROM history WHERE trip_id='%s'",
+                                                     private$current.trip))
+
+                          if (nrow(hist) == 0) {
+                              warning("No history ...")
+                              return(invisible(self))
+                          }
+                          
+                          hist$time.day <-
+                              hist$timestamp -
+                              as.numeric(format(as.POSIXct(paste(hist$trip_start_date, "00:00:00")),
+                                                format = "%s"))
+                          hist$time.hour <- hist$time.day / 60 / 60
+                          
+                          hist$dvt <- as.factor(paste(hist$trip_start_date,
+                                                      hist$trip_id, hist
+                                                      $vehicle_id, sep = ":"))
+                          which.keep <- 
+                              do.call(c,
+                                      invisible(tapply(1:nrow(hist), hist$dvt, function(i) {
+                                          d <- diff(range(hist$time.day[i]))
+                                          ## max speed
+                                          dt <- diff(hist$time.day[i])
+                                          dx <- diff(hist$distance[i])
+                                          if (max(dx/dt) < 50) return(i) else numeric()
+                                      })))
+                          hist <- hist[which.keep, ]
+
+                          if (nrow(hist) > 1) {
+                              private$trip.history <- hist
+
+                              history.fn <- try({
+                                  tapply(1:nrow(hist), hist$dvt, function(i) {
+                                      splinefun(hist$time.day[i],
+                                                hist$distance[i],
+                                                method = "hyman", ties = min)
+                                  })
+                              }, silent = TRUE)
+
+                              if (inherits(history.fn, "try-error")) {
+                                  warning("Unable to fit spline through history.")
+                              } else {
+                                  private$history.fn <- history.fn
+                              }
+                              
+                              history.fnD <- function(d, delta = 0, deriv = 0) {
+                                  sapply(private$history.fn, function(f) {
+                                      ## convert distance to time, time to ["speed", "acceleration"]
+                                      t <- optimize(
+                                          function(x) (f(x) - d)^2,
+                                          interval = range(private$trip.history$time.day)
+                                      )$minimum
+                                      f(t + delta, deriv = deriv)
+                                  })
+                              }
+                              private$history.fnD <- Vectorize(history.fnD, "d")
+                          }
+                          
+                          invisible(self)
+                      },
+
+                      plotHistory = function() {
+                          if (is.null(private$trip.history)) return(invisible(self))
+                          hist <- private$trip.history
+                          with(hist,
+                               plot(time.hour, distance, type = "n",
+                                    main = paste("History of trip", private$current.trip),
+                                    ## xlim = c(6.2, 8), ylim = c(0, 10000),
+                                    xlab = "Time (h)", ylab = "Distance into Trip (m)"))
+                          invisible(tapply(1:nrow(hist), hist$dvt, function(i) {
+                              lines(hist$time.hour[i], hist$distance[i], col = "#00000040")
+                              points(hist$time.hour[i], hist$distance[i], cex = 0.3, pch = 10)
+                          }))
+
+                          invisible(self)
+                      },
+
+                      historyFns = function() {
+                          list(private$history.fn,
+                               private$history.fnD)
                       }
                       
                   ),
@@ -214,6 +310,9 @@ vehicle = R6Class("vehicle",
                       schedule.fn = NULL,
                       schedule.fnD = NULL,
                       acc.sd = NA,
+                      trip.history = NULL,
+                      history.fn = NULL,
+                      history.fnD = NULL,
                       
                       N.particles = NA,
                       particles = NULL,
@@ -337,9 +436,24 @@ vehicle = R6Class("vehicle",
                           ## ... actually, let it go backwards UNTIL it's been 0:
                           p.back <- ifelse(runif(ncol(x)) < 0.05, -Inf, 0)
                           v <- pmax(p.back, x[2, ] + delta * a)
-                          d <- pmax(0, x[1, ] + pmax(p.back, delta * x[2, ] + delta^2 / 2 * a))
+                          ## d <- pmax(0, x[1, ] + pmax(p.back, delta * x[2, ] + delta^2 / 2 * a))
                           ## v <- x[2, ] + delta * a
                           ## d <- x[1, ] + delta * x[2, ] + delta^2 / 2 * a
+
+                          ## Forget velocity, acceleration:
+                          if (is.null(private$history.fnD)) {
+                              d <- pmax(0, x[1, ] + pmax(p.back, delta * x[2, ] + delta^2 / 2 * a))
+                          } else {
+                              Dhat <- private$history.fnD(x[1, ], delta)
+                              d <- colMeans(Dhat) + rnorm(private$N.particles, 0,
+                                                          apply(Dhat, 2, sd) / sqrt(nrow(Dhat)))
+                              d <- pmax(x[1, ], d)
+                          }
+
+                          self$plotHistory()
+                          curX <- private$particles["distance", ]
+                          abline(h = d, col = "#00990060")
+                          abline(h = curX, col = "#99000020", lty = 3)
 
                           ## need to limit the distance!
                           #w <- which(private$pattern$trip_id == private$current.trip)
