@@ -13,8 +13,7 @@ vehicle = R6Class("vehicle",
                               self$setPattern(getPattern(trip, verbose = FALSE))
                               private$setSchedule()
                               private$initParticles()
-
-                              private$loadHistory()
+                              self$loadHistory()
                           }
                           
                           cat("New vehicle instantiated.\n")
@@ -122,7 +121,7 @@ vehicle = R6Class("vehicle",
                               private$history$xhat <- abind::abind(private$history$xhat,
                                                                    private$particles, along = 3)
 
-                              print(private$particles["distance", ])
+#                              print(private$particles["distance", ])
                               abline(h = private$particles["distance", ], col = "#00009930")
 
                               #self$info()

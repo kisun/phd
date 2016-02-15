@@ -174,17 +174,28 @@ for (i in 1:ncol(dX)) points(rep(dat$timestamp[i], nrow(dX)), hist$xhat[1,,i],
 
 ## Let's do it REAL TIME
 loadall()
-con <- dbConnect(SQLite(), "db/gtfs-realtime.db")
-(all <- getPositions(con, route.id="090"))
+## con <- dbConnect(SQLite(), "db/gtfs-realtime.db")
+con <- dbConnect(SQLite(), "db/gtfs-history.db")
+(all <- getPositions(con, route.id="090", date = "2016-01-25"))
+## table(all$vehicle_id)
 ## dd <- all[5, ]
-(dd <- getPositions(con, vehicle.id = "57B6"))
+dd <- all[all$vehicle_id == "57BA", ]
+## (dd <- getPositions(con, vehicle.id = "57BA"))
+## with(dd, plot(position_longitude, position_latitude, type = "l"))
+
+## table(dd$trip_id)
+dd <- dd[dd$trip_id == unique(dd$trip_id)[2], ]
 
 loadall()
-v <- vehicle$new(dd$vehicle_id,
+v <- vehicle$new(dd$vehicle_id[1],
                  dd[1, c("position_latitude", "position_longitude", "timestamp")],
-                 dd$trip_id)
-v$plot()
-v$update(con = con)
+                 dd$trip_id[1])
+
+v$update()$plot()
+for (i in 2:nrow(dd)) {
+    v$update(dd[i, ])
+    grid::grid.locator()
+}
 
 v$update(con = con)
 
