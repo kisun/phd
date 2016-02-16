@@ -9,7 +9,7 @@ loadall <- function()
 loadall()
 collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(SQLite(), "db/historical-data.db")) {
 
-    con <- dbConnect(SQLite(), "db/gtfs-history.db")
+    con <- dbConnect(SQLite(), "db/backups/gtfs-history_latest.db")
 
     if (!missing(day))
         positions <- getPositions(con, route.id = route, date = day)
@@ -108,7 +108,7 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
             tmp3 <- tmp2[tmp2$vehicle_id == vid, ]
             
             v <- vehicle$new(vid, tmp3[1, c("position_latitude", "position_longitude", "timestamp")], trip)
-            v$update()## $plot()
+            v$update()$plot()
             
             pb <- txtProgressBar(1, nrow(tmp3), style = 3)
             for (i in 2:nrow(tmp3)) {
@@ -184,11 +184,11 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
             
             ## Provide a 90 minute window ...
             ## ... and only keep history that spans > 90% of the route ...
-            plot(distance_into_trip ~ time, data = SCHED,
-                 main = paste("Route:", route, "   Date:", day),
-                 xlim = range(SCHED$time, out$trip.timestamp),
-                 ylim = c(0, max(out$distance, SCHED$distance_into_trip)))
-            with(out, lines(trip.timestamp, distance))
+            #plot(distance_into_trip ~ time, data = SCHED,
+            #     main = paste("Route:", route, "   Date:", day),
+            #     xlim = range(SCHED$time, out$trip.timestamp),
+            #     ylim = c(0, max(out$distance, SCHED$distance_into_trip)))
+            #with(out, lines(trip.timestamp, distance))
 
             #cat("STARTS:", min(SCHED$time), ";   first observation:", out$trip.timestamp[1], "\n")
 
@@ -218,11 +218,11 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
 
 
 loadall()
-days <- dbGetQuery(dbConnect(SQLite(), "db/gtfs-history.db"),
+days <- dbGetQuery(dbConnect(SQLite(), "db/backups/gtfs-history_201602160945.db"),
                    "SELECT DISTINCT timestamp FROM vehicle_positions")
 days <- unique(tsDate(days$timestamp))
 
-collectHistory(route = "090")
+collectHistory(route = "090", day = "2016-02-06")
 
 
 
@@ -278,7 +278,7 @@ KEEP$dvt <- as.factor(paste(KEEP$trip_start_date, KEEP$trip_id, KEEP$vehicle_id,
         points(KEEP$time.hour[i], KEEP$distance[i], cex = 0.3, pch = 10)
     }))
 ## stop locations:
-stops <- vehicle$new("1", c(1, 1), trip = KEEP$trip_id[1])$getSchedule()
+stops <- vehicle$new("1", c(1, 1), trip = tail(KEEP$trip_id, 1))$getSchedule()
     abline(h = stops$distance_into_trip, lty = 3, col = "gray50")
 
 diffs <- invisible(tapply(1:nrow(KEEP), KEEP$dvt, function(i) {

@@ -6,7 +6,8 @@ lib = ".Rlibrary"
 packages = c(
   "DBI", "RSQLite",
   "BH", "devtools",
-  "abind"
+  "abind",
+  "msm"  
 )
 
 options(repos = "http://cran.stat.auckland.ac.nz")
