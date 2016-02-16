@@ -7,6 +7,7 @@ packages = c(
   "DBI", "RSQLite",
   "BH", "devtools",
   "abind",
+  "knitr", "xtable",
   "msm"  
 )
 

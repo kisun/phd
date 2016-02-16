@@ -6,15 +6,16 @@
 
 \usepackage{fullpage}
 \usepackage{parskip}
+\usepackage{booktabs}
 
 
 <<echo=FALSE,results="hide">>=
 opts_knit$set(fig.width = 8, fig.height = 5, fig.align = "center")
 suppressMessages({
-    library(RSQLite)
-    library(iNZightMaps)
     .libPaths("../../../.Rlibrary")
-    
+    library(RSQLite)
+    library(msm)
+    library(iNZightMaps)
     source("../src/R/database.R")
     source("../src/R/time_fns.R")
     source("../src/R/graphics.R")
@@ -147,6 +148,11 @@ hist$dvt <- factor(hist$dvt)
 hist$time_into_trip <- 
     do.call(c, tapply(1:nrow(hist), hist$dvt, 
                       function(i) hist$time.day[i] - min(hist$time.day[i])))
+
+test.trip <- hist[hist$trip_start_date == tail(unique(hist$trip_start_date), 1), ]
+hist <- hist[hist$trip_start_date != tail(unique(hist$trip_start_date), 1), ]
+hist$dvt <- factor(hist$dvt)
+
 with(hist, plot(time_into_trip, distance, type = "n",
                 main = "History of Route 090, 12:15 trip", 
                 xlab = "Time into Trip (s)", 
@@ -172,7 +178,7 @@ all starting at zero.
 
 <<initialise>>=
 M <- 500
-(w <- rep(0, M))
+w <- rep(0, M)
 @ 
 
 From here, we wish to predict $a_1$, arrival time at stop number 1, $s_1$.
@@ -203,23 +209,23 @@ arrivalTime <- Vectorize(.arrivalTime, "d")
                    function(x) (f(x) - d)^2,
                    interval = range(hist$time_into_trip)
                    )$minimum
-               print(t)
                f(t + delta, deriv = deriv)
            })
 }
 history.fnD <- Vectorize(.history.fnD, "d")
-draw <- function(s = 0, a, labs = TRUE) {
+draw <- function(s = 0, a, labs = TRUE, xlim = NULL, ylim = NULL) {
     with(hist, plot(time_into_trip, distance, type = "n",
                     main = ifelse(labs, "History of Route 090, 12:15 trip", ""), 
                     xlab = ifelse(labs, "Time into Trip (s)", ""),
                     ylab = ifelse(labs, "Distance into Trip (m)", ""),
+                    xlim = xlim, ylim = ylim,
                     axes = labs))
     box()
     invisible(lapply(history.fn, function(f) 
         curve(f(x), 0, attr(f, "max"), n = 101, add = TRUE)))
     if (s == 0)
         abline(h = c(0, stops), col = "#0000ff", lty = 3)
-    else
+    else if (s > 0)
         abline(h = stops[s], col = "#0000ff", lty = 3)
     
     if (!missing(a) & s > 0)
@@ -242,12 +248,13 @@ For stop 2 (and all future stops), we will use the historical time taken to trav
 stops 2 and 3 (or $s_k$ and $s_{k+1}$).
 
 <<stops_remaining_arrival,fig.width=9,fig.height=12>>=
-a <- a1
+a <- matrix(nrow = 15, ncol = M)
+a[1, ] <- a1
 par(mfrow = c(7, 2), mai = c(0, 0, 0, 0), oma = c(4.1, 4.1, 5.1, 2.1))
 for (i in 2:15) {
     Delta <- arrivalTime(stops[i])[, 1] - arrivalTime(stops[i - 1])[, 1]
-    a <- a + rtnorm(M, mean(Delta), sd(Delta), lower = 0)
-    draw(i, a, labs = FALSE)
+    a[i, ] <- a[i - 1, ] + rtnorm(M, mean(Delta), sd(Delta), lower = 0)
+    draw(i, a[i, ], labs = FALSE)
     if (i >= 14) axis(1) 
     if (i <= 3) axis(3)
 
@@ -258,6 +265,99 @@ mtext("Time into Trip (s)", 1, line = 3, outer = TRUE)
 mtext("Distance into Trip (d)", 2, line = 3, outer = TRUE)
 @ 
 
+We can also see the arrival distribution for stops, in a table:
+<<results="asis">>=
+tab <- t(apply(a, 1, function(x) c(mean(x), sd(x),
+                                   quantile(x, c(0.025, 0.5, 0.975)))))
+colnames(tab)[1:2] <- c("mean", "sd")
+
+xtable::print.xtable(
+    xtable::xtable(cbind(stop = as.character(1:nrow(tab)), 
+                         round(tab / 60)), 
+                   label = "tab:arrival_time_1"), 
+    booktabs = TRUE, include.rownames = FALSE)
+@ 
+
+
+Now would be a good time to get one real trip, and see how well we do.
+<<single_trip,fig.width=9,fig.height=5>>=
+draw()
+with(test.trip, lines(time_into_trip, distance, col = "red", lwd = 2))
+@ 
+
+
+\subsection{Particle Position Update}
+\label{sec:particle_likelihood}
+
+From the above plot, we get sequential real-time updates from the bus as it travels.
+Therefore, we wish to update the predictions in Table~\ref{tab:arrival_time_1} as new data arrives.
+To do this, we need to use the \emph{current state} of each particle 
+$\bx_k(i) = \left[d_k(i), v_k(i)\right]^T$
+to predict the \emph{new state} after $\delta_{k+1}$ seconds.
+
+
+For starters, we'll just go really basic and use the distribution of distance traveled in $\delta_{k+1}$ seconds.
+NOTE: we'll just assume for now that the first observation was made before the bus departed
+the first stop, so the first row is all 0.
+<<first_observation,fig.width=9,fig.height=5>>=
+## convert w from before into a matrix
+N <- nrow(test.trip)
+w <- matrix(nrow = N, ncol = length(w))
+w[1, ] <- 0
+w0 <- w  ## matrix for the original estimates
+
+t <- test.trip$time_into_trip
+delta.t <- c(0, diff(t))
+
+pred <- history.fnD(w[1, ], delta.t[2])
+w0[2, ] <- rtnorm(ncol(w), colMeans(pred), apply(pred, 2, sd), lower = w[1, ])
+pi <- dnorm(w0[2, ], test.trip$distance[2], 20)
+wi <- pi / sum(pi)
+w[2, ] <- sample(w0[2, ], M, TRUE, wi)
+draw(1, a = a[2, ], xlim = c(0, 1000), ylim = c(0, 5200))
+points(rep(t[2], M), w0[2, ], col = "#009900", pch = 19, cex = 0.3)
+points(rep(t[2], M), w[2, ], col = "#000099", pch = 19, cex = 0.3)
+@ 
+
+
+Next step, repeat! Update the stop arrival time predictions.
+
+<<arrival_times_2,fig.width=9,fig.height=12>>=
+a <- matrix(nrow = 15, ncol = M)
+
+ti <- test.trip$time_into_trip[2]
+a1j <- arrivalTime(stops[1])[,1] - ti
+a1 <- ti + rtnorm(M, mean(a1j), sd(a1j), lower = ti)
+draw(1, a = a1)
+
+a[1, ] <- a1
+par(mfrow = c(7, 2), mai = c(0, 0, 0, 0), oma = c(4.1, 4.1, 5.1, 2.1))
+for (i in 2:15) {
+    Delta <- arrivalTime(stops[i])[, 1] - arrivalTime(stops[i - 1])[, 1]
+    a[i, ] <- a[i - 1, ] + rtnorm(M, mean(Delta), sd(Delta), lower = 0)
+    draw(i, a[i, ], labs = FALSE)
+    if (i >= 14) axis(1) 
+    if (i <= 3) axis(3)
+
+    if (i %% 4 == 2) axis(2)
+    if (i %% 4 == 1) axis(4)
+}
+mtext("Time into Trip (s)", 1, line = 3, outer = TRUE)
+mtext("Distance into Trip (d)", 2, line = 3, outer = TRUE)
+@
+
+
+<<results="asis">>=
+tab <- t(apply(a, 1, function(x) c(mean(x), sd(x),
+                                   quantile(x, c(0.025, 0.5, 0.975)))))
+colnames(tab)[1:2] <- c("mean", "sd")
+
+xtable::print.xtable(
+    xtable::xtable(cbind(stop = as.character(1:nrow(tab)), 
+                         round((tab - ti) / 60)), 
+                   label = "tab:arrival_time_1"), 
+    booktabs = TRUE, include.rownames = FALSE)
+@ 
 
 
 \end{document}
