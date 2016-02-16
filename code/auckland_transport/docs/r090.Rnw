@@ -10,7 +10,7 @@
 
 
 <<echo=FALSE,results="hide">>=
-opts_knit$set(fig.width = 8, fig.height = 5, fig.align = "center")
+opts_knit$set(fig.width = 9, fig.height = 5, fig.align = "center")
 suppressMessages({
     .libPaths("../../../.Rlibrary")
     library(RSQLite)
@@ -223,14 +223,19 @@ draw <- function(s = 0, a, labs = TRUE, xlim = NULL, ylim = NULL) {
     box()
     invisible(lapply(history.fn, function(f) 
         curve(f(x), 0, attr(f, "max"), n = 101, add = TRUE)))
-    if (s == 0)
+    if (any(s == 0))
         abline(h = c(0, stops), col = "#0000ff", lty = 3)
-    else if (s > 0)
+    else if (all(s > 0))
         abline(h = stops[s], col = "#0000ff", lty = 3)
     
-    if (!missing(a) & s > 0)
-        points(a, rep(stops[s], length(a)), 
-               pch = 19, col = "red", cex = 0.3)
+    if (!missing(a) && all(s > 0)) {
+        if (!is.matrix(a)) a <- rbind(a)
+        if (length(s) == nrow(a)) {
+            for (i in 1:nrow(a))
+                points(a[i, ], rep(stops[s[i]], ncol(a)), 
+                       pch = 19, col = "red", cex = 0.3)
+        }
+    }
 }
 draw()
 @ 
@@ -247,22 +252,14 @@ Without any data, all we can do is push on further into the future.
 For stop 2 (and all future stops), we will use the historical time taken to travel between
 stops 2 and 3 (or $s_k$ and $s_{k+1}$).
 
-<<stops_remaining_arrival,fig.width=9,fig.height=12>>=
+<<stops_remaining_arrival,fig.width=9,fig.height=5>>=
 a <- matrix(nrow = 15, ncol = M)
 a[1, ] <- a1
-par(mfrow = c(7, 2), mai = c(0, 0, 0, 0), oma = c(4.1, 4.1, 5.1, 2.1))
 for (i in 2:15) {
     Delta <- arrivalTime(stops[i])[, 1] - arrivalTime(stops[i - 1])[, 1]
     a[i, ] <- a[i - 1, ] + rtnorm(M, mean(Delta), sd(Delta), lower = 0)
-    draw(i, a[i, ], labs = FALSE)
-    if (i >= 14) axis(1) 
-    if (i <= 3) axis(3)
-
-    if (i %% 4 == 2) axis(2)
-    if (i %% 4 == 1) axis(4)
 }
-mtext("Time into Trip (s)", 1, line = 3, outer = TRUE)
-mtext("Distance into Trip (d)", 2, line = 3, outer = TRUE)
+draw(s = 1:15, a = a)
 @ 
 
 We can also see the arrival distribution for stops, in a table:
@@ -274,8 +271,10 @@ colnames(tab)[1:2] <- c("mean", "sd")
 xtable::print.xtable(
     xtable::xtable(cbind(stop = as.character(1:nrow(tab)), 
                          round(tab / 60)), 
+                   caption = "Sequential Predictions",
                    label = "tab:arrival_time_1"), 
-    booktabs = TRUE, include.rownames = FALSE)
+    booktabs = TRUE, include.rownames = FALSE, floating = TRUE,
+    table.placement = "p")
 @ 
 
 
@@ -284,6 +283,38 @@ Now would be a good time to get one real trip, and see how well we do.
 draw()
 with(test.trip, lines(time_into_trip, distance, col = "red", lwd = 2))
 @ 
+
+
+Alternatively, we do the entire prediction (rather than just the stop-to-stop prediction):
+<<alt_stop_prediction,fig.width=9,fig.height=5>>=
+a <- matrix(nrow = 15, ncol = M)
+a[1, ] <- a1
+for (i in 2:15) {
+    Delta <- arrivalTime(stops[i])[, 1]
+    a[i, ] <- rtnorm(M, mean(Delta), sd(Delta), lower = 0)
+}
+draw(s = 1:15, a = a)
+@ 
+
+We can also see the arrival distribution for stops, in a table:
+<<alt_results_table,results="asis">>=
+tab <- t(apply(a, 1, function(x) c(mean(x), sd(x),
+                                   quantile(x, c(0.025, 0.5, 0.975)))))
+colnames(tab)[1:2] <- c("mean", "sd")
+
+xtable::print.xtable(
+    xtable::xtable(cbind(stop = as.character(1:nrow(tab)), 
+                         round(tab / 60)), 
+                   caption = "All-in-one Predictions",
+                   label = "tab:arrival_time_1"), 
+    booktabs = TRUE, include.rownames = FALSE, floating = TRUE,
+    table.placement = "p")
+@ 
+
+Using this all-in-one method, the variance might be slightly smaller,
+but otherwise fairly similar.
+
+
 
 
 \subsection{Particle Position Update}
@@ -322,7 +353,7 @@ points(rep(t[2], M), w[2, ], col = "#000099", pch = 19, cex = 0.3)
 
 Next step, repeat! Update the stop arrival time predictions.
 
-<<arrival_times_2,fig.width=9,fig.height=12>>=
+<<arrival_times_2,fig.width=9,fig.height=5>>=
 a <- matrix(nrow = 15, ncol = M)
 
 ti <- test.trip$time_into_trip[2]
@@ -331,19 +362,13 @@ a1 <- ti + rtnorm(M, mean(a1j), sd(a1j), lower = ti)
 draw(1, a = a1)
 
 a[1, ] <- a1
-par(mfrow = c(7, 2), mai = c(0, 0, 0, 0), oma = c(4.1, 4.1, 5.1, 2.1))
 for (i in 2:15) {
-    Delta <- arrivalTime(stops[i])[, 1] - arrivalTime(stops[i - 1])[, 1]
-    a[i, ] <- a[i - 1, ] + rtnorm(M, mean(Delta), sd(Delta), lower = 0)
-    draw(i, a[i, ], labs = FALSE)
-    if (i >= 14) axis(1) 
-    if (i <= 3) axis(3)
-
-    if (i %% 4 == 2) axis(2)
-    if (i %% 4 == 1) axis(4)
+    Delta <- arrivalTime(stops[i])[, 1] - ti
+    a[i, ] <- ti + rtnorm(M, mean(Delta), sd(Delta)/sqrt(length(Delta)), lower = ti)
 }
-mtext("Time into Trip (s)", 1, line = 3, outer = TRUE)
-mtext("Distance into Trip (d)", 2, line = 3, outer = TRUE)
+draw(1:15, a)
+points(rep(t[2], M), w0[2, ], col = "#009900", pch = 19, cex = 0.3)
+points(rep(t[2], M), w[2, ], col = "#000099", pch = 19, cex = 0.3)
 @
 
 
@@ -355,9 +380,57 @@ colnames(tab)[1:2] <- c("mean", "sd")
 xtable::print.xtable(
     xtable::xtable(cbind(stop = as.character(1:nrow(tab)), 
                          round((tab - ti) / 60)), 
+                   caption = "Predictions after one observation",
                    label = "tab:arrival_time_1"), 
-    booktabs = TRUE, include.rownames = FALSE)
+    booktabs = TRUE, include.rownames = FALSE, floating = TRUE,
+    table.placement = "tb")
 @ 
+
+
+Another step:
+<<second_observation,fig.width=9,fig.height=5>>=
+predict <- function(i, draw = TRUE, ...) {
+    pred <- history.fnD(w[i - 1, ], delta.t[i])
+    w0[i, ] <<- rtnorm(ncol(w), colMeans(pred), apply(pred, 2, sd), lower = w[i - 1, ])
+    pi <- dnorm(w0[i, ], test.trip$distance[i], 20)
+    wi <- pi / sum(pi)
+    w[i, ] <<- sample(w0[i, ], M, TRUE, wi)
+    
+    wstops <- which(stops > min(w[i, ]))
+    stops <- stops[wstops]
+    
+    a <- matrix(nrow = length(stops), ncol = M)    
+    ti <- test.trip$time_into_trip[i]
+    a1j <- arrivalTime(stops[1])[,1] - ti
+    a1 <- ti + rtnorm(M, mean(a1j), sd(a1j) / sqrt(length(Delta)), lower = 0)
+    
+    a[1, ] <- a1
+    for (j in 2:length(stops)) {
+        Delta <- arrivalTime(stops[j])[, 1] - ti
+        a[j, ] <- ti + rtnorm(M, mean(Delta), sd(Delta)/sqrt(length(Delta)), lower = 0)
+    }
+    if (draw) {
+        draw(wstops, a, ...)
+        points(rep(t[i], M), w0[i, ], col = "#009900", pch = 19, cex = 0.3)
+        points(rep(t[i], M), w[i, ], col = "#000099", pch = 19, cex = 0.3)
+    }
+}
+predict(3)
+@ 
+
+Well, that seems to be working! Let's take off!
+<<future_observations,fig.width=9,fig.height=12>>=
+par(mfcol = c(6, 2), mar = c(0, 0, 0, 1), oma = c(5.1, 4.1, 4.1, 2.1))
+for (i in 4:27) 
+    predict(i, labs = FALSE)
+@ 
+
+
+Continue on for the entire route, and then check the results!
+<<remaining_obs>>=
+for(i in 28:nrow(test.trip)) predict(i, draw = FALSE)
+@ 
+
 
 
 \end{document}
