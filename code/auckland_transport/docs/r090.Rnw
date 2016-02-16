@@ -1,0 +1,263 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{xfrac}
+
+\usepackage{fullpage}
+\usepackage{parskip}
+
+
+<<echo=FALSE,results="hide">>=
+opts_knit$set(fig.width = 8, fig.height = 5, fig.align = "center")
+suppressMessages({
+    library(RSQLite)
+    library(iNZightMaps)
+    .libPaths("../../../.Rlibrary")
+    
+    source("../src/R/database.R")
+    source("../src/R/time_fns.R")
+    source("../src/R/graphics.R")
+    source("../src/R/particle_filter.R")
+})
+@ 
+
+\newcommand{\bx}{\boldsymbol{x}}
+\newcommand{\bu}{\boldsymbol{u}}
+\newcommand{\bw}{\boldsymbol{w}}
+\newcommand{\bz}{\boldsymbol{z}}
+\newcommand{\by}{\boldsymbol{y}}
+\newcommand{\bY}{\boldsymbol{Y}}
+\newcommand{\br}{\boldsymbol{r}}
+\newcommand{\bd}{\boldsymbol{d}}
+\newcommand{\bs}{\boldsymbol{s}}
+\newcommand{\bh}{\boldsymbol{h}}
+\newcommand{\bv}{\boldsymbol{v}}
+\newcommand{\bfn}{\boldsymbol{f}}
+\newcommand{\bF}{\boldsymbol{F}}
+\newcommand{\bg}{\boldsymbol{g}}
+\newcommand{\bH}{\boldsymbol{2H}}
+\newcommand{\bK}{\boldsymbol{K}}
+\newcommand{\bQ}{\boldsymbol{Q}}
+\newcommand{\bR}{\boldsymbol{R}}
+\newcommand{\bP}{\boldsymbol{P}}
+\newcommand{\bS}{\boldsymbol{S}}
+\newcommand{\bZero}{\boldsymbol{0}}
+\newcommand{\dd}[2]{\frac{\partial {#1}}{\partial {#2}}}
+
+\newcommand{\X}{\mathrm{X}}
+\newcommand{\E}{\mathrm{E}}
+\newcommand{\V}{\mathrm{V}}
+
+
+\newcommand{\pr}{\mathbb{P}}
+\renewcommand{\Pr}[1]{\pr\left(#1\right)}
+
+
+\newcommand{\km}{_{k-1}}
+\newcommand{\kk}{_{k|k}}
+\newcommand{\kkm}{_{k|k-1}}
+\newcommand{\kmkm}{_{k-1|k-1}}
+
+
+\title{Modelling Bus Route 090}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+
+
+\section{Initial Historical Data}
+\label{sec:historical-data}
+
+
+A couple of weeks worth of data was collected for the bus route 090 (Westgate to Downtown), 
+and a very general Particle Filter model was used to estimate the distance into trip, $\bd$,
+of each observation. 
+This data is stored in the database \texttt{db/historical\_data.db}.
+The following code extracts the raw history, 
+and makes a few manipulations to make it easier to work with,
+as well as remove some impossibly fast trips.
+
+<<extract_historical_data,fig.height=5,fig.width=9>>=
+routeid <- "09001-20151224100745_v36.10"
+hist090 <- dbGetQuery(dbConnect(SQLite(), "historical-data.db"),
+                      sprintf("SELECT * FROM history WHERE route_id='%s'",
+                              routeid))
+hist090$time.day <- hist090$timestamp - 
+    as.numeric(format(as.POSIXct(paste(hist090$trip_start_date, 
+                                       "00:00:00")), 
+                      format = "%s"))
+hist090$time.hour <- hist090$time.day / 60 / 60
+hist090$dvt <- as.factor(paste(hist090$trip_start_date, 
+                               hist090$trip_id, 
+                               hist090$vehicle_id, 
+                               sep = ":"))
+which.keep <- 
+    do.call(c,
+            invisible(tapply(1:nrow(hist090), hist090$dvt, function(i) {
+                d <- diff(range(hist090$time.day[i]))
+                dt <- diff(hist090$time.day[i])
+                dx <- diff(hist090$distance[i])
+                if (max(dx/dt) < 50) return(i) else numeric()
+            })))
+hist090 <- hist090[which.keep, ]
+with(hist090, plot(time.hour, distance, type = "n",
+                   main = "History of Route 090", xlab = "Time (h)", 
+                   ylab = "Distance into Trip (m)"))
+
+invisible(tapply(1:nrow(hist090), hist090$dvt, 
+                 function(i) lines(hist090$time.hour[i], hist090$distance[i])))
+@ 
+
+
+\section{Predicting a Route}
+\label{sec:route_prediction}
+
+From here, we will be using the historical data to project particles ahead to estimate arrival time at future stops.
+There will be two parts to each iteration:
+\begin{enumerate}
+\item predict partical arrival times at future stops,
+  
+\item predict partical locations at time $t_{k-1} + \delta_k$.
+\end{enumerate}
+The first will be used to predict arrival time at stops, 
+while the second will be used to predict the new location of the bus and produce a new set of particles for the next iteration.
+
+
+Each bus reports its position at time $t_k$ as $r_k$ (latitude, longitude), 
+where the $k$ subscript is the observation number.
+The distance into trip at time $t_k$ is defined as $d_k$, 
+and is known only as a distribution which is defined by the particles $\bw_k$.
+For now, only distance will be used; in future, however, velocity may also be modelled.
+
+
+The particles are updated using standard Particle Filter theory, 
+so that after each new observation is obtained, 
+the distribution of the particles represents the posterior distribution of $d_k$ via SIR.
+
+
+For this example, we will use a single trip:
+<<example_trip,fig.height=5,fig.width=9>>=
+tripid <- "3090020609-20151224100745_v36.10"
+hist <- hist090[hist090$trip_id == tripid, ]
+hist$dvt <- factor(hist$dvt)
+hist$time_into_trip <- 
+    do.call(c, tapply(1:nrow(hist), hist$dvt, 
+                      function(i) hist$time.day[i] - min(hist$time.day[i])))
+with(hist, plot(time_into_trip, distance, type = "n",
+                main = "History of Route 090, 12:15 trip", 
+                xlab = "Time into Trip (s)", 
+                ylab = "Distance into Trip (m)"))
+invisible(tapply(1:nrow(hist), hist$dvt, 
+                 function(i) lines(hist$time_into_trip[i], hist$distance[i])))
+
+stops <- 1:15 * 2000
+abline(h = c(0, stops), col = "#0000ff", lty = 3)
+@ 
+The first model is going to ignore actual start time, and instead just use variability in travel times.
+Also, to simplify, we have made up 15 evently spaced ``stops''.
+
+
+
+\subsection{Arrival Times at Future Stops}
+\label{sec:future_arrival_times}
+
+
+The prediction of arrival times is actually fairly straight forward.
+We start off with (for simplicity) 50 walkers, $w_0(i), i \in \{1,...,10\}$, 
+all starting at zero.
+
+<<initialise>>=
+M <- 500
+(w <- rep(0, M))
+@ 
+
+From here, we wish to predict $a_1$, arrival time at stop number 1, $s_1$.
+To do this, we need to know at what \emph{time} each historical journey arrives at the stop.
+This is done by fitting a polynomial spline to each journey, 
+and some fancy optimisation techniques to find $a_{1|\boldsymbol{j}}$ 
+($\boldsymbol{j}$ represents all of the information associated with historical trip $j$).
+
+<<spline_curves,fig.height=5,fig.width=9>>=
+history.fn <- try({
+    tapply(1:nrow(hist), hist$dvt, function(i) {
+               f=splinefun(hist$time_into_trip[i],
+                         hist$distance[i],
+                         method = "hyman", ties = min)
+               attr(f, "max") <- max(hist$time_into_trip[i])
+               f
+           })
+}, silent = TRUE)
+.arrivalTime <- function(d)
+    sapply(history.fn, 
+           function(f) optimize(function(x) (f(x) - d)^2,
+                                interval = range(hist$time_into_trip))$minimum)
+arrivalTime <- Vectorize(.arrivalTime, "d")
+.history.fnD <- function(d, delta = 0, deriv = 0) {
+    sapply(history.fn, function(f) {
+               ## convert distance to time, time to ["speed", "acceleration"]
+               t <- optimize(
+                   function(x) (f(x) - d)^2,
+                   interval = range(hist$time_into_trip)
+                   )$minimum
+               print(t)
+               f(t + delta, deriv = deriv)
+           })
+}
+history.fnD <- Vectorize(.history.fnD, "d")
+draw <- function(s = 0, a, labs = TRUE) {
+    with(hist, plot(time_into_trip, distance, type = "n",
+                    main = ifelse(labs, "History of Route 090, 12:15 trip", ""), 
+                    xlab = ifelse(labs, "Time into Trip (s)", ""),
+                    ylab = ifelse(labs, "Distance into Trip (m)", ""),
+                    axes = labs))
+    box()
+    invisible(lapply(history.fn, function(f) 
+        curve(f(x), 0, attr(f, "max"), n = 101, add = TRUE)))
+    if (s == 0)
+        abline(h = c(0, stops), col = "#0000ff", lty = 3)
+    else
+        abline(h = stops[s], col = "#0000ff", lty = 3)
+    
+    if (!missing(a) & s > 0)
+        points(a, rep(stops[s], length(a)), 
+               pch = 19, col = "red", cex = 0.3)
+}
+draw()
+@ 
+
+
+So, for the particles, the possible time of arrival at $s_1$ is:
+<<stop_one_arrival,fig.width=9,fig.height=5>>=
+a1j <- arrivalTime(stops[1])[,1]
+a1 <- rtnorm(M, mean(a1j), sd(a1j), lower = 0)
+draw(1, a = a1)
+@ 
+
+Without any data, all we can do is push on further into the future.
+For stop 2 (and all future stops), we will use the historical time taken to travel between
+stops 2 and 3 (or $s_k$ and $s_{k+1}$).
+
+<<stops_remaining_arrival,fig.width=9,fig.height=12>>=
+a <- a1
+par(mfrow = c(7, 2), mai = c(0, 0, 0, 0), oma = c(4.1, 4.1, 5.1, 2.1))
+for (i in 2:15) {
+    Delta <- arrivalTime(stops[i])[, 1] - arrivalTime(stops[i - 1])[, 1]
+    a <- a + rtnorm(M, mean(Delta), sd(Delta), lower = 0)
+    draw(i, a, labs = FALSE)
+    if (i >= 14) axis(1) 
+    if (i <= 3) axis(3)
+
+    if (i %% 4 == 2) axis(2)
+    if (i %% 4 == 1) axis(4)
+}
+mtext("Time into Trip (s)", 1, line = 3, outer = TRUE)
+mtext("Distance into Trip (d)", 2, line = 3, outer = TRUE)
+@ 
+
+
+
+\end{document}

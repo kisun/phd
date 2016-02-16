@@ -1,0 +1,351 @@
+\documentclass[11pt]{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{xfrac}
+
+\usepackage{fullpage}
+\usepackage{parskip}
+
+
+
+
+\newcommand{\bx}{\boldsymbol{x}}
+\newcommand{\bu}{\boldsymbol{u}}
+\newcommand{\bw}{\boldsymbol{w}}
+\newcommand{\bz}{\boldsymbol{z}}
+\newcommand{\by}{\boldsymbol{y}}
+\newcommand{\bY}{\boldsymbol{Y}}
+\newcommand{\br}{\boldsymbol{r}}
+\newcommand{\bd}{\boldsymbol{d}}
+\newcommand{\bs}{\boldsymbol{s}}
+\newcommand{\bh}{\boldsymbol{h}}
+\newcommand{\bv}{\boldsymbol{v}}
+\newcommand{\bfn}{\boldsymbol{f}}
+\newcommand{\bF}{\boldsymbol{F}}
+\newcommand{\bg}{\boldsymbol{g}}
+\newcommand{\bH}{\boldsymbol{2H}}
+\newcommand{\bK}{\boldsymbol{K}}
+\newcommand{\bQ}{\boldsymbol{Q}}
+\newcommand{\bR}{\boldsymbol{R}}
+\newcommand{\bP}{\boldsymbol{P}}
+\newcommand{\bS}{\boldsymbol{S}}
+\newcommand{\bZero}{\boldsymbol{0}}
+\newcommand{\dd}[2]{\frac{\partial {#1}}{\partial {#2}}}
+
+\newcommand{\X}{\mathrm{X}}
+\newcommand{\E}{\mathrm{E}}
+\newcommand{\V}{\mathrm{V}}
+
+
+\newcommand{\pr}{\mathbb{P}}
+\renewcommand{\Pr}[1]{\pr\left(#1\right)}
+
+
+\newcommand{\km}{_{k-1}}
+\newcommand{\kk}{_{k|k}}
+\newcommand{\kkm}{_{k|k-1}}
+\newcommand{\kmkm}{_{k-1|k-1}}
+
+
+\title{Modelling Bus Route 090}
+\author{}
+\date{}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+\maketitle
+
+
+
+\section{Initial Historical Data}
+\label{sec:historical-data}
+
+
+A couple of weeks worth of data was collected for the bus route 090 (Westgate to Downtown), 
+and a very general Particle Filter model was used to estimate the distance into trip, $\bd$,
+of each observation. 
+This data is stored in the database \texttt{db/historical\_data.db}.
+The following code extracts the raw history, 
+and makes a few manipulations to make it easier to work with,
+as well as remove some impossibly fast trips.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{routeid} \hlkwb{<-} \hlstr{"09001-20151224100745_v36.10"}
+\hlstd{hist090} \hlkwb{<-} \hlkwd{dbGetQuery}\hlstd{(}\hlkwd{dbConnect}\hlstd{(}\hlkwd{SQLite}\hlstd{(),} \hlstr{"historical-data.db"}\hlstd{),}
+                      \hlkwd{sprintf}\hlstd{(}\hlstr{"SELECT * FROM history WHERE route_id='%s'"}\hlstd{,}
+                              \hlstd{routeid))}
+\hlstd{hist090}\hlopt{$}\hlstd{time.day} \hlkwb{<-} \hlstd{hist090}\hlopt{$}\hlstd{timestamp} \hlopt{-}
+    \hlkwd{as.numeric}\hlstd{(}\hlkwd{format}\hlstd{(}\hlkwd{as.POSIXct}\hlstd{(}\hlkwd{paste}\hlstd{(hist090}\hlopt{$}\hlstd{trip_start_date,}
+                                       \hlstr{"00:00:00"}\hlstd{)),}
+                      \hlkwc{format} \hlstd{=} \hlstr{"%s"}\hlstd{))}
+\hlstd{hist090}\hlopt{$}\hlstd{time.hour} \hlkwb{<-} \hlstd{hist090}\hlopt{$}\hlstd{time.day} \hlopt{/} \hlnum{60} \hlopt{/} \hlnum{60}
+\hlstd{hist090}\hlopt{$}\hlstd{dvt} \hlkwb{<-} \hlkwd{as.factor}\hlstd{(}\hlkwd{paste}\hlstd{(hist090}\hlopt{$}\hlstd{trip_start_date,}
+                               \hlstd{hist090}\hlopt{$}\hlstd{trip_id,}
+                               \hlstd{hist090}\hlopt{$}\hlstd{vehicle_id,}
+                               \hlkwc{sep} \hlstd{=} \hlstr{":"}\hlstd{))}
+\hlstd{which.keep} \hlkwb{<-}
+    \hlkwd{do.call}\hlstd{(c,}
+            \hlkwd{invisible}\hlstd{(}\hlkwd{tapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(hist090), hist090}\hlopt{$}\hlstd{dvt,} \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{) \{}
+                \hlstd{d} \hlkwb{<-} \hlkwd{diff}\hlstd{(}\hlkwd{range}\hlstd{(hist090}\hlopt{$}\hlstd{time.day[i]))}
+                \hlstd{dt} \hlkwb{<-} \hlkwd{diff}\hlstd{(hist090}\hlopt{$}\hlstd{time.day[i])}
+                \hlstd{dx} \hlkwb{<-} \hlkwd{diff}\hlstd{(hist090}\hlopt{$}\hlstd{distance[i])}
+                \hlkwa{if} \hlstd{(}\hlkwd{max}\hlstd{(dx}\hlopt{/}\hlstd{dt)} \hlopt{<} \hlnum{50}\hlstd{)} \hlkwd{return}\hlstd{(i)} \hlkwa{else} \hlkwd{numeric}\hlstd{()}
+            \hlstd{\})))}
+\hlstd{hist090} \hlkwb{<-} \hlstd{hist090[which.keep, ]}
+\hlkwd{with}\hlstd{(hist090,} \hlkwd{plot}\hlstd{(time.hour, distance,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,}
+                   \hlkwc{main} \hlstd{=} \hlstr{"History of Route 090"}\hlstd{,} \hlkwc{xlab} \hlstd{=} \hlstr{"Time (h)"}\hlstd{,}
+                   \hlkwc{ylab} \hlstd{=} \hlstr{"Distance into Trip (m)"}\hlstd{))}
+
+\hlkwd{invisible}\hlstd{(}\hlkwd{tapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(hist090), hist090}\hlopt{$}\hlstd{dvt,}
+                 \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{)} \hlkwd{lines}\hlstd{(hist090}\hlopt{$}\hlstd{time.hour[i], hist090}\hlopt{$}\hlstd{distance[i])))}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/extract_historical_data-1} 
+
+\end{knitrout}
+
+
+\section{Predicting a Route}
+\label{sec:route_prediction}
+
+From here, we will be using the historical data to project particles ahead to estimate arrival time at future stops.
+There will be two parts to each iteration:
+\begin{enumerate}
+\item predict partical arrival times at future stops,
+  
+\item predict partical locations at time $t_{k-1} + \delta_k$.
+\end{enumerate}
+The first will be used to predict arrival time at stops, 
+while the second will be used to predict the new location of the bus and produce a new set of particles for the next iteration.
+
+
+Each bus reports its position at time $t_k$ as $r_k$ (latitude, longitude), 
+where the $k$ subscript is the observation number.
+The distance into trip at time $t_k$ is defined as $d_k$, 
+and is known only as a distribution which is defined by the particles $\bw_k$.
+For now, only distance will be used; in future, however, velocity may also be modelled.
+
+
+The particles are updated using standard Particle Filter theory, 
+so that after each new observation is obtained, 
+the distribution of the particles represents the posterior distribution of $d_k$ via SIR.
+
+
+For this example, we will use a single trip:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{tripid} \hlkwb{<-} \hlstr{"3090020609-20151224100745_v36.10"}
+\hlstd{hist} \hlkwb{<-} \hlstd{hist090[hist090}\hlopt{$}\hlstd{trip_id} \hlopt{==} \hlstd{tripid, ]}
+\hlstd{hist}\hlopt{$}\hlstd{dvt} \hlkwb{<-} \hlkwd{factor}\hlstd{(hist}\hlopt{$}\hlstd{dvt)}
+\hlstd{hist}\hlopt{$}\hlstd{time_into_trip} \hlkwb{<-}
+    \hlkwd{do.call}\hlstd{(c,} \hlkwd{tapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(hist), hist}\hlopt{$}\hlstd{dvt,}
+                      \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{) hist}\hlopt{$}\hlstd{time.day[i]} \hlopt{-} \hlkwd{min}\hlstd{(hist}\hlopt{$}\hlstd{time.day[i])))}
+\hlkwd{with}\hlstd{(hist,} \hlkwd{plot}\hlstd{(time_into_trip, distance,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,}
+                \hlkwc{main} \hlstd{=} \hlstr{"History of Route 090, 12:15 trip"}\hlstd{,}
+                \hlkwc{xlab} \hlstd{=} \hlstr{"Time into Trip (s)"}\hlstd{,}
+                \hlkwc{ylab} \hlstd{=} \hlstr{"Distance into Trip (m)"}\hlstd{))}
+\hlkwd{invisible}\hlstd{(}\hlkwd{tapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(hist), hist}\hlopt{$}\hlstd{dvt,}
+                 \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{)} \hlkwd{lines}\hlstd{(hist}\hlopt{$}\hlstd{time_into_trip[i], hist}\hlopt{$}\hlstd{distance[i])))}
+
+\hlstd{stops} \hlkwb{<-} \hlnum{1}\hlopt{:}\hlnum{15} \hlopt{*} \hlnum{2000}
+\hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{, stops),} \hlkwc{col} \hlstd{=} \hlstr{"#0000ff"}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/example_trip-1} 
+
+\end{knitrout}
+The first model is going to ignore actual start time, and instead just use variability in travel times.
+Also, to simplify, we have made up 15 evently spaced ``stops''.
+
+
+
+\subsection{Arrival Times at Future Stops}
+\label{sec:future_arrival_times}
+
+
+The prediction of arrival times is actually fairly straight forward.
+We start off with (for simplicity) 50 walkers, $w_0(i), i \in \{1,...,10\}$, 
+all starting at zero.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{M} \hlkwb{<-} \hlnum{500}
+\hlstd{(w} \hlkwb{<-} \hlkwd{rep}\hlstd{(}\hlnum{0}\hlstd{, M))}
+\end{alltt}
+\begin{verbatim}
+##   [1] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+##  [36] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+##  [71] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+## [106] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+## [141] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+## [176] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+## [211] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+## [246] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+## [281] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+## [316] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+## [351] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+## [386] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+## [421] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+## [456] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+## [491] 0 0 0 0 0 0 0 0 0 0
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+From here, we wish to predict $a_1$, arrival time at stop number 1, $s_1$.
+To do this, we need to know at what \emph{time} each historical journey arrives at the stop.
+This is done by fitting a polynomial spline to each journey, 
+and some fancy optimisation techniques to find $a_{1|\boldsymbol{j}}$ 
+($\boldsymbol{j}$ represents all of the information associated with historical trip $j$).
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{history.fn} \hlkwb{<-} \hlkwd{try}\hlstd{(\{}
+    \hlkwd{tapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(hist), hist}\hlopt{$}\hlstd{dvt,} \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{) \{}
+               \hlstd{f}\hlkwb{=}\hlkwd{splinefun}\hlstd{(hist}\hlopt{$}\hlstd{time_into_trip[i],}
+                         \hlstd{hist}\hlopt{$}\hlstd{distance[i],}
+                         \hlkwc{method} \hlstd{=} \hlstr{"hyman"}\hlstd{,} \hlkwc{ties} \hlstd{= min)}
+               \hlkwd{attr}\hlstd{(f,} \hlstr{"max"}\hlstd{)} \hlkwb{<-} \hlkwd{max}\hlstd{(hist}\hlopt{$}\hlstd{time_into_trip[i])}
+               \hlstd{f}
+           \hlstd{\})}
+\hlstd{\},} \hlkwc{silent} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\hlstd{.arrivalTime} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{)}
+    \hlkwd{sapply}\hlstd{(history.fn,}
+           \hlkwa{function}\hlstd{(}\hlkwc{f}\hlstd{)} \hlkwd{optimize}\hlstd{(}\hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) (}\hlkwd{f}\hlstd{(x)} \hlopt{-} \hlstd{d)}\hlopt{^}\hlnum{2}\hlstd{,}
+                                \hlkwc{interval} \hlstd{=} \hlkwd{range}\hlstd{(hist}\hlopt{$}\hlstd{time_into_trip))}\hlopt{$}\hlstd{minimum)}
+\hlstd{arrivalTime} \hlkwb{<-} \hlkwd{Vectorize}\hlstd{(.arrivalTime,} \hlstr{"d"}\hlstd{)}
+\hlstd{.history.fnD} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{,} \hlkwc{delta} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{deriv} \hlstd{=} \hlnum{0}\hlstd{) \{}
+    \hlkwd{sapply}\hlstd{(history.fn,} \hlkwa{function}\hlstd{(}\hlkwc{f}\hlstd{) \{}
+               \hlcom{## convert distance to time, time to ["speed", "acceleration"]}
+               \hlstd{t} \hlkwb{<-} \hlkwd{optimize}\hlstd{(}
+                   \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) (}\hlkwd{f}\hlstd{(x)} \hlopt{-} \hlstd{d)}\hlopt{^}\hlnum{2}\hlstd{,}
+                   \hlkwc{interval} \hlstd{=} \hlkwd{range}\hlstd{(hist}\hlopt{$}\hlstd{time_into_trip)}
+                   \hlstd{)}\hlopt{$}\hlstd{minimum}
+               \hlkwd{print}\hlstd{(t)}
+               \hlkwd{f}\hlstd{(t} \hlopt{+} \hlstd{delta,} \hlkwc{deriv} \hlstd{= deriv)}
+           \hlstd{\})}
+\hlstd{\}}
+\hlstd{history.fnD} \hlkwb{<-} \hlkwd{Vectorize}\hlstd{(.history.fnD,} \hlstr{"d"}\hlstd{)}
+\hlstd{draw} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{s} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{a}\hlstd{,} \hlkwc{labs} \hlstd{=} \hlnum{TRUE}\hlstd{) \{}
+    \hlkwd{with}\hlstd{(hist,} \hlkwd{plot}\hlstd{(time_into_trip, distance,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,}
+                    \hlkwc{main} \hlstd{=} \hlkwd{ifelse}\hlstd{(labs,} \hlstr{"History of Route 090, 12:15 trip"}\hlstd{,} \hlstr{""}\hlstd{),}
+                    \hlkwc{xlab} \hlstd{=} \hlkwd{ifelse}\hlstd{(labs,} \hlstr{"Time into Trip (s)"}\hlstd{,} \hlstr{""}\hlstd{),}
+                    \hlkwc{ylab} \hlstd{=} \hlkwd{ifelse}\hlstd{(labs,} \hlstr{"Distance into Trip (m)"}\hlstd{,} \hlstr{""}\hlstd{),}
+                    \hlkwc{axes} \hlstd{= labs))}
+    \hlkwd{box}\hlstd{()}
+    \hlkwd{invisible}\hlstd{(}\hlkwd{lapply}\hlstd{(history.fn,} \hlkwa{function}\hlstd{(}\hlkwc{f}\hlstd{)}
+        \hlkwd{curve}\hlstd{(}\hlkwd{f}\hlstd{(x),} \hlnum{0}\hlstd{,} \hlkwd{attr}\hlstd{(f,} \hlstr{"max"}\hlstd{),} \hlkwc{n} \hlstd{=} \hlnum{101}\hlstd{,} \hlkwc{add} \hlstd{=} \hlnum{TRUE}\hlstd{)))}
+    \hlkwa{if} \hlstd{(s} \hlopt{==} \hlnum{0}\hlstd{)}
+        \hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{, stops),} \hlkwc{col} \hlstd{=} \hlstr{"#0000ff"}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+    \hlkwa{else}
+        \hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{= stops[s],} \hlkwc{col} \hlstd{=} \hlstr{"#0000ff"}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+
+    \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{missing}\hlstd{(a)} \hlopt{&} \hlstd{s} \hlopt{>} \hlnum{0}\hlstd{)}
+        \hlkwd{points}\hlstd{(a,} \hlkwd{rep}\hlstd{(stops[s],} \hlkwd{length}\hlstd{(a)),}
+               \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.3}\hlstd{)}
+\hlstd{\}}
+\hlkwd{draw}\hlstd{()}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/spline_curves-1} 
+
+\end{knitrout}
+
+
+So, for the particles, the possible time of arrival at $s_1$ is:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{a1j} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[}\hlnum{1}\hlstd{])[,}\hlnum{1}\hlstd{]}
+\hlstd{a1} \hlkwb{<-} \hlkwd{rtnorm}\hlstd{(M,} \hlkwd{mean}\hlstd{(a1j),} \hlkwd{sd}\hlstd{(a1j),} \hlkwc{lower} \hlstd{=} \hlnum{0}\hlstd{)}
+\hlkwd{draw}\hlstd{(}\hlnum{1}\hlstd{,} \hlkwc{a} \hlstd{= a1)}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/stop_one_arrival-1} 
+
+\end{knitrout}
+
+Without any data, all we can do is push on further into the future.
+For stop 2 (and all future stops), we will use the historical time taken to travel between
+stops 2 and 3 (or $s_k$ and $s_{k+1}$).
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{a} \hlkwb{<-} \hlstd{a1}
+\hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{7}\hlstd{,} \hlnum{2}\hlstd{),} \hlkwc{mai} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{),} \hlkwc{oma} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{4.1}\hlstd{,} \hlnum{4.1}\hlstd{,} \hlnum{5.1}\hlstd{,} \hlnum{2.1}\hlstd{))}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{2}\hlopt{:}\hlnum{15}\hlstd{) \{}
+    \hlstd{Delta} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[i])[,} \hlnum{1}\hlstd{]} \hlopt{-} \hlkwd{arrivalTime}\hlstd{(stops[i} \hlopt{-} \hlnum{1}\hlstd{])[,} \hlnum{1}\hlstd{]}
+    \hlstd{a} \hlkwb{<-} \hlstd{a} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M,} \hlkwd{mean}\hlstd{(Delta),} \hlkwd{sd}\hlstd{(Delta),} \hlkwc{lower} \hlstd{=} \hlnum{0}\hlstd{)}
+    \hlkwd{draw}\hlstd{(i, a,} \hlkwc{labs} \hlstd{=} \hlnum{FALSE}\hlstd{)}
+    \hlkwa{if} \hlstd{(i} \hlopt{>=} \hlnum{14}\hlstd{)} \hlkwd{axis}\hlstd{(}\hlnum{1}\hlstd{)}
+    \hlkwa{if} \hlstd{(i} \hlopt{<=} \hlnum{3}\hlstd{)} \hlkwd{axis}\hlstd{(}\hlnum{3}\hlstd{)}
+
+    \hlkwa{if} \hlstd{(i} \hlopt{%%} \hlnum{4} \hlopt{==} \hlnum{2}\hlstd{)} \hlkwd{axis}\hlstd{(}\hlnum{2}\hlstd{)}
+    \hlkwa{if} \hlstd{(i} \hlopt{%%} \hlnum{4} \hlopt{==} \hlnum{1}\hlstd{)} \hlkwd{axis}\hlstd{(}\hlnum{4}\hlstd{)}
+\hlstd{\}}
+\hlkwd{mtext}\hlstd{(}\hlstr{"Time into Trip (s)"}\hlstd{,} \hlnum{1}\hlstd{,} \hlkwc{line} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{outer} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\hlkwd{mtext}\hlstd{(}\hlstr{"Distance into Trip (d)"}\hlstd{,} \hlnum{2}\hlstd{,} \hlkwc{line} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{outer} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/stops_remaining_arrival-1} 
+
+\end{knitrout}
+
+
+
+\end{document}
