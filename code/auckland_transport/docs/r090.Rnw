@@ -337,6 +337,7 @@ w <- matrix(nrow = N, ncol = length(w))
 w[1, ] <- 0
 w0 <- w  ## matrix for the original estimates
 
+test.trip$time_into_trip <- test.trip$time_into_trip + 60 * 10
 t <- test.trip$time_into_trip
 delta.t <- c(0, diff(t))
 
@@ -356,15 +357,23 @@ Next step, repeat! Update the stop arrival time predictions.
 <<arrival_times_2,fig.width=9,fig.height=5>>=
 a <- matrix(nrow = 15, ncol = M)
 
+colSds <- function(x, ...) apply(x, 2, sd, ...)
+
 ti <- test.trip$time_into_trip[2]
-a1j <- arrivalTime(stops[1])[,1] - ti
-a1 <- ti + rtnorm(M, mean(a1j), sd(a1j), lower = ti)
+a1j <- arrivalTime(stops[1])[2,1]
+adj <- - sweep(arrivalTime(w[2, ]), 1, a1j)
+adj[adj < 0] <- 0
+a1 <- ti + rtnorm(M, colMeans(adj, na.rm = TRUE), 
+                  colSds(adj, na.rm = TRUE), lower = 0)
 draw(1, a = a1)
 
 a[1, ] <- a1
 for (i in 2:15) {
-    Delta <- arrivalTime(stops[i])[, 1] - ti
-    a[i, ] <- ti + rtnorm(M, mean(Delta), sd(Delta)/sqrt(length(Delta)), lower = ti)
+    aij <- arrivalTime(stops[i])[, 1]
+    adj <- - sweep(arrivalTime(w[2, ]), 1, aij)
+    adj[adj < 0] <- 0
+    a[i, ] <- ti + rtnorm(M, colMeans(adj), 
+                          colSds(adj), lower = 0)
 }
 draw(1:15, a)
 points(rep(t[2], M), w0[2, ], col = "#009900", pch = 19, cex = 0.3)
@@ -393,6 +402,8 @@ predict <- function(i, draw = TRUE, ...) {
     pred <- history.fnD(w[i - 1, ], delta.t[i])
     w0[i, ] <<- rtnorm(ncol(w), colMeans(pred), apply(pred, 2, sd), lower = w[i - 1, ])
     pi <- dnorm(w0[i, ], test.trip$distance[i], 20)
+    if (all(pi == 0))
+        pi <- dnorm(w0[i, ], test.trip$distance[i], 100)
     wi <- pi / sum(pi)
     w[i, ] <<- sample(w0[i, ], M, TRUE, wi)
     
@@ -401,13 +412,19 @@ predict <- function(i, draw = TRUE, ...) {
     
     a <- matrix(nrow = length(stops), ncol = M)    
     ti <- test.trip$time_into_trip[i]
-    a1j <- arrivalTime(stops[1])[,1] - ti
-    a1 <- ti + rtnorm(M, mean(a1j), sd(a1j) / sqrt(length(Delta)), lower = 0)
     
-    a[1, ] <- a1
+    a1j <- arrivalTime(stops[1])[,1]
+    adj <- - sweep(arrivalTime(w[i, ]), 1, a1j)
+    adj[adj < 0] <- 0
+    a[1, ] <- ti + rtnorm(M, colMeans(adj), 
+                          colSds(adj), lower = 0)
+    
     for (j in 2:length(stops)) {
-        Delta <- arrivalTime(stops[j])[, 1] - ti
-        a[j, ] <- ti + rtnorm(M, mean(Delta), sd(Delta)/sqrt(length(Delta)), lower = 0)
+        ajj <- arrivalTime(stops[j])[,1]
+        adj <- - sweep(arrivalTime(w[i, ]), 1, ajj)
+        adj[adj < 0] <- 0
+        a[j, ] <- ti + rtnorm(M, colMeans(adj), 
+                              colSds(adj), lower = 0)
     }
     if (draw) {
         draw(wstops, a, ...)
@@ -421,14 +438,19 @@ predict(3)
 Well, that seems to be working! Let's take off!
 <<future_observations,fig.width=9,fig.height=12>>=
 par(mfcol = c(6, 2), mar = c(0, 0, 0, 1), oma = c(5.1, 4.1, 4.1, 2.1))
-for (i in 4:27) 
+for (i in 4:27) {
     predict(i, labs = FALSE)
+    with(test.trip, lines(time_into_trip[1:i], distance[1:i],
+                          col = "#990000", lwd = 4))
+    with(test.trip, lines(time_into_trip[-(1:i)], distance[-(1:i)],
+                          col = "#009999", lwd = 3, lty = 3))
+}
 @ 
 
 
 Continue on for the entire route, and then check the results!
 <<remaining_obs>>=
-for(i in 28:nrow(test.trip)) predict(i, draw = FALSE)
+#for(i in 28:nrow(test.trip)) predict(i, draw = FALSE)
 @ 
 
 

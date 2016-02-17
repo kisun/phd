@@ -349,7 +349,7 @@ We can also see the arrival distribution for stops, in a table:
     \hlkwc{table.placement} \hlstd{=} \hlstr{"p"}\hlstd{)}
 \end{alltt}
 \end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
-% Wed Feb 17 10:35:30 2016
+% Wed Feb 17 14:25:15 2016
 \begin{table}[p]
 \centering
 \begin{tabular}{llllll}
@@ -358,19 +358,19 @@ stop & mean & sd & 2.5\% & 50\% & 97.5\% \\
   \midrule
 1 & 5 & 2 & 1 & 5 & 9 \\ 
   2 & 9 & 2 & 5 & 9 & 14 \\ 
-  3 & 13 & 2 & 9 & 14 & 18 \\ 
+  3 & 13 & 2 & 8 & 13 & 18 \\ 
   4 & 17 & 3 & 12 & 17 & 22 \\ 
   5 & 22 & 3 & 17 & 22 & 27 \\ 
   6 & 28 & 3 & 22 & 28 & 34 \\ 
-  7 & 34 & 3 & 28 & 34 & 40 \\ 
-  8 & 41 & 3 & 35 & 41 & 47 \\ 
-  9 & 46 & 3 & 39 & 46 & 52 \\ 
-  10 & 49 & 3 & 42 & 49 & 55 \\ 
-  11 & 51 & 3 & 45 & 51 & 57 \\ 
+  7 & 34 & 3 & 27 & 34 & 40 \\ 
+  8 & 41 & 3 & 34 & 41 & 48 \\ 
+  9 & 45 & 3 & 39 & 45 & 52 \\ 
+  10 & 48 & 3 & 42 & 48 & 55 \\ 
+  11 & 51 & 3 & 44 & 51 & 58 \\ 
   12 & 53 & 3 & 46 & 53 & 59 \\ 
-  13 & 56 & 3 & 49 & 56 & 62 \\ 
+  13 & 55 & 3 & 49 & 55 & 63 \\ 
   14 & 59 & 3 & 53 & 59 & 66 \\ 
-  15 & 64 & 3 & 58 & 64 & 71 \\ 
+  15 & 64 & 3 & 57 & 64 & 71 \\ 
    \bottomrule
 \end{tabular}
 \caption{Sequential Predictions} 
@@ -425,7 +425,7 @@ We can also see the arrival distribution for stops, in a table:
     \hlkwc{table.placement} \hlstd{=} \hlstr{"p"}\hlstd{)}
 \end{alltt}
 \end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
-% Wed Feb 17 10:35:30 2016
+% Wed Feb 17 14:25:16 2016
 \begin{table}[p]
 \centering
 \begin{tabular}{llllll}
@@ -434,19 +434,19 @@ stop & mean & sd & 2.5\% & 50\% & 97.5\% \\
   \midrule
 1 & 5 & 2 & 1 & 5 & 9 \\ 
   2 & 9 & 2 & 5 & 9 & 13 \\ 
-  3 & 13 & 2 & 9 & 13 & 18 \\ 
+  3 & 13 & 2 & 9 & 13 & 17 \\ 
   4 & 17 & 2 & 13 & 17 & 22 \\ 
-  5 & 22 & 3 & 18 & 22 & 28 \\ 
-  6 & 28 & 2 & 23 & 28 & 33 \\ 
-  7 & 34 & 2 & 30 & 34 & 38 \\ 
+  5 & 22 & 3 & 17 & 22 & 28 \\ 
+  6 & 28 & 2 & 23 & 28 & 32 \\ 
+  7 & 34 & 2 & 30 & 33 & 38 \\ 
   8 & 41 & 3 & 36 & 41 & 46 \\ 
-  9 & 45 & 2 & 41 & 45 & 50 \\ 
-  10 & 48 & 3 & 43 & 49 & 54 \\ 
-  11 & 51 & 3 & 45 & 51 & 56 \\ 
-  12 & 53 & 2 & 48 & 53 & 57 \\ 
-  13 & 55 & 3 & 50 & 55 & 61 \\ 
-  14 & 59 & 3 & 52 & 59 & 65 \\ 
-  15 & 64 & 3 & 58 & 64 & 70 \\ 
+  9 & 45 & 2 & 40 & 45 & 50 \\ 
+  10 & 48 & 3 & 43 & 48 & 54 \\ 
+  11 & 51 & 2 & 46 & 51 & 55 \\ 
+  12 & 53 & 3 & 48 & 53 & 57 \\ 
+  13 & 55 & 3 & 50 & 55 & 60 \\ 
+  14 & 59 & 3 & 53 & 59 & 65 \\ 
+  15 & 64 & 3 & 58 & 63 & 69 \\ 
    \bottomrule
 \end{tabular}
 \caption{All-in-one Predictions} 
@@ -482,6 +482,7 @@ the first stop, so the first row is all 0.
 \hlstd{w[}\hlnum{1}\hlstd{, ]} \hlkwb{<-} \hlnum{0}
 \hlstd{w0} \hlkwb{<-} \hlstd{w}  \hlcom{## matrix for the original estimates}
 
+\hlstd{test.trip}\hlopt{$}\hlstd{time_into_trip} \hlkwb{<-} \hlstd{test.trip}\hlopt{$}\hlstd{time_into_trip} \hlopt{+} \hlnum{60} \hlopt{*} \hlnum{10}
 \hlstd{t} \hlkwb{<-} \hlstd{test.trip}\hlopt{$}\hlstd{time_into_trip}
 \hlstd{delta.t} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{diff}\hlstd{(t))}
 
@@ -507,9 +508,14 @@ Next step, repeat! Update the stop arrival time predictions.
 \begin{alltt}
 \hlstd{a} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwc{nrow} \hlstd{=} \hlnum{15}\hlstd{,} \hlkwc{ncol} \hlstd{= M)}
 
+\hlstd{colSds} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{...}\hlstd{)} \hlkwd{apply}\hlstd{(x,} \hlnum{2}\hlstd{, sd, ...)}
+
 \hlstd{ti} \hlkwb{<-} \hlstd{test.trip}\hlopt{$}\hlstd{time_into_trip[}\hlnum{2}\hlstd{]}
-\hlstd{a1j} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[}\hlnum{1}\hlstd{])[,}\hlnum{1}\hlstd{]} \hlopt{-} \hlstd{ti}
-\hlstd{a1} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M,} \hlkwd{mean}\hlstd{(a1j),} \hlkwd{sd}\hlstd{(a1j),} \hlkwc{lower} \hlstd{= ti)}
+\hlstd{a1j} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[}\hlnum{1}\hlstd{])[}\hlnum{2}\hlstd{,}\hlnum{1}\hlstd{]}
+\hlstd{adj} \hlkwb{<-} \hlopt{-} \hlkwd{sweep}\hlstd{(}\hlkwd{arrivalTime}\hlstd{(w[}\hlnum{2}\hlstd{, ]),} \hlnum{1}\hlstd{, a1j)}
+\hlstd{adj[adj} \hlopt{<} \hlnum{0}\hlstd{]} \hlkwb{<-} \hlnum{0}
+\hlstd{a1} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M,} \hlkwd{colMeans}\hlstd{(adj,} \hlkwc{na.rm} \hlstd{=} \hlnum{TRUE}\hlstd{),}
+                  \hlkwd{colSds}\hlstd{(adj,} \hlkwc{na.rm} \hlstd{=} \hlnum{TRUE}\hlstd{),} \hlkwc{lower} \hlstd{=} \hlnum{0}\hlstd{)}
 \hlkwd{draw}\hlstd{(}\hlnum{1}\hlstd{,} \hlkwc{a} \hlstd{= a1)}
 \end{alltt}
 \end{kframe}
@@ -517,8 +523,11 @@ Next step, repeat! Update the stop arrival time predictions.
 \begin{kframe}\begin{alltt}
 \hlstd{a[}\hlnum{1}\hlstd{, ]} \hlkwb{<-} \hlstd{a1}
 \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{2}\hlopt{:}\hlnum{15}\hlstd{) \{}
-    \hlstd{Delta} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[i])[,} \hlnum{1}\hlstd{]} \hlopt{-} \hlstd{ti}
-    \hlstd{a[i, ]} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M,} \hlkwd{mean}\hlstd{(Delta),} \hlkwd{sd}\hlstd{(Delta)}\hlopt{/}\hlkwd{sqrt}\hlstd{(}\hlkwd{length}\hlstd{(Delta)),} \hlkwc{lower} \hlstd{= ti)}
+    \hlstd{aij} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[i])[,} \hlnum{1}\hlstd{]}
+    \hlstd{adj} \hlkwb{<-} \hlopt{-} \hlkwd{sweep}\hlstd{(}\hlkwd{arrivalTime}\hlstd{(w[}\hlnum{2}\hlstd{, ]),} \hlnum{1}\hlstd{, aij)}
+    \hlstd{adj[adj} \hlopt{<} \hlnum{0}\hlstd{]} \hlkwb{<-} \hlnum{0}
+    \hlstd{a[i, ]} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M,} \hlkwd{colMeans}\hlstd{(adj),}
+                          \hlkwd{colSds}\hlstd{(adj),} \hlkwc{lower} \hlstd{=} \hlnum{0}\hlstd{)}
 \hlstd{\}}
 \hlkwd{draw}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{15}\hlstd{, a)}
 \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[}\hlnum{2}\hlstd{], M), w0[}\hlnum{2}\hlstd{, ],} \hlkwc{col} \hlstd{=} \hlstr{"#009900"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.3}\hlstd{)}
@@ -545,28 +554,28 @@ Next step, repeat! Update the stop arrival time predictions.
     \hlkwc{table.placement} \hlstd{=} \hlstr{"tb"}\hlstd{)}
 \end{alltt}
 \end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
-% Wed Feb 17 10:35:30 2016
+% Wed Feb 17 14:25:19 2016
 \begin{table}[tb]
 \centering
 \begin{tabular}{llllll}
   \toprule
 stop & mean & sd & 2.5\% & 50\% & 97.5\% \\ 
   \midrule
-1 & 4 & 1 & 1 & 4 & 8 \\ 
-  2 & 8 & 0 & 6 & 8 & 9 \\ 
-  3 & 12 & 0 & 10 & 12 & 14 \\ 
-  4 & 16 & 0 & 14 & 16 & 18 \\ 
-  5 & 21 & 0 & 19 & 21 & 23 \\ 
-  6 & 27 & 0 & 25 & 27 & 29 \\ 
-  7 & 33 & 0 & 31 & 33 & 34 \\ 
-  8 & 40 & 0 & 38 & 40 & 42 \\ 
-  9 & 44 & 0 & 42 & 44 & 46 \\ 
-  10 & 47 & 0 & 45 & 47 & 50 \\ 
-  11 & 50 & 0 & 47 & 50 & 52 \\ 
-  12 & 51 & 0 & 49 & 51 & 54 \\ 
-  13 & 54 & 0 & 52 & 54 & 57 \\ 
-  14 & 58 & 0 & 55 & 58 & 60 \\ 
-  15 & 63 & 0 & 60 & 63 & 65 \\ 
+1 & 2 & -10 & 0 & 2 & 5 \\ 
+  2 & 7 & -9 & 3 & 7 & 11 \\ 
+  3 & 11 & -9 & 7 & 11 & 15 \\ 
+  4 & 15 & -9 & 11 & 15 & 19 \\ 
+  5 & 20 & -9 & 15 & 20 & 25 \\ 
+  6 & 26 & -9 & 20 & 26 & 31 \\ 
+  7 & 31 & -8 & 26 & 31 & 37 \\ 
+  8 & 39 & -8 & 33 & 39 & 45 \\ 
+  9 & 43 & -8 & 37 & 43 & 50 \\ 
+  10 & 46 & -8 & 40 & 46 & 53 \\ 
+  11 & 49 & -8 & 43 & 49 & 55 \\ 
+  12 & 50 & -8 & 45 & 50 & 56 \\ 
+  13 & 53 & -8 & 47 & 53 & 60 \\ 
+  14 & 57 & -7 & 50 & 57 & 65 \\ 
+  15 & 62 & -8 & 55 & 61 & 69 \\ 
    \bottomrule
 \end{tabular}
 \caption{Predictions after one observation} 
@@ -583,6 +592,8 @@ Another step:
     \hlstd{pred} \hlkwb{<-} \hlkwd{history.fnD}\hlstd{(w[i} \hlopt{-} \hlnum{1}\hlstd{, ], delta.t[i])}
     \hlstd{w0[i, ]} \hlkwb{<<-} \hlkwd{rtnorm}\hlstd{(}\hlkwd{ncol}\hlstd{(w),} \hlkwd{colMeans}\hlstd{(pred),} \hlkwd{apply}\hlstd{(pred,} \hlnum{2}\hlstd{, sd),} \hlkwc{lower} \hlstd{= w[i} \hlopt{-} \hlnum{1}\hlstd{, ])}
     \hlstd{pi} \hlkwb{<-} \hlkwd{dnorm}\hlstd{(w0[i, ], test.trip}\hlopt{$}\hlstd{distance[i],} \hlnum{20}\hlstd{)}
+    \hlkwa{if} \hlstd{(}\hlkwd{all}\hlstd{(pi} \hlopt{==} \hlnum{0}\hlstd{))}
+        \hlstd{pi} \hlkwb{<-} \hlkwd{dnorm}\hlstd{(w0[i, ], test.trip}\hlopt{$}\hlstd{distance[i],} \hlnum{100}\hlstd{)}
     \hlstd{wi} \hlkwb{<-} \hlstd{pi} \hlopt{/} \hlkwd{sum}\hlstd{(pi)}
     \hlstd{w[i, ]} \hlkwb{<<-} \hlkwd{sample}\hlstd{(w0[i, ], M,} \hlnum{TRUE}\hlstd{, wi)}
 
@@ -591,13 +602,19 @@ Another step:
 
     \hlstd{a} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwc{nrow} \hlstd{=} \hlkwd{length}\hlstd{(stops),} \hlkwc{ncol} \hlstd{= M)}
     \hlstd{ti} \hlkwb{<-} \hlstd{test.trip}\hlopt{$}\hlstd{time_into_trip[i]}
-    \hlstd{a1j} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[}\hlnum{1}\hlstd{])[,}\hlnum{1}\hlstd{]} \hlopt{-} \hlstd{ti}
-    \hlstd{a1} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M,} \hlkwd{mean}\hlstd{(a1j),} \hlkwd{sd}\hlstd{(a1j)} \hlopt{/} \hlkwd{sqrt}\hlstd{(}\hlkwd{length}\hlstd{(Delta)),} \hlkwc{lower} \hlstd{=} \hlnum{0}\hlstd{)}
 
-    \hlstd{a[}\hlnum{1}\hlstd{, ]} \hlkwb{<-} \hlstd{a1}
+    \hlstd{a1j} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[}\hlnum{1}\hlstd{])[,}\hlnum{1}\hlstd{]}
+    \hlstd{adj} \hlkwb{<-} \hlopt{-} \hlkwd{sweep}\hlstd{(}\hlkwd{arrivalTime}\hlstd{(w[i, ]),} \hlnum{1}\hlstd{, a1j)}
+    \hlstd{adj[adj} \hlopt{<} \hlnum{0}\hlstd{]} \hlkwb{<-} \hlnum{0}
+    \hlstd{a[}\hlnum{1}\hlstd{, ]} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M,} \hlkwd{colMeans}\hlstd{(adj),}
+                          \hlkwd{colSds}\hlstd{(adj),} \hlkwc{lower} \hlstd{=} \hlnum{0}\hlstd{)}
+
     \hlkwa{for} \hlstd{(j} \hlkwa{in} \hlnum{2}\hlopt{:}\hlkwd{length}\hlstd{(stops)) \{}
-        \hlstd{Delta} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[j])[,} \hlnum{1}\hlstd{]} \hlopt{-} \hlstd{ti}
-        \hlstd{a[j, ]} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M,} \hlkwd{mean}\hlstd{(Delta),} \hlkwd{sd}\hlstd{(Delta)}\hlopt{/}\hlkwd{sqrt}\hlstd{(}\hlkwd{length}\hlstd{(Delta)),} \hlkwc{lower} \hlstd{=} \hlnum{0}\hlstd{)}
+        \hlstd{ajj} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[j])[,}\hlnum{1}\hlstd{]}
+        \hlstd{adj} \hlkwb{<-} \hlopt{-} \hlkwd{sweep}\hlstd{(}\hlkwd{arrivalTime}\hlstd{(w[i, ]),} \hlnum{1}\hlstd{, ajj)}
+        \hlstd{adj[adj} \hlopt{<} \hlnum{0}\hlstd{]} \hlkwb{<-} \hlnum{0}
+        \hlstd{a[j, ]} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M,} \hlkwd{colMeans}\hlstd{(adj),}
+                              \hlkwd{colSds}\hlstd{(adj),} \hlkwc{lower} \hlstd{=} \hlnum{0}\hlstd{)}
     \hlstd{\}}
     \hlkwa{if} \hlstd{(draw) \{}
         \hlkwd{draw}\hlstd{(wstops, a, ...)}
@@ -617,8 +634,13 @@ Well, that seems to be working! Let's take off!
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlkwd{par}\hlstd{(}\hlkwc{mfcol} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{6}\hlstd{,} \hlnum{2}\hlstd{),} \hlkwc{mar} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{1}\hlstd{),} \hlkwc{oma} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{5.1}\hlstd{,} \hlnum{4.1}\hlstd{,} \hlnum{4.1}\hlstd{,} \hlnum{2.1}\hlstd{))}
-\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{4}\hlopt{:}\hlnum{27}\hlstd{)}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{4}\hlopt{:}\hlnum{27}\hlstd{) \{}
     \hlkwd{predict}\hlstd{(i,} \hlkwc{labs} \hlstd{=} \hlnum{FALSE}\hlstd{)}
+    \hlkwd{with}\hlstd{(test.trip,} \hlkwd{lines}\hlstd{(time_into_trip[}\hlnum{1}\hlopt{:}\hlstd{i], distance[}\hlnum{1}\hlopt{:}\hlstd{i],}
+                          \hlkwc{col} \hlstd{=} \hlstr{"#990000"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{4}\hlstd{))}
+    \hlkwd{with}\hlstd{(test.trip,} \hlkwd{lines}\hlstd{(time_into_trip[}\hlopt{-}\hlstd{(}\hlnum{1}\hlopt{:}\hlstd{i)], distance[}\hlopt{-}\hlstd{(}\hlnum{1}\hlopt{:}\hlstd{i)],}
+                          \hlkwc{col} \hlstd{=} \hlstr{"#009999"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{))}
+\hlstd{\}}
 \end{alltt}
 \end{kframe}
 \includegraphics[width=\maxwidth]{figure/future_observations-1} 
@@ -632,443 +654,9 @@ Continue on for the entire route, and then check the results!
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlkwa{for}\hlstd{(i} \hlkwa{in} \hlnum{28}\hlopt{:}\hlkwd{nrow}\hlstd{(test.trip))} \hlkwd{predict}\hlstd{(i,} \hlkwc{draw} \hlstd{=} \hlnum{FALSE}\hlstd{)}
+\hlcom{#for(i in 28:nrow(test.trip)) predict(i, draw = FALSE)}
 \end{alltt}
-
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in optimize(function(x) (f(x) - d)\textasciicircum{}2, interval = range(hist\$time\_into\_trip)): NA/Inf replaced by maximum positive value}}
-
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in `[<-`(`*tmp*`, j, , value = c(4723.99988213222, 4723.99988213222, : subscript out of bounds}}\end{kframe}
+\end{kframe}
 \end{knitrout}
 
 
