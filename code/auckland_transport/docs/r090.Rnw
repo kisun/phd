@@ -83,9 +83,9 @@ and makes a few manipulations to make it easier to work with,
 as well as remove some impossibly fast trips.
 
 <<extract_historical_data,fig.height=5,fig.width=9>>=
-routeid <- "09001-20151224100745_v36.10"
+routeid <- "09001%"
 hist090 <- dbGetQuery(dbConnect(SQLite(), "historical-data.db"),
-                      sprintf("SELECT * FROM history WHERE route_id='%s'",
+                      sprintf("SELECT * FROM history WHERE route_id LIKE '%s'",
                               routeid))
 hist090$time.day <- hist090$timestamp - 
     as.numeric(format(as.POSIXct(paste(hist090$trip_start_date, 
@@ -142,8 +142,8 @@ the distribution of the particles represents the posterior distribution of $d_k$
 
 For this example, we will use a single trip:
 <<example_trip,fig.height=5,fig.width=9>>=
-tripid <- "3090020609-20151224100745_v36.10"
-hist <- hist090[hist090$trip_id == tripid, ]
+tripid <- "^3090020609"
+hist <- hist090[grepl(tripid, hist090$trip_id), ]
 hist$dvt <- factor(hist$dvt)
 hist$time_into_trip <- 
     do.call(c, tapply(1:nrow(hist), hist$dvt, 
@@ -436,21 +436,32 @@ predict(3)
 @ 
 
 Well, that seems to be working! Let's take off!
-<<future_observations,fig.width=9,fig.height=12>>=
-par(mfcol = c(6, 2), mar = c(0, 0, 0, 1), oma = c(5.1, 4.1, 4.1, 2.1))
-for (i in 4:27) {
-    predict(i, labs = FALSE)
-    with(test.trip, lines(time_into_trip[1:i], distance[1:i],
-                          col = "#990000", lwd = 4))
-    with(test.trip, lines(time_into_trip[-(1:i)], distance[-(1:i)],
-                          col = "#009999", lwd = 3, lty = 3))
-}
+<<future_observations,fig.width=9,fig.height=12,cache=TRUE>>=
+#par(mfcol = c(6, 2), mar = c(0, 0, 0, 1), oma = c(5.1, 4.1, 4.1, 2.1))p
+#b <- txtProgressBar(3, 94, initial = 3, style = 3)
+#jpeg("hist/route090_1215_%03d.jpg", width = 620, height = 480)
+#for (i in 88:94) {
+#    predict(i)
+#    with(test.trip, lines(time_into_trip[1:i], distance[1:i],
+#                          col = "#990000", lwd = 4))
+#    with(test.trip, lines(time_into_trip[-(1:i)], distance[-(1:i)],
+#                          col = "#009999", lwd = 3, lty = 3))
+#    setTxtProgressBar(pb, i)
+#    Sys.sleep(1)
+#};close(pb);dev.off()
 @ 
 
 
 Continue on for the entire route, and then check the results!
-<<remaining_obs>>=
-#for(i in 28:nrow(test.trip)) predict(i, draw = FALSE)
+<<remaining_obs,fig.width=9,fig.height=12,cache=TRUE>>=
+#par(mfcol = c(6, 2), mar = c(0, 0, 0, 1), oma = c(5.1, 4.1, 4.1, 2.1))
+#for(i in 28:nrow(test.trip)) {
+#    predict(i, labs = FALSE)
+#    with(test.trip, lines(time_into_trip[1:i], distance[1:i],
+#                          col = "#990000", lwd = 4))
+#    with(test.trip, lines(time_into_trip[-(1:i)], distance[-(1:i)],
+#                          col = "#009999", lwd = 3, lty = 3))
+#}
 @ 
 
 

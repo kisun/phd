@@ -122,7 +122,7 @@ vehicle = R6Class("vehicle",
                                                                    private$particles, along = 3)
 
 #                              print(private$particles["distance", ])
-                              abline(h = private$particles["distance", ], col = "#00009930")
+                              ## abline(h = private$particles["distance", ], col = "#00009930")
 
                               #self$info()
                           }
@@ -263,11 +263,13 @@ vehicle = R6Class("vehicle",
                               history.fnD <- function(d, delta = 0, deriv = 0) {
                                   sapply(private$history.fn, function(f) {
                                       ## convert distance to time, time to ["speed", "acceleration"]
-                                      t <- optimize(
-                                          function(x) (f(x) - d)^2,
-                                          interval = range(private$trip.history$time.day)
-                                      )$minimum
-                                      f(t + delta, deriv = deriv)
+                                      if (class(f) == "function") {
+                                          t <- optimize(
+                                              function(x) (f(x) - d)^2,
+                                              interval = range(private$trip.history$time.day)
+                                          )$minimum
+                                          f(t + delta, deriv = deriv)
+                                      } else 0
                                   })
                               }
                               private$history.fnD <- Vectorize(history.fnD, "d")
@@ -449,10 +451,10 @@ vehicle = R6Class("vehicle",
                               d <- pmax(x[1, ], d)
                           }
 
-                          self$plotHistory()
+                          ## self$plotHistory()
                           curX <- private$particles["distance", ]
-                          abline(h = d, col = "#00990060")
-                          abline(h = curX, col = "#99000020", lty = 3)
+                          ## abline(h = d, col = "#00990060")
+                          ## abline(h = curX, col = "#99000020", lty = 3)
 
                           ## need to limit the distance!
                           #w <- which(private$pattern$trip_id == private$current.trip)

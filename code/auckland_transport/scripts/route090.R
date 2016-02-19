@@ -108,7 +108,7 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
             tmp3 <- tmp2[tmp2$vehicle_id == vid, ]
             
             v <- vehicle$new(vid, tmp3[1, c("position_latitude", "position_longitude", "timestamp")], trip)
-            v$update()$plot()
+            v$update()## $plot()
             
             pb <- txtProgressBar(1, nrow(tmp3), style = 3)
             for (i in 2:nrow(tmp3)) {
@@ -222,8 +222,10 @@ days <- dbGetQuery(dbConnect(SQLite(), "db/backups/gtfs-history_201602160945.db"
                    "SELECT DISTINCT timestamp FROM vehicle_positions")
 days <- unique(tsDate(days$timestamp))
 
-collectHistory(route = "090", day = "2016-02-06")
+for (date in days)
+    collectHistory(route = "09001", day = days)
 
+TRUE
 
 
 ## tr <- as.numeric(format(as.POSIXct(days[1]), format = "%s")) + c(0, 60 * 60 * 24)
@@ -360,7 +362,7 @@ collectHistory2 <- function(route, data.clean = list(), hist.db = dbConnect(SQLi
 
             trip.map <- iNZightMap(~position_latitude, ~position_longitude, data = tmp2,
                                    name = "Historical Route 090")
-            do.call(plot, list(x = trip.map, pch = 4, cex.pt = 0.6, col.pt = "#cc0000"))
+            ## do.call(plot, list(x = trip.map, pch = 4, cex.pt = 0.6, col.pt = "#cc0000"))
             
             shape <- getPattern(trip, verbose = FALSE)
             addLines(shape$shape_pt_lon, shape$shape_pt_lat)
@@ -403,7 +405,7 @@ collectHistory2 <- function(route, data.clean = list(), hist.db = dbConnect(SQLi
             ## Initialise
             ## pars$x[1, ] <- rep(max(data$shape$distance_into_pattern), data$N)
             pars$x[1, ] <- sort(runif(data$N, 0, max(data$shape$distance_into_pattern)))
-            plot(data$t, pars$x[1, ], ylim = range(data$shape$distance_into_pattern))
+            ## plot(data$t, pars$x[1, ], ylim = range(data$shape$distance_into_pattern))
 
             ## Likelihood function:
             lhood <- function(x) {
@@ -436,7 +438,7 @@ collectHistory2 <- function(route, data.clean = list(), hist.db = dbConnect(SQLi
                 ## points(data$t, x.p, col = "red", pch = 4)
                 mm <- iNZightMap(~position_latitude, ~position_longitude, data = tmp3,
                                  name = "Historical Route 090")
-                plot(mm, pch = 4, cex.pt = 0.6, col.pt = "#cc0000")
+                ## plot(mm, pch = 4, cex.pt = 0.6, col.pt = "#cc0000")
                 xy <- sapply(x.p, h, shape = data$shape)
                 addPoints(xy[2, ], xy[1, ])
                 
