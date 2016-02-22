@@ -1,0 +1,19 @@
+#!/bin/bash
+
+echo "Backing up the GTFS Realtime database ..."
+
+DIR=/home/tell029/Documents/uni/phd/code/auckland_transport/db
+BDIR=$DIR/backups
+DATE=$(date +%Y%m%d%H%M)
+BACKUP=gtfs-history_$DATE.db
+cp $DIR/gtfs-history.db $BDIR/$BACKUP
+
+LATEST=gtfs-history_latest.db
+rm -f $BDIR/$LATEST
+ln -s $BDIR/$BACKUP $BDIR/$LATEST
+
+echo "Deleting duplicate rows ..."
+
+sqlite3 $BDIR/$BACKUP "DELETE FROM vehicle_positions WHERE oid NOT IN (SELECT MAX(oid) FROM vehicle_positions GROUP BY vehicle_id, timestamp);"
+
+echo "Done."
