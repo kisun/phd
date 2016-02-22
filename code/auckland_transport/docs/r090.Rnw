@@ -665,9 +665,13 @@ predarrivalTime <- Vectorize(.predarrivalTime, "d")
 }
 predhistory.fnD <- Vectorize(.predhistory.fnD, "d")
 
-draw <- function(s = 0, a, labs = TRUE, xlim = NULL, ylim = NULL, stop.pch = 19) {
+draw <- function(s = 0, a, labs = TRUE, xlim = NULL, ylim = NULL, 
+                 stop.pch = 19, stop.col = "red") {
     with(hist, plot(time_into_trip, distance, type = "n",
-                    main = ifelse(labs, "History of Route 090, 12:15 trip and previous 11:15 trip", ""), 
+                    main = ifelse(
+                        labs, 
+                        "History of Route 090, 12:15 trip and previous 11:15 trip", 
+                        ""), 
                     xlab = ifelse(labs, "Time into Trip (s)", ""),
                     ylab = ifelse(labs, "Distance into Trip (m)", ""),
                     xlim = xlim, ylim = ylim,
@@ -687,7 +691,7 @@ draw <- function(s = 0, a, labs = TRUE, xlim = NULL, ylim = NULL, stop.pch = 19)
         if (length(s) == nrow(a)) {
             for (i in 1:nrow(a))
                 points(a[i, ], rep(stops[s[i]], ncol(a)), 
-                       pch = stop.pch, col = "red", cex = 0.3)
+                       pch = stop.pch, col = stop.col, cex = 0.3)
         }
     }
 }
@@ -728,7 +732,6 @@ points(rep(t[2], M), w[1,,2], col = "magenta", pch = 19, cex = 0.3)
 
 <<prediction_function,fig.height=5,fig.width=9>>=
 predict <- function(i, draw = TRUE, ...) {
-    cat("\nPredict ...")
     pred1 <- history.fnD(w[1,,i-1], delta.t[i])
     pred2 <- predhistory.fnD(w[1,,i-1], delta.t[i])
     w0[2,,i] <- pnorm(qnorm(w[2,,i-1]) + rnorm(M))
@@ -744,12 +747,12 @@ predict <- function(i, draw = TRUE, ...) {
     stops <- stops[wstops]
     a <- matrix(nrow = length(stops), ncol = M)
     ti <- test.trip$time_into_trip[i]
-    USE <- runif(M) > w[2,,i]
+    USE <- runif(M) < w[2,,i]
     a1j <- arrivalTime(stops[1])[,1]
     adj <- - sweep(arrivalTime(w[1,,i]), 1, a1j)
     adj[adj < 0] <- 0
     adpred <- predarrivalTime(stops[1]) - predarrivalTime(w[1,,i])
-    a[1, ] <- ti + rtnorm(M, ifelse(USE,
+    a[1, ] <- ti + rtnorm(M, ifelse(!USE,
                                     colMeans(adj), 
                                     rep(adpred, M)),
                           pmax(1, colSds(adj)), lower = 0)
@@ -759,15 +762,17 @@ predict <- function(i, draw = TRUE, ...) {
         adj <- - sweep(arrivalTime(w[1,,i]), 1, ajj)
         adj[adj < 0] <- 0
         adpred <- predarrivalTime(stops[j]) - predarrivalTime(w[1,,i])
-        a[j, ] <- ti + rtnorm(M, ifelse(USE,
+        a[j, ] <- ti + rtnorm(M, ifelse(!USE,
                                         colMeans(adj), 
                                         rep(adpred, M)),
                               pmax(1, colSds(adj)), lower = 0)
     }
     if (draw) {
         layout(rbind(c(1,2)), width = c(5, 1))
+        par(mar = c(5.1, 4.1, 4.1, 4.1))
         
-        draw(wstops, a, stop.pch = ifelse(USE, 19, 4), ...)
+        draw(wstops, a, stop.pch = ifelse(USE, 19, 4), 
+             stop.col = ifelse(USE, "#000000", "#ff0000"), ...)
         with(test.trip, lines(time_into_trip[1:i], distance[1:i],
                               col = "#000099", lwd = 4))
         with(test.trip, lines(time_into_trip[-(1:i)], distance[-(1:i)],
@@ -792,7 +797,21 @@ for (i in 4:nrow(test.trip)) {
     predict(i)
     grid::grid.locator()
 }
+ 
+
+pb <- txtProgressBar(3, 94, initial = 3, style = 3)
+jpeg("hist/route090_1215-2_%03d.jpg", width = 620, height = 480)
+for (i in 3:94) {
+   predict(i)
+   setTxtProgressBar(pb, i)
+   Sys.sleep(1)
+};dev.off();close(pb)
 @ 
+
+
+
+
+
 
 
 \end{document}
