@@ -7,6 +7,13 @@
 \usepackage{fullpage}
 \usepackage{parskip}
 \usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+% \usepackage{movie15}
+% \usepackage{animate}
+
+\usepackage[hidelinks]{hyperref}
 
 
 <<echo=FALSE,results="hide">>=
@@ -53,6 +60,8 @@ suppressMessages({
 
 \newcommand{\pr}{\mathbb{P}}
 \renewcommand{\Pr}[1]{\pr\left(#1\right)}
+\newcommand{\Ex}[1]{\mathbb{E}\left[#1\right]}
+\newcommand{\given}{\,|\,}
 
 
 \newcommand{\km}{_{k-1}}
@@ -354,7 +363,7 @@ points(rep(t[2], M), w[2, ], col = "#000099", pch = 19, cex = 0.3)
 
 Next step, repeat! Update the stop arrival time predictions.
 
-<<arrival_times_2,fig.width=9,fig.height=5>>=
+<<arrival_times_2,fig.width=9,fig.height=5,cache=TRUE>>=
 a <- matrix(nrow = 15, ncol = M)
 
 colSds <- function(x, ...) apply(x, 2, sd, ...)
@@ -397,7 +406,7 @@ xtable::print.xtable(
 
 
 Another step:
-<<second_observation,fig.width=9,fig.height=5>>=
+<<second_observation,fig.width=9,fig.height=5,cache=TRUE>>=
 predict <- function(i, draw = TRUE, ...) {
     pred <- history.fnD(w[i - 1, ], delta.t[i])
     w0[i, ] <<- rtnorm(ncol(w), colMeans(pred), apply(pred, 2, sd), lower = w[i - 1, ])
@@ -436,34 +445,354 @@ predict(3)
 @ 
 
 Well, that seems to be working! Let's take off!
-<<future_observations,fig.width=9,fig.height=12,cache=TRUE>>=
-#par(mfcol = c(6, 2), mar = c(0, 0, 0, 1), oma = c(5.1, 4.1, 4.1, 2.1))p
-#b <- txtProgressBar(3, 94, initial = 3, style = 3)
-#jpeg("hist/route090_1215_%03d.jpg", width = 620, height = 480)
-#for (i in 88:94) {
-#    predict(i)
-#    with(test.trip, lines(time_into_trip[1:i], distance[1:i],
-#                          col = "#990000", lwd = 4))
-#    with(test.trip, lines(time_into_trip[-(1:i)], distance[-(1:i)],
-#                          col = "#009999", lwd = 3, lty = 3))
-#    setTxtProgressBar(pb, i)
-#    Sys.sleep(1)
-#};close(pb);dev.off()
+<<future_observations,fig.width=9,fig.height=12,cache=TRUE,echo=FALSE>>=
+## b <- txtProgressBar(3, 94, initial = 3, style = 3)
+## jpeg("hist/route090_1215_%03d.jpg", width = 620, height = 480)
+## for (i in 88:94) {
+##    predict(i)
+##    with(test.trip, lines(time_into_trip[1:i], distance[1:i],
+##                          col = "#990000", lwd = 4))
+##    with(test.trip, lines(time_into_trip[-(1:i)], distance[-(1:i)],
+##                          col = "#009999", lwd = 3, lty = 3))
+##    setTxtProgressBar(pb, i)
+##    Sys.sleep(1)
+## }
+## dev.off()
+@ 
+
+Well unfortunately, the model is fragile and breaks for some odd reasons.
+Eventually got it to work, and here's the result:
+
+% \includemovie{9cm}{5cm}{hist/route090_1215.gif{
+
+% \animategraphics[width=\textwidth]{5}{hist/route090_1215_}{001}{088}
+
+\begin{figure}[bp]
+  \centering
+  \begin{subfigure}{0.33\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{hist/route090_1215_001.jpg}
+    \label{fig:route090-history-1}
+  \end{subfigure}%
+  \begin{subfigure}{0.33\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{hist/route090_1215_040.jpg}
+    \label{fig:route090-history-2}
+  \end{subfigure}%
+  \begin{subfigure}{0.33\textwidth}  
+    \centering
+    \includegraphics[width=\textwidth]{hist/route090_1215_081.jpg}
+    \label{fig:route090-history-3}
+  \end{subfigure}
+  \caption{Arrival time predictions for a single route, using only historical data.}
+  \label{fig:route090-history}
+\end{figure}
+
+
+There we have it. Here's a summary:
+\begin{itemize}
+\item Predicions only use historical data
+\item Each particle is used to make an individual prediction, based on
+  the \emph{distribution} of time taken to get to the stop in
+  historical trips.
+\item the \emph{distribution} is of time taken for particle $i$ to get
+  from distance $d_k(i)$ to stop $s_j$ is $t_{k,j}(i)$ is normally distributed.
+\end{itemize}
+
+
+
+There are several directions we can go from here:
+\begin{itemize}
+\item using dynamic motion to adjust predictions (i.e., velocity and acceleration)
+\item similar to above, but weight historical trips based on
+  \emph{velocity} at the current distance, or distance/speed at current time.
+\item \textbf{use multiple \emph{trips} and weight based on how old they are,
+  and maybe some historical correlation between trips.}
+\end{itemize}
+
+
+We're going to go with the last option first, because its moreorless
+what we want to focus our attentions on.
+
+
+
+
+\section{Using Multiple Trips}
+\label{sec:multiple_trips}
+
+The ``raw'' data is:
+
+<<multiple_route_history,fig.width=9,fig.height=5>>=
+with(hist090, plot(time.hour, distance, type = "n",
+                   main = "History of Route 090", xlab = "Time (h)",
+                   ylab = "Distance into Trip (m)"))
+invisible(tapply(1:nrow(hist090), hist090$dvt,
+                 function(i) lines(hist090$time.hour[i], hist090$distance[i])))
+@ 
+
+To get an idea of relatedness between trips, we'll zero them all, and stuff.
+
+<<comparing_multiple_trips,fig.width=9,fig.height=5>>=
+hist090$dvt <- factor(hist090$dvt)
+hist090$time.zero <- 
+    do.call(c, tapply(1:nrow(hist090), hist090$dvt,
+                      function(i) hist090$time.day[i] - min(hist090$time.day[i])))
+trip.starttime <- tapply(hist090$time.day, hist090$dvt, min)
+coli <- function(t, r = range(tnum), tnum = as.numeric(t))
+    structure(rainbow(101)[round((tnum - min(r)) / diff(r) * 100) + 1],
+              .Names = names(t))
+hist090$colour <- as.character(coli(trip.starttime)[hist090$dvt])
+                         
+
+with(hist090, plot(time.zero, distance, type = "n",
+                   main = "History of Route 090", xlab = "Time into Trip (s)",
+                   ylab = "Distance into Trip (m)"))
+invisible(tapply(1:nrow(hist090), hist090$dvt,
+                 function(i) lines(hist090$time.zero[i], hist090$distance[i],
+                                   col = hist090$colour[i[1]])))
 @ 
 
 
-Continue on for the entire route, and then check the results!
-<<remaining_obs,fig.width=9,fig.height=12,cache=TRUE>>=
-#par(mfcol = c(6, 2), mar = c(0, 0, 0, 1), oma = c(5.1, 4.1, 4.1, 2.1))
-#for(i in 28:nrow(test.trip)) {
-#    predict(i, labs = FALSE)
-#    with(test.trip, lines(time_into_trip[1:i], distance[1:i],
-#                          col = "#990000", lwd = 4))
-#    with(test.trip, lines(time_into_trip[-(1:i)], distance[-(1:i)],
-#                          col = "#009999", lwd = 3, lty = 3))
-#}
+That looks nice, but it's not all that useful.
+We want $(\Delta d)_{d,\delta}$, 
+the \emph{distance traveled} from distance $d$~m into trip in $\delta$~seconds.
+That is,
+\begin{equation}
+  \label{eq:predict-distance}
+  \Ex{d_k(i)} = d_{k-1}(i) + \Ex{(\Delta d)_{d_{k-1},t_k}}.
+\end{equation}
+However, previously $(\Delta d)_{d,\delta}$ was distributed normally,
+with mean and standard deviation obtained from historical data, i.e.,
+$\Ex{(\Delta d)_{d_{k-1},t_k}\given D_{j,r}}, j = \{1,...,J-1\}, r = \text{current trip ID}$ and $J$
+the current ``day''.
+Now, we want to introduce a probability $\phi$, the ``correlation'' between two successive trips.
+We will use the time taken by the previous trip (along the same route), $r-1$,
+with probability $\phi_k$, otherwise use the expected value above.
+
+Defining $a_{d,j,r} = a(d\given j, r)$ as the arrival time at some arbitrary distance $d$ 
+(a future stop, or current location), on day $j$, trip $r$,
+the distance traveled from $d_1$ in $\delta$ seconds is:
+\begin{equation}
+  \label{eq:previous_trip_delta}
+  (\Delta d)_{d_1,\delta}\given D_{j,r-1} =
+  a^{-1}(a_{d_1,j, r-1} + \delta\given j,r-1)
+\end{equation}
+
+Essentially, $a$ is the inverse of the fitted bus trajectory, $d(t\given j,r)$.
+So (\ref{eq:previous_trip_delta}) becomes
+\begin{equation}
+  \label{eq:previous_trip_delta_2}
+  (\Delta d)_{d_1,\delta}\given D_{j,r-1} =
+  d(a_{d_1,j, r-1} + \delta\given j,r-1).
+\end{equation}
+
+
+Well that's not confusing at all.
+
+So, basically, the above equations work for anything (historical, previous routes, etc).
+Now, the expected distance is:
+\begin{equation}
+  \label{eq:expected_hist_prev_}
+   \Ex{d_k(i)} = d_{k-1}(i) +
+   \begin{cases}
+     (\Delta d)_{d_1,\delta}\given D_{j,r-1} & \text{w.p. } \phi_k(i), \\
+      \Ex{(\Delta d)_{d_{k-1},t_k}} & \text{w.p. } 1 - \phi_k(i)
+   \end{cases}.
+\end{equation}
+For the variance, we'll just use the variance at that point \ldots
+
+
+<<historical_sameday,fig.width=9,fig.height=5>>=
+## the trips
+R <- unique(gsub("-.+$", "", hist090$trip_id))
+## start times
+R.start <- sapply(R, function(r) 
+    hist090[grepl(r, hist090$trip_id), "trip_start_time"][1])
+
+r <- "3090020609"
+
+hist <- hist090[grepl(tripid, hist090$trip_id), ]
+hist$dvt <- factor(hist$dvt)
+hist$time_into_trip <- 
+    do.call(c, tapply(1:nrow(hist), hist$dvt, 
+                      function(i) hist$time.day[i] - min(hist$time.day[i])))
+
+test.trip <- hist[hist$trip_start_date == tail(unique(hist$trip_start_date), 1), ]
+hist <- hist[hist$trip_start_date != tail(unique(hist$trip_start_date), 1), ]
+hist$dvt <- factor(hist$dvt)
+
+## previous trip on test day
+rtimes <- sort(unique(hist090[hist090$trip_start_date == 
+                              test.trip$trip_start_date[1], 
+                              "trip_start_time"]))
+ri <- which(rtimes == test.trip$trip_start_time[1])
+rpred <- hist090[hist090$trip_start_time == rtimes[ri - 1] &
+                 hist090$trip_start_date == test.trip$trip_start_date[1], ]
+
+with(hist, plot(time_into_trip, distance, type = "n",
+                main = "History of Route 090 12:15 trip and Previous 11:15 trip", 
+                xlab = "Time into Trip (s)", 
+                ylab = "Distance into Trip (m)"))
+invisible(tapply(1:nrow(hist), hist$dvt, 
+                 function(i) lines(hist$time_into_trip[i], hist$distance[i])))
+
+stops <- 1:15 * 2000
+abline(h = c(0, stops), col = "#0000ff", lty = 3)
+
+with(rpred, lines(time.zero + 10*60, distance, col = "#990000", lwd = 2))
+with(test.trip, lines(time.zero + 10*60, distance, col = "#009900", lwd = 2, lty = 3))
 @ 
 
+
+<<supporting_functions,fig.width=9,fig.height=5>>=
+rpred.fn <- try({
+    f=splinefun(rpred$time.zero, rpred$distance,
+                method = "hyman", ties = min)
+    attr(f, "max") <- max(rpred$time.zero)
+    f
+}, silent = TRUE)
+.predarrivalTime <- function(d)
+    optimize(function(x) (rpred.fn(x) - d)^2,
+             interval = range(rpred$time.zero))$minimum
+predarrivalTime <- Vectorize(.predarrivalTime, "d")
+.predhistory.fnD <- function(d, delta = 0, deriv = 0) {
+    ## convert distance to time, time to ["speed", "acceleration"]
+    t <- optimize(
+        function(x) (rpred.fn(x) - d)^2,
+        interval = range(hist$time_into_trip)
+    )$minimum
+    rpred.fn(t + delta, deriv = deriv)
+}
+predhistory.fnD <- Vectorize(.predhistory.fnD, "d")
+
+draw <- function(s = 0, a, labs = TRUE, xlim = NULL, ylim = NULL, stop.pch = 19) {
+    with(hist, plot(time_into_trip, distance, type = "n",
+                    main = ifelse(labs, "History of Route 090, 12:15 trip and previous 11:15 trip", ""), 
+                    xlab = ifelse(labs, "Time into Trip (s)", ""),
+                    ylab = ifelse(labs, "Distance into Trip (m)", ""),
+                    xlim = xlim, ylim = ylim,
+                    axes = labs))
+    box()
+    invisible(lapply(history.fn, function(f) 
+        curve(f(x), 0, attr(f, "max"), n = 101, add = TRUE, lty = 2)))
+    curve(rpred.fn(x - 600), 600, attr(rpred.fn, "max") + 600, 
+          n = 101, add = TRUE, col = "#990000", lwd = 3)
+    if (any(s == 0))
+        abline(h = c(0, stops), col = "#0000ff", lty = 3)
+    else if (all(s > 0))
+        abline(h = stops[s], col = "#0000ff", lty = 3)
+    
+    if (!missing(a) && all(s > 0)) {
+        if (!is.matrix(a)) a <- rbind(a)
+        if (length(s) == nrow(a)) {
+            for (i in 1:nrow(a))
+                points(a[i, ], rep(stops[s[i]], ncol(a)), 
+                       pch = stop.pch, col = "red", cex = 0.3)
+        }
+    }
+}
+
+## convert w from before into an array (2 x M x N = parameters x particles x obs)
+N <- nrow(test.trip)
+w <- array(NA, dim = c(2, M, N))
+w[1,,1] <- 0 ## start position is 0
+w[2,,1] <- runif(M) ## start correlation is ~ U[0,1]
+w0 <- w  ## matrix for the original estimates
+
+test.trip$time_into_trip <- test.trip$time_into_trip + 600
+t <- test.trip$time_into_trip
+delta.t <- c(0, diff(t))
+
+pred1 <- history.fnD(w[1,,1], delta.t[2])
+pred2 <- predhistory.fnD(w[1,,1], delta.t[2])
+w0[2,,2] <- pnorm(qnorm(w[2,,1]) + rnorm(M))
+w0[1,,2] <- rtnorm(M, ifelse(runif(M) < w0[2,,2], 
+                             colMeans(pred1),
+                             pred2), 
+                   apply(pred1, 2, sd), lower = w[1,,1])
+pi <- dnorm(w0[1,,2], test.trip$distance[2], 20)
+wi <- pi / sum(pi)
+w[,,2] <- w0[, sample(M, replace = TRUE, prob = wi), 2]
+draw()
+with(test.trip, lines(time_into_trip[1:2], distance[1:2],
+                      col = "#000099", lwd = 4))
+with(test.trip, lines(time_into_trip[-(1:2)], distance[-(1:2)],
+                      col = "#009999", lwd = 3, lty = 3))
+
+points(rep(t[2], M), w0[1,,2], col = "#009900", pch = 19, cex = 0.3)
+points(rep(t[2], M), w[1,,2], col = "magenta", pch = 19, cex = 0.3)
+@
+
+
+
+
+<<prediction_function,fig.height=5,fig.width=9>>=
+predict <- function(i, draw = TRUE, ...) {
+    cat("\nPredict ...")
+    pred1 <- history.fnD(w[1,,i-1], delta.t[i])
+    pred2 <- predhistory.fnD(w[1,,i-1], delta.t[i])
+    w0[2,,i] <- pnorm(qnorm(w[2,,i-1]) + rnorm(M))
+    w0[1,,i] <- rtnorm(M, ifelse(runif(M) > w0[2,,i], 
+                                 colMeans(pred1),
+                                 pred2), 
+                       apply(pred1, 2, sd), lower = w[1,,i-1])
+    pi <- dnorm(w0[1,,i], test.trip$distance[i], 20)
+    wi <- pi / sum(pi)
+    w[,,i] <<- w0[, sample(M, replace = TRUE, prob = wi), i]
+    
+    wstops <- which(stops > min(w[1,,i]))
+    stops <- stops[wstops]
+    a <- matrix(nrow = length(stops), ncol = M)
+    ti <- test.trip$time_into_trip[i]
+    USE <- runif(M) > w[2,,i]
+    a1j <- arrivalTime(stops[1])[,1]
+    adj <- - sweep(arrivalTime(w[1,,i]), 1, a1j)
+    adj[adj < 0] <- 0
+    adpred <- predarrivalTime(stops[1]) - predarrivalTime(w[1,,i])
+    a[1, ] <- ti + rtnorm(M, ifelse(USE,
+                                    colMeans(adj), 
+                                    rep(adpred, M)),
+                          pmax(1, colSds(adj)), lower = 0)
+
+    for (j in 2:length(stops)) {
+        ajj <- arrivalTime(stops[j])[,1]
+        adj <- - sweep(arrivalTime(w[1,,i]), 1, ajj)
+        adj[adj < 0] <- 0
+        adpred <- predarrivalTime(stops[j]) - predarrivalTime(w[1,,i])
+        a[j, ] <- ti + rtnorm(M, ifelse(USE,
+                                        colMeans(adj), 
+                                        rep(adpred, M)),
+                              pmax(1, colSds(adj)), lower = 0)
+    }
+    if (draw) {
+        layout(rbind(c(1,2)), width = c(5, 1))
+        
+        draw(wstops, a, stop.pch = ifelse(USE, 19, 4), ...)
+        with(test.trip, lines(time_into_trip[1:i], distance[1:i],
+                              col = "#000099", lwd = 4))
+        with(test.trip, lines(time_into_trip[-(1:i)], distance[-(1:i)],
+                              col = "#009999", lwd = 3, lty = 3))
+        
+        points(rep(t[i], M), w0[1,,i], col = "#009900", pch = 19, cex = 0.3)
+        points(rep(t[i], M), w[1,,i], col = "magenta", pch = 19, cex = 0.3)
+        
+        ## distribution of correlation
+        den <- density(w[2,,i], from = 0, to = 1)
+        par(mar = c(5.1, 0, 4.1, 4.1))
+        plot(den$y, den$x, type = "l", yaxs = 'i', ylim = c(0,1), yaxt='n', xaxt = "n")
+        axis(4)
+        mtext(expression(phi), 4, line = 3)
+    }
+}
+predict(3)
+@ 
+
+<<eval=FALSE>>=
+for (i in 4:nrow(test.trip)) {
+    predict(i)
+    grid::grid.locator()
+}
+@ 
 
 
 \end{document}
