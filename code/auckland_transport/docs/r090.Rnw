@@ -730,7 +730,7 @@ points(rep(t[2], M), w[1,,2], col = "magenta", pch = 19, cex = 0.3)
 
 
 
-<<prediction_function,fig.height=5,fig.width=9>>=
+<<prediction_function,fig.height=5,fig.width=9,cache=TRUE>>=
 predict <- function(i, draw = TRUE, ...) {
     pred1 <- history.fnD(w[1,,i-1], delta.t[i])
     pred2 <- predhistory.fnD(w[1,,i-1], delta.t[i])
@@ -809,6 +809,63 @@ for (i in 3:94) {
 @ 
 
 
+
+\subsection{Correlation between route consecutive routes}
+
+In the last model, a constantly evolving correlation, $\phi$, was used to decide how well a route follows its predecessor.
+Now we'll look at historical relatedness over the course of history.
+
+<<examine_relation>>=
+## Obtain the data for each trip
+r1 <- hist090[hist090$trip_start_time == "11:15:00", ]
+r2 <- hist090[hist090$trip_start_time == "12:15:00", ]
+
+## Distribute into days:
+days <- unique(r1$trip_start_date)[unique(r1$trip_start_date) %in% 
+                                   unique(r2$trip_start_date)]
+hist.paired <- lapply(days, function(d) {
+    t1 <- r1[r1$trip_start_date == d, c("time.zero", "distance")]
+    t2 <- r2[r2$trip_start_date == d, c("time.zero", "distance")]
+    d1 <- splinefun(t1$time.zero, t1$distance, method = "hyman", ties = "min")
+    d2 <- splinefun(t2$time.zero, t2$distance, method = "hyman", ties = "min")
+    list(r1 = d1, r2 = d2)
+})
+names(hist.paired) <- days
+
+t <- seq(0, max(r1$time.zero, r2$time.zero), length = 1001)
+DIST <- lapply(hist.paired, function(d) {
+    rbind(d$r1(t), d$r2(t))
+})
+SPEED <- lapply(hist.paired, function(d) {
+    rbind(d$r1(t, deriv = 1), d$r2(t, deriv = 1))
+})
+Ymax <- max(hist090$distance)
+Vmax <- 50
+for (i in 1:length(days)) {
+    layout(rbind(c(1,2)), width = c(5, 2))
+    par(mar = c(5.1, 4.1, 4.1, 0))    
+    plot(NA, xlim = range(t), ylim = c(0, Ymax), 
+         xlab = "Time into Trip (s)",
+         ylab = "Distance into Trip (m)")
+    lines(t, d1 <- DIST[[i]][1, ], col = "#990000", lwd = 2)
+    lines(t, d2 <- DIST[[i]][2, ], col = "#000099", lwd = 2)
+    
+    par(mar = c(5.1, 0, 4.1, 4.1))
+    plot(NA, ylim = c(0, Ymax), xlim = c(0, Vmax),
+         xlab = "Speed (m/s)", yaxt = "n")
+    lines(s1 <- SPEED[[i]][1, ], d1, col = "#990000", lwd = 1, lty = 3)
+    lines(s2 <- SPEED[[i]][2, ], d2, col = "#000099", lwd = 1, lty = 3)
+    dn1 <- lowess(s1, f = 1/5)
+    dn2 <- lowess(s2, f = 1/5)
+    lines(dn1$y, d1, col = "#990000", lwd = 2)
+    lines(dn2$y, d2, col = "#000099", lwd = 2)
+    
+    axis(1)
+    axis(4)
+
+    locator(1)
+}
+@ 
 
 
 
