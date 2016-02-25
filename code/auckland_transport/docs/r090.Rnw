@@ -841,20 +841,29 @@ SPEED <- lapply(hist.paired, function(d) {
 })
 Ymax <- max(hist090$distance)
 Vmax <- 50
+@ 
+
+<<examine_relation_GIF,eval=FALSE>>= 
+jpeg("hist/route090_1115_1215_%02d.jpg", width = 620, height = 480)
 for (i in 1:length(days)) {
+    ti1 <- range(r1[r1$trip_start_date == days[i], "time.zero"])
+    ti2 <- range(r2[r2$trip_start_date == days[i], "time.zero"])
+    tw1 <- which(t >= ti1[1] & t <= ti1[2])
+    tw2 <- which(t >= ti2[1] & t <= ti2[2])
+    
     layout(rbind(c(1,2)), width = c(5, 2))
     par(mar = c(5.1, 4.1, 4.1, 0))    
     plot(NA, xlim = range(t), ylim = c(0, Ymax), 
          xlab = "Time into Trip (s)",
          ylab = "Distance into Trip (m)")
-    lines(t, d1 <- DIST[[i]][1, ], col = "#990000", lwd = 2)
-    lines(t, d2 <- DIST[[i]][2, ], col = "#000099", lwd = 2)
+    lines(t[tw1], d1 <- DIST[[i]][1, tw1], col = "#990000", lwd = 2)
+    lines(t[tw2], d2 <- DIST[[i]][2, tw2], col = "#000099", lwd = 2)
     
     par(mar = c(5.1, 0, 4.1, 4.1))
     plot(NA, ylim = c(0, Ymax), xlim = c(0, Vmax),
          xlab = "Speed (m/s)", yaxt = "n")
-    lines(s1 <- SPEED[[i]][1, ], d1, col = "#990000", lwd = 1, lty = 3)
-    lines(s2 <- SPEED[[i]][2, ], d2, col = "#000099", lwd = 1, lty = 3)
+    lines(s1 <- SPEED[[i]][1, tw1], d1, col = "#990000", lwd = 1, lty = 3)
+    lines(s2 <- SPEED[[i]][2, tw2], d2, col = "#000099", lwd = 1, lty = 3)
     dn1 <- lowess(s1, f = 1/5)
     dn2 <- lowess(s2, f = 1/5)
     lines(dn1$y, d1, col = "#990000", lwd = 2)
@@ -862,9 +871,7 @@ for (i in 1:length(days)) {
     
     axis(1)
     axis(4)
-
-    locator(1)
-}
+}; dev.off()
 @ 
 
 
