@@ -12,7 +12,10 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
     con <- dbConnect(SQLite(), "db/backups/gtfs-history_latest.db")
 
     if (!missing(day))
-        positions <- getPositions(con, route.id = route, date = day)
+        if (missing(route))
+            positions <- getPositions(con, date = day)
+        else
+            positions <- getPositions(con, route.id = route, date = day)
     else
         positions <- getPositions(con, route.id = route)
     ## table(positions$route_id)  ## version number has updated! 
@@ -30,14 +33,14 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
     
     dat <- positions[positions$started, ]
     
-    for (day in unique(dat$trip_start_date)) {
-    ## for (route in unique(dat$route_id)) {
+    ## for (day in unique(dat$trip_start_date)) {
+    for (route in unique(dat$route_id)) {
         
         ## day <- unique(dat$trip_start_date)[1]
-        cat("\n\n========================== Processing historical data:", day, "\n") 
+        cat("\n\n========================== Processing route:", route, "\n") 
         
-        tmp <- dat[dat$trip_start_date == day, ]
-        ## tmp <- dat[dat$route_id == route, ]
+        ## tmp <- dat[dat$trip_start_date == day, ]
+        tmp <- dat[dat$route_id == route, ]
         
         trips <- unique(tmp$trip_id)
         ## if (day %in% names(data.clean))
@@ -54,7 +57,7 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
             
             ## trip <- trips[trips.order][2]
             
-            cat("============ Processing history trip:", trip, "\n")
+            cat("============ Processing trip:", trip, "\n")
             tmp2 <- tmp[tmp$trip_id == trip, ]
 
             ## trip.map <- iNZightMap(~position_latitude, ~position_longitude, data = tmp2,
@@ -101,6 +104,7 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
             ## do computations on the shape ...
             p1 <- t(shape[-nrow(shape), c("shape_pt_lon", "shape_pt_lat")])
             p2 <- t(shape[-1, c("shape_pt_lon", "shape_pt_lat")])
+            mode(p1) <- mode(p2) <- "numeric"
             shape$length <- c(distanceFlat(p1, p2), 0)
             shape$distance_into_pattern <- c(0, cumsum(shape$length[-nrow(shape)]))
             shape$bearing <- c(bearing(p1, p2), 0)
@@ -142,8 +146,8 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
             MAX <- MAX[c(1, which(diff(MAX) > 1) + 1)]
 
             ## with(out, plot(timestamp, distance, type = "l",
-                           ## ylim = c(0, max(distance, SCHED$distance_into_trip)),
-                           ## main = "Unfiltered output"))
+            ## ylim = c(0, max(distance, SCHED$distance_into_trip)),
+            ## main = "Unfiltered output"))
             
             ## pick out the bottom points
             segs <- lapply(seq_along(MAX), function(i) {
@@ -218,12 +222,14 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
 
 
 loadall()
-days <- dbGetQuery(dbConnect(SQLite(), "db/backups/gtfs-history_201602160945.db"),
+days <- dbGetQuery(dbConnect(SQLite(), "db/backups/gtfs-history_201602230919.db"),
                    "SELECT DISTINCT timestamp FROM vehicle_positions")
 days <- unique(tsDate(days$timestamp))
 
-for (date in days)
-    collectHistory(route = "09001", day = days)
+## static Date:
+static.latest <- gsub("gtfs_", "", system("readlink _data/gtfs-latest", intern = TRUE))
+valid.days <- days[which(days == static.latest):length(days)]
+collectHistory(day = valid.days[1])
 
 TRUE
 

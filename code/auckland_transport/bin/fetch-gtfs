@@ -1,0 +1,24 @@
+#!/bin/bash
+LASTMOD=$(curl -sI https://cdn01.at.govt.nz/data/gtfs.zip | grep Last-Modified:)
+RAWDATE=$(echo $LASTMOD | grep -oP "\K\d{2}\s.{3}\s\d{4}\s\d{2}:\d{2}:\d{2}\s.{3}")
+DATE=$(date --date="$RAWDATE" +%Y-%m-%d)
+
+URL=https://cdn01.at.govt.nz/data/gtfs.zip
+DIR=_data/gtfs_$DATE
+
+mkdir -p $DIR
+rm -rf $DIR/*
+
+wget -O $DIR/gtfs.zip $URL
+unzip $DIR/gtfs.zip -d $DIR
+
+rm -f _data/gtfs-latest
+ln -s gtfs_$DATE _data/gtfs-latest
+
+## create new database
+rm -f db/gtfs-static.db
+touch db/gtfs-static.db
+R -f scripts/build_gtfs_database.R --slave
+
+mv db/gtfs-static.db db/backups/gtfs-static_$DATE.db
+ln -s backups/gtfs-static_$DATE.db db/gtfs-static.db

@@ -478,6 +478,8 @@ vehicle = R6Class("vehicle",
 distanceFlat <- function(y, z, R = 6371000) {
     ## computes the distance between {y} and {z}
     ## different R (such as in km) give results in those units
+
+    mode(y) <- mode(z) <- "numeric"
     
     if (length(dim(y)) < 2)
         y <- cbind(y)
@@ -500,6 +502,8 @@ bearing <- function(a, b) {
     if (length(dim(b)) < 2) z <- cbind(b)
     if (ncol(a) != ncol(b) & ncol(a) > 1 & ncol(b) > 1)
         stop("Incorrent dimensions")
+
+    mode(a) <- mode(b) <- "numeric"
     
     ## convert to radians!!
     lam.a <- a[1, ] * pi / 180
