@@ -13,11 +13,11 @@ vehicle = R6Class("vehicle",
                               self$setPattern(getPattern(trip, verbose = FALSE))
                               private$setSchedule()
                               private$initParticles()
-                              self$loadHistory()
+                              ## self$loadHistory()
                           }
                           
-                          cat("New vehicle instantiated.\n")
-                          self$report()
+                          ## cat("New vehicle instantiated.\n")
+                          ## self$report()
 
                           invisible(self)
                       },
@@ -218,7 +218,7 @@ vehicle = R6Class("vehicle",
                                              sprintf("SELECT * FROM history WHERE trip_id='%s'",
                                                      private$current.trip))
 
-                          if (nrow(hist) == 0) {
+                          if (nrow(hist) <= 1) {
                               warning("No history ...")
                               return(invisible(self))
                           }

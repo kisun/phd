@@ -34,10 +34,12 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
     dat <- positions[positions$started, ]
     
     ## for (day in unique(dat$trip_start_date)) {
-    for (route in unique(dat$route_id)) {
+    pb <- txtProgressBar(0, length(unique(dat$route_id)), style = 3)
+    for (I in seq_along(unique(dat$route_id))) {
+        route <- unique(dat$route_id)[I]
         
         ## day <- unique(dat$trip_start_date)[1]
-        cat("\n\n========================== Processing route:", route, "\n") 
+        ## cat("\n\n========================== Processing route:", route, "\n") 
         
         ## tmp <- dat[dat$trip_start_date == day, ]
         tmp <- dat[dat$route_id == route, ]
@@ -57,7 +59,7 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
             
             ## trip <- trips[trips.order][2]
             
-            cat("============ Processing trip:", trip, "\n")
+            ## cat("============ Processing trip:", trip, "\n")
             tmp2 <- tmp[tmp$trip_id == trip, ]
 
             ## trip.map <- iNZightMap(~position_latitude, ~position_longitude, data = tmp2,
@@ -81,8 +83,8 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
             if (all(voffset > 90 * 60)) next
 
             vs <- unique(tmp2$vehicle_id)
-            if (length(vs) > 1)
-                cat("Multiple matches ... using the vehicle starting closest to the schedule.\n")
+            ## if (length(vs) > 1)
+                ## cat("Multiple matches ... using the vehicle starting closest to the schedule.\n")
 
             valid.vs <- which(voffset < 90 * 60)
             if (length(valid.vs) == 1) {
@@ -113,14 +115,14 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
             
             v <- vehicle$new(vid, tmp3[1, c("position_latitude", "position_longitude", "timestamp")], trip)
             v$update()## $plot()
+
+            if (nrow(tmp3) < 2) next
             
-            pb <- txtProgressBar(1, nrow(tmp3), style = 3)
             for (i in 2:nrow(tmp3)) {
                 v$update(tmp3[i, ])
                 ## if (i %% 5 == 0) v$plot()
                 ## v$plot();grid::grid.locator()
-                setTxtProgressBar(pb, i)
-            }; close(pb)
+            }
             
             
             ##try({
@@ -177,7 +179,7 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
             out <- try(out[segs[[which.max(sapply(segs, function(i) diff(range(out$distance[i]))))]], ])
             
             if (inherits(out, "try-error")) {
-                cat("Error with this route ...\n")
+                cat("Error with this route: ", route, "\n")
                 next
             }
             
@@ -196,6 +198,7 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
 
             #cat("STARTS:", min(SCHED$time), ";   first observation:", out$trip.timestamp[1], "\n")
 
+            msg <- ""
             if (out$trip.timestamp[1] < min(SCHED$time) + 90 * 60) {
                 if (diff(range(out$distance)) > 0.9 * diff(range(SCHED$distance_into_trip))) {
                     
@@ -204,20 +207,47 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
                     ## Some way of deciding whether to keep it or not ...
                     keep <- TRUE  ## readline("Keep this record? (Y/n) ")
                     ## if (keep %in% c("", "Y", "y")) {
+                    out$message <- ""
                     
                     res <- dbWriteTable(dbConnect(SQLite(), "db/historical-data.db"),
                                         "history", out, append = TRUE)
                     
                     if (!res) stop("Unable to write to database ...")
+                    ## else cat("Trip written to database.\n")
                     ## }
                     
-                } else cat("Range less than 90%; ignoring trip.\n")
-            } else cat("Route started too late; assuming driver error.\n")
+                } else {
+                    cat("Route ", route, " - ", "range less than 90%; ignoring trip.\n")
+                    msg <- "short"
+                }
+            } else {
+                cat("Route ", route, " - ", "started too late; assuming driver error.\n")
+                msg <- "late"
+            }
+
+            if (msg != "") {
+                dbWriteTable(dbConnect(SQLite(), "db/historical-data.db"),
+                             "history",
+                             data.frame(trip_id = out$trip_id[1],
+                                        vehicle_id = out$vehicle_id[1],
+                                        route_id = out$route_id[1],
+                                        timestamp = out$timestamp[1],
+                                        trip_start_date = out$trip_start_date[1],
+                                        trip_start_time = out$trip_start_time[1],
+                                        distance = 0,
+                                        velocity = 0,
+                                        acceleration = 0,
+                                        trip.timestamp = 0,
+                                        message = msg), append = TRUE)
+            }
             
             ##}, silent = TRUE) -> tryy
             ##if (inherits(try, "try-error")) print(try)
         }
+
+        setTxtProgressBar(pb, I)
     }
+    close(pb)
 }
 
 
