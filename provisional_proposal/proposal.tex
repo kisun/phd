@@ -153,12 +153,13 @@ Confirmed PhD registration is now sought.
 
 Public transport is central to city planning and traffic management in large cities.
 There are various forms, including trains, trams, ferries, and of particular interest to us, buses.
-Over the years, the technologies involves in these systems has become ever more complex,
+Over the years, the technologies involved in these systems has become ever more complex,
 one evident example being the introduction of cashless payment systems such as Auckland Transport's HOP cards \citep{cn}.
 
-Another piece of technology that has been introduced the public transport vehicles is positioning devices,
+Another piece of technology that has been introduced to public transport vehicles is positioning devices,
 referred to in the literature as automatic vehicle location (AVL) systems.
-The frontrunner of these uses a global positioning system (GPS) to relay the location of vehicles to a central server.
+The system we are most interested in (i.e., the one AT uses) 
+uses a global positioning system (GPS) to relay the location of vehicles to a central server.
 
 
 
@@ -239,14 +240,13 @@ We'll be using GPS data provided through Google's general transit feed specifica
 
 
 \textbf{What's already out there?}
-Kalman Filter, ANN, SVN, and many others \ldots
-They use real time location data and predict arrival using normal distributions (KF anyway).
+Kalman Filter, KNN, ANN, SVN, and many others \ldots including particle filters (only recent, 2014).
 
 \textbf{What can we do better?}
 Use more relevant data (congestion, historical, etc).
 Make more useful predictions (different point estimate, prediction intervals, \ldots).
 Better models that don't have fewer assumptions and overcome some problems 
-(e.g., particle filter for better use of GPS data, etc.).
+(e.g., particle filter that doesn't make assumptions about distributions, etc).
 
 
 Predicting the arrival time of a bus at a future stop is done in two stages:
@@ -320,13 +320,21 @@ Each particle represents a plausible parameter value, and when new data is obtai
 particles is compared to the observation, and a new sample of particles is taken based on the likelihood of the current set of particles.
 It's like a bootstrap at each iteration, where the particles are sampled (with replacement) to generate a new sample that represents the posterior distribution.
 
-Theory ...
+Use in bus prediction \ldots \cite{chen-rakha:2014,hans-etal:2015}
+
+Theory ... \cite{gordon-etal:1993,carpenter-etal:1999,gustafsson-etal:2002}
 
 Advantages ...
 
 Disadvantages ...
 
 How will it help us? ...
+
+
+\subsubsection{Historical Data}
+\label{sec:historical_data}
+
+Many approached (KNN, ANN, etc) use historical data to make predictions.
 
 
 \subsection{Predicting Arrival Times}
@@ -366,7 +374,7 @@ AT has a ``Where's My Bus?'' app that shows the GPS location of the bus you are 
 Journey planning, allowing commuters so provide a location and destination, 
 and get information about the best stop to walk to and bus to catch.
 
-
+Prediction intervals \ldots \cite{mazloumi-etal:2011}
 
 
 \vspace{1cm}
@@ -768,7 +776,7 @@ Induction Days}:
 \textit{Obtain a grade of B or higher in STATS 710}
 
 \item
-\textit{Obtain a grade of B or higher in STATS 7XX}
+\textit{Obtain a grade of B or higher in STATS 769}
 
 \end{enumerate}
 
@@ -844,6 +852,9 @@ Modern Probability Theory \\
 %
 2016-01-28 & Maartje an de Vrugt &
 Online appointment scheduling: a taxonomy and review \\
+%
+2016-02-24 & Arndl von Haeseler &
+Terraces, partial terraces, and phylogenetic inference \\
 %
 % \midrule
 % 2010-06-16 & James B.~Conant &
