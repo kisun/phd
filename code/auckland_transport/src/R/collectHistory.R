@@ -33,7 +33,7 @@ collectHistory <- function(route, day, data.clean = list(),
         warning("No routes ...")
         return()
     }
-    pb <- txtProgressBar(0, length(unique(dat$route_id)), style = 4)
+    ## pb <- txtProgressBar(0, length(unique(dat$route_id)), style = 4)
     for (I in seq_along(unique(dat$route_id))) {
         route <- unique(dat$route_id)[I]
         
@@ -45,8 +45,15 @@ collectHistory <- function(route, day, data.clean = list(),
         tmp <- dat[dat$route_id == route, ]
         
         trips <- unique(tmp$trip_id)
-        ## if (day %in% names(data.clean))
-        ##     trips <- trips[!trips %in% data.clean[[day]]]
+        trips.check <- dbGetQuery(hist.db,
+                               sprintf("SELECT DISTINCT trip_id FROM history WHERE trip_start_date='%s' AND route_id='%s'",
+                                       day, route))
+        trips.use <- ! trips %in% trips.check
+        if (verbose) cat("Processing ", sum(trips.use), " of ", length(trips), "trips ...\n")
+        if (all(! trips.use)) next
+
+        trips <- trips[trips.use]
+        
         trips.schedule <- lapply(trips, getSchedule, verbose = FALSE)
         names(trips.schedule) <- trips
         trips.start <- sapply(trips.schedule, function(x) {
@@ -55,11 +62,17 @@ collectHistory <- function(route, day, data.clean = list(),
                               })
         trips.order <- order(trips.start)
         
-        for (trip in trips[trips.order]) {
+        for (J in seq_along(trips[trips.order])) {
+            trip <- trips[trips.order[J]]
+            
+            progress(route = I, trip = J, nr = length(unique(dat$route_id)), nt = length(trips))
+
+            if (verbose) cat("\n")
             
             ## trip <- trips[trips.order][2]
             if (verbose) 
                 cat("============ Processing trip:", trip, "\n")
+            
             tmp2 <- tmp[tmp$trip_id == trip, ]
 
             ## trip.map <- iNZightMap(~position_latitude, ~position_longitude, data = tmp2,
@@ -130,11 +143,10 @@ collectHistory <- function(route, day, data.clean = list(),
             out <- try(data.frame(cbind(
                 tmp3[, c("trip_id", "vehicle_id", "route_id", "timestamp", "trip_start_date", "trip_start_time")],
                 t(apply(v$getParticles()$xhat, 3, function(x) apply(x, 1, median, na.rm = TRUE))[, -1])
-                )))
+                )), silent = TRUE)
 
             if (inherits(out, "try-error")) {
                 print("Unable to extract info ... rows don't match???")
-                print(tail(v$getParticles()$xhat))
                 next
             }
             
@@ -176,7 +188,8 @@ collectHistory <- function(route, day, data.clean = list(),
                                                    SCHED$departure_time[1])),
                                   format = "%s"))
             segs[toffset > 90 * 60] <- NULL
-            out <- try(out[segs[[which.max(sapply(segs, function(i) diff(range(out$distance[i]))))]], ])
+            out <- try(out[segs[[which.max(sapply(segs, function(i) diff(range(out$distance[i]))))]], ],
+                       silent = TRUE)
             
             if (inherits(out, "try-error")) {
                 ## cat("\nError with this route: ", route)
@@ -245,8 +258,29 @@ collectHistory <- function(route, day, data.clean = list(),
             ##}, silent = TRUE) -> tryy
             ##if (inherits(try, "try-error")) print(try)
         }
-        if (verbose) cat("\n")
-        setTxtProgressBar(pb, I)
+        ## if (verbose) cat("\n")
+        ## setTxtProgressBar(pb, I)
     }
-    close(pb)
+    ## close(pb)
+    progress(kill = TRUE)
+}
+
+
+
+
+progress <- function(route, trip, nr, nt, kill = FALSE) {
+
+    if (kill) {
+        cat("\n")
+    } else {
+        if (nr < route) stop("Not enough routes")
+        if (nt < trip) stop("Not enough trips")
+
+        perc <- round(((route - 1) + (trip / nt)) / nr * 100)
+        
+        cat(paste0("\r | Route ", route, " of ", nr, "   -   Trip ", trip, " of ", nt,
+                  "             | ", perc, "%"))
+    }
+    
+    flush.console()
 }
