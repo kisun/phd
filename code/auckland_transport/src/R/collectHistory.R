@@ -1,4 +1,6 @@
-collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(SQLite(), "db/historical-data.db")) {
+collectHistory <- function(route, day, data.clean = list(),
+                           hist.db = dbConnect(SQLite(), "db/historical-data.db"),
+                           verbose = FALSE) {
 
     con <- dbConnect(SQLite(), "db/backups/gtfs-history_latest.db")
 
@@ -27,12 +29,17 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
     dat <- positions[positions$started, ]
     
     ## for (day in unique(dat$trip_start_date)) {
-    pb <- txtProgressBar(0, length(unique(dat$route_id)), style = 3)
+    if (length(unique(dat$route_id)) == 0) {
+        warning("No routes ...")
+        return()
+    }
+    pb <- txtProgressBar(0, length(unique(dat$route_id)), style = 4)
     for (I in seq_along(unique(dat$route_id))) {
         route <- unique(dat$route_id)[I]
         
         ## day <- unique(dat$trip_start_date)[1]
-        ## cat("\n\n========================== Processing route:", route, "\n") 
+        if (verbose)
+            cat("\n\n========================== Processing route:", route, "\n") 
         
         ## tmp <- dat[dat$trip_start_date == day, ]
         tmp <- dat[dat$route_id == route, ]
@@ -51,8 +58,8 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
         for (trip in trips[trips.order]) {
             
             ## trip <- trips[trips.order][2]
-            
-            ## cat("============ Processing trip:", trip, "\n")
+            if (verbose) 
+                cat("============ Processing trip:", trip, "\n")
             tmp2 <- tmp[tmp$trip_id == trip, ]
 
             ## trip.map <- iNZightMap(~position_latitude, ~position_longitude, data = tmp2,
@@ -77,7 +84,7 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
 
             vs <- unique(tmp2$vehicle_id)
             ## if (length(vs) > 1)
-                ## cat("Multiple matches ... using the vehicle starting closest to the schedule.\n")
+               ## cat("Multiple matches ... using the vehicle starting closest to the schedule.\n")
 
             valid.vs <- which(voffset < 90 * 60)
             if (length(valid.vs) == 1) {
@@ -207,15 +214,15 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
                                         "history", out, append = TRUE)
                     
                     if (!res) stop("Unable to write to database ...")
-                    ## else cat("Trip written to database.\n")
-                    ## }
+                    else if (verbose) cat("Trip written to database.\n")
+                    
                     
                 } else {
-                    ## cat("\nRoute ", route, " - ", "range less than 90%; ignoring trip.")
+                    if (verbose ) cat("\nRoute ", route, " - ", "range less than 90%; ignoring trip.")
                     msg <- "short"
                 }
             } else {
-                ## cat("\nRoute ", route, " - ", "started too late; assuming driver error.")
+                if (verbose) cat("\nRoute ", route, " - ", "started too late; assuming driver error.")
                 msg <- "late"
             }
 
@@ -238,7 +245,7 @@ collectHistory <- function(route, day, data.clean = list(), hist.db = dbConnect(
             ##}, silent = TRUE) -> tryy
             ##if (inherits(try, "try-error")) print(try)
         }
-        ## cat("\n")
+        if (verbose) cat("\n")
         setTxtProgressBar(pb, I)
     }
     close(pb)
