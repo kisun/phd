@@ -48,7 +48,7 @@ collectHistory <- function(route, day, data.clean = list(),
         trips.check <- dbGetQuery(hist.db,
                                sprintf("SELECT DISTINCT trip_id FROM history WHERE trip_start_date='%s' AND route_id='%s'",
                                        day, route))
-        trips.use <- ! trips %in% trips.check
+        trips.use <- ! trips %in% trips.check$trip_id
         if (verbose) cat("Processing ", sum(trips.use), " of ", length(trips), "trips ...\n")
         if (all(! trips.use)) next
 
@@ -147,6 +147,20 @@ collectHistory <- function(route, day, data.clean = list(),
 
             if (inherits(out, "try-error")) {
                 print("Unable to extract info ... rows don't match???")
+                out <- tmp3[, c("trip_id", "vehicle_id", "route_id", "timestamp", "trip_start_date", "trip_start_time")]
+                dbWriteTable(dbConnect(SQLite(), "db/historical-data.db"),
+                             "history",
+                             data.frame(trip_id = out$trip_id[1],
+                                        vehicle_id = out$vehicle_id[1],
+                                        route_id = out$route_id[1],
+                                        timestamp = out$timestamp[1],
+                                        trip_start_date = out$trip_start_date[1],
+                                        trip_start_time = out$trip_start_time[1],
+                                        distance = 0,
+                                        velocity = 0,
+                                        acceleration = 0,
+                                        trip.timestamp = 0,
+                                        message = "error"), append = TRUE)
                 next
             }
             
@@ -188,13 +202,27 @@ collectHistory <- function(route, day, data.clean = list(),
                                                    SCHED$departure_time[1])),
                                   format = "%s"))
             segs[toffset > 90 * 60] <- NULL
-            out <- try(out[segs[[which.max(sapply(segs, function(i) diff(range(out$distance[i]))))]], ],
-                       silent = TRUE)
+            out.tmp <- try(out[segs[[which.max(sapply(segs, function(i) diff(range(out$distance[i]))))]], ],
+                           silent = TRUE)
             
-            if (inherits(out, "try-error")) {
+            if (inherits(out.tmp, "try-error")) {
                 ## cat("\nError with this route: ", route)
-                ERRORS <- c(ERRORS, route)
+                dbWriteTable(dbConnect(SQLite(), "db/historical-data.db"),
+                             "history",
+                             data.frame(trip_id = out$trip_id[1],
+                                        vehicle_id = out$vehicle_id[1],
+                                        route_id = out$route_id[1],
+                                        timestamp = out$timestamp[1],
+                                        trip_start_date = out$trip_start_date[1],
+                                        trip_start_time = out$trip_start_time[1],
+                                        distance = 0,
+                                        velocity = 0,
+                                        acceleration = 0,
+                                        trip.timestamp = 0,
+                                        message = "error"), append = TRUE)
                 next
+            } else {
+                out <- out.tmp
             }
             
             out$trip.timestamp <-
@@ -226,7 +254,7 @@ collectHistory <- function(route, day, data.clean = list(),
                     res <- dbWriteTable(dbConnect(SQLite(), "db/historical-data.db"),
                                         "history", out, append = TRUE)
                     
-                    if (!res) stop("Unable to write to database ...")
+                    if (!res) msg = "fail" #("Unable to write to database ...")
                     else if (verbose) cat("Trip written to database.\n")
                     
                     
@@ -278,8 +306,12 @@ progress <- function(route, trip, nr, nt, kill = FALSE) {
 
         perc <- round(((route - 1) + (trip / nt)) / nr * 100)
         
-        cat(paste0("\r | Route ", route, " of ", nr, "   -   Trip ", trip, " of ", nt,
-                  "             | ", perc, "%"))
+        cat(paste0("\r | Route ", format(route, width = nchar(nr), justify = "right"),
+                   " of ", nr,
+                   "   -   Trip ", format(trip, width = 3, justify = "right"),
+                   " of ", format(nt, width = 3, justify = "right"),
+                   "             | ",
+                   format(perc, width = 3, justify = "right"), "%"))
     }
     
     flush.console()
