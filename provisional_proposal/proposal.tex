@@ -26,6 +26,13 @@
 %\textwidth=450pt
 %\hoffset=-2cm
 
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\newcommand{\bu}{\boldsymbol{u}}
+\newcommand{\bx}{\boldsymbol{x}}
+\newcommand{\by}{\boldsymbol{y}}
+\newcommand{\bz}{\boldsymbol{z}}
+
 \usepackage[hidelinks]{hyperref}
 
 \begin{document}
@@ -150,53 +157,59 @@ Confirmed PhD registration is now sought.
 % system.
 % There is a close relationship between EndNote and {BibTeX}.
 
-
+\textbf{Background:}
 Public transport is central to city planning and traffic management in large cities.
 There are various forms, including trains, trams, ferries, and of particular interest to us, buses.
 Over the years, the technologies involved in these systems has become ever more complex,
-one evident example being the introduction of cashless payment systems such as Auckland Transport's HOP cards \citep{cn}.
+one evident example being the introduction of cashless payment systems such as 
+Auckland Transport's (AT's) HOP cards \citep{cn}.
 
-Another piece of technology that has been introduced to public transport vehicles is positioning devices,
+Another piece of technology that is widely used in public transport vehicles is positioning devices,
 referred to in the literature as automatic vehicle location (AVL) systems.
-The system we are most interested in (i.e., the one AT uses) 
-uses a global positioning system (GPS) to relay the location of vehicles to a central server.
+The AVL system we are most interested in (i.e., the one AT and many other companies use) 
+uses a global positioning system (GPS) to relay the location of vehicles to a central server
+every 30~seconds or so.
+
+\textbf{The main purpose:}
+As a result of this real-time location information, many studies have investigated methods of
+predicting travel time of buses (and hence arrival time at future stops).
+The goal of these studies was to make accurate predictions about the estimated time until arrival (ETA) 
+of a bus for passengers waiting at a bus stop.
+Consequently, studies have shown that when a countdown is displayed, percieved waiting times are less 
+than actual wait times \citep{cn}.
+However, this is only true so long as the countdown is accurate.
+
+In Auckland, there are two main cases where inaccuracy can cause frustration for passengers:
+the first is when uncertainty is large, and ETAs can increase suddenly, 
+while the second occurs when a bus that is not running for whatever reason is still displayed 
+on the board, so commuters are left waiting for a bus that isn't coming.
+The first of these is an issue we will be targeting, while the second may only be something we can allow for.
+
+
+\textbf{Work that has been done:}
+Previous studies have used a range of different modeling and prediction techniques to obtain ETAs.
+These ranged from fairly simple real-time only Kalman Filter models \citep{cn}, 
+to data-driven models such as 
+$k$-nearest neighbour (KNN) \citep{cn}, 
+artificial neural networks (ANNs) \citep{cn}, 
+and support vector machines (SVMs) \citep{cn}.
+Recently, several particle filter models have been used in various ways to solve transit problems,
+such as \cite{hans-etal:2015} who used a particle filter to model the bunching behaviour of buses
+in the hopes of coming up with better management techniques.
 
 
 
+\textbf{What we hope to achieve:}
+There are several areas we hope to target in our research.
+The first of these is to improve predictions by using more of the available data,
+including travel times of other buses traveling along the same road ways, 
+not necessarily the same route.
+The second is to investigate predictions intervals as a way of communicating uncertainty to commuters.
+Finally, we hope to create a user interface (UI) that allows commuters to (i) find out the ETA of their bus,
+and (ii) a journey planning application that lets commuters choose the best (fastest) journey to their destination.
 
-\vspace{1cm}
-\hrule
-\vspace{1cm}
-
-In many cities, public transport is important to management and traffic etc.
-For commuters, knowledge of expected waiting times is useful for both trip planning,
-as well as reducing frustration at waiting for long periods of time.
-
-
-Over the years, many technologies have been added to transit vehicles---such as 
-automatic vehicle positioning (AVL) systems---which are used to provide commuters with
-up-to-date information on the location and, more importantly, expected arrival time of their bus.
-
-
-Many applications have been produced to present this information to commuters, and many different methods
-for generating this information have been used.
-Notable methods are the Kalman Filter \citep{cathey-dailey:2003}, \ldots
-
-
-The main problem is efficiency.
-The resulting algorithm must be able to update the predictions quickly, 
-to reduce the time between receiving a vehicle location, and getting predictions to commuters.
-This can be difficult when there are a lot of busses (the Auckland Transport service can have upwards of 800 busses operating simultaneously at peak traffic times).
-Additionally, new locations are recieved every 10--30~seconds, 
-so the predictions will constantly need updating as new information arrives.
-
-
-
-Additionally, the predictions supplied to commuters can be terribly inaccurate.
-In the Auckland Transport system, common phenomena include ``time travelling busses'', 
-where the ETA increses significantly (from, for example, five~minutes to 15~minutes), 
-or ``disappearing busses'' that display a realistic ETA, leading to ``DUE'', 
-and finally removed from the board without the bus having gone past.
+To do all this, we are going to focus on implementing a particle filter to model the dynamic motion of buses,
+and use this in conjunction with historical data and the travel times of other buses to estimate ETA.
 
 
 
@@ -228,15 +241,46 @@ and finally removed from the board without the bus having gone past.
 % Don't put anything new in this section.
 
 \textbf{What are we trying to do? }
-Predict arrival times of busses.
+Prediction of travel (or arrival) time has many applications,
+for instance optimising traffic flow, priortising traffic signals,
+and improving the behaviour of vehicles on multiple-vehicle routes
+\citep{hans-etal:2015}.
+The application we are interested in, however, is providing commuters with accurate predictions of 
+the question every bus-commuters asks, ``how long will I be waiting here?''.
+
 
 \textbf{Why are we trying to do it?}
-So commuters can plan their journeys, or at least have a good idea of how long they have wait.
+There is always going to be room for improvement when it comes to predictions.
+However, it seems that the predictions in Auckland are often wrong,
+and it is of particular interest to us to come up with better predictions.
+
+
 
 \textbf{How are we going to make predictions?}
-We'll fit state-space models to real time GPS location data,
-and then use this to make predictions about the time of arrival at future locations.
-We'll be using GPS data provided through Google's general transit feed specification (GTFS).
+Making predictions about travel or arrival times (knowing the travel time between two points
+tells you the arrival time at the later point) consists of two parts:
+the first involves accurately modeling the dynamic state of the vehicle
+(that is, its current position, refered to often as ``distance into trip'', its speed,
+and its acceleration).
+The second step uses the dynamic state to predict the path of the vehicle,
+and thereby estimate the travel time to and arrival time at a point in the future (i.e., a bus stop).
+
+These two can be treated using a single model \citep{cn},
+or as two related but separates models \citep{cn}.
+The latter is what we will be using, as it is more flexible and allows the incorporation of more information.
+For the first part, we will use a particle filter based on
+(i) the state-space of the vehicle (distance into trip, velocity, and acceleration),
+or (ii) historical data for the given vehicle or route,
+or (iii) historical data from the most recent vehicle traveling along the given route,
+or (iv) a combination of (i)--(iii).
+
+The second part (prediction) will involve similar information, and is where most of the work will be done.
+In fact, the only difference between the two is that the first predicts the distance into trip after a given
+length of time, while the second predicts the time taken to travel a given distance.
+The first is over short time periods (10-60~seconds), 
+while the second could be making predictions up to an hour in advance, so there is a lot more room for variability.
+
+The final part of the project involves communication of this information to commuters.
 
 
 \textbf{What's already out there?}
@@ -291,7 +335,6 @@ makes fewer assumptions (such as normality).
 The workings of the PF are detailed in \S\ref{sec:particle_filter}.
 
 
-
 \subsubsection{Kalman Filter}
 \label{sec:kalman_filter}
 
@@ -300,11 +343,24 @@ The idea is that, instead of fitting the model to the full set of data,
 the model is fit using one observation at a time.
 This is obviously advantageous when it comes to modeling real time data,
 as we want to \emph{update} the current sate (which contains the information from all previous observations)
-when new data is obtained.
+when new data is obtained,
+rather than estimate a new posterior using all of the data each time, which is (more) computationally intensive.
+
+Given a state vector $\bx_k = \left[d_k, v_k, a_k\right]^T$, there $d_k$ is the distance into trip,
+$v_k$ is the velocity, and $a_k$ is the acceleration at time $t_k$ (observation $k$),
+$\mathbf{A}$ is the state transition matrix,
+$\bu_k$ is the control vector at time $t_k$ (i.e., any additional information),
+$\mathbf{B}$ is the control matrix (i.e., how to use the control vector), 
+and $\mathbf{G}_k$ is the random error associated with observation $k$.
+Once data $y_k$ is obtained, the difference between the estimate and the observation is $\bz_k$,
+if $\mathbf{H}$ is the measurement matrix, then:
 
 \begin{equation}
   \label{eq:kalman_filter}
-  m = ec^2
+  \begin{array}{r@{~=~}l}
+    \hat \bx_k & \mathbf{A}\bx_{k-1} + \mathbf{B}\bu_k + \mathbf{G}_k \\
+    \bz_k & \hat\bx_k - \mathbf{H}\by_k
+  \end{array}
 \end{equation}
 
 The filter works in two stages: first, predict where the state will be at time $k$, given the previous information.
@@ -334,10 +390,10 @@ How will it help us? ...
 \subsubsection{Historical Data}
 \label{sec:historical_data}
 
-Many approached (KNN, ANN, etc) use historical data to make predictions.
+Many approaches (KNN, ANN, etc) use historical data to make predictions.
 
 
-\subsection{Predicting Arrival Times}
+\subsection{Predicting Arrival/Travel Times}
 \label{sec:predicting_arival_times}
 
 Modeling the dynamic state of the vehicle is only the first part of the problem.
