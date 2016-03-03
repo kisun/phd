@@ -9,7 +9,10 @@
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{caption}
+% \usepackage{subfig}
 \usepackage{subcaption}
+\newcommand{\subfloat}[2][need a sub-caption]{\subcaptionbox{#1}{#2}}
+% \usepackage{subfig}
 % \usepackage{movie15}
 % \usepackage{animate}
 
@@ -315,7 +318,7 @@ xtable::print.xtable(
     xtable::xtable(cbind(stop = as.character(1:nrow(tab)), 
                          round(tab / 60)), 
                    caption = "All-in-one Predictions",
-                   label = "tab:arrival_time_1"), 
+                   label = "tab:arrival_time_2"), 
     booktabs = TRUE, include.rownames = FALSE, floating = TRUE,
     table.placement = "p")
 @ 
@@ -843,15 +846,14 @@ Ymax <- max(hist090$distance)
 Vmax <- 50
 @ 
 
-<<examine_relation_GIF,eval=FALSE>>= 
-jpeg("hist/route090_1115_1215_%02d.jpg", width = 620, height = 480)
-for (i in 1:length(days)) {
+<<examine_relation_GIF,cache=TRUE>>= 
+plotfn <- function(i) {
     ti1 <- range(r1[r1$trip_start_date == days[i], "time.zero"])
     ti2 <- range(r2[r2$trip_start_date == days[i], "time.zero"])
     tw1 <- which(t >= ti1[1] & t <= ti1[2])
     tw2 <- which(t >= ti2[1] & t <= ti2[2])
     
-    layout(rbind(c(1,2)), width = c(5, 2))
+    layout(rbind(c(1,2, 3)), width = c(10, 2, 2))
     par(mar = c(5.1, 4.1, 4.1, 0))    
     plot(NA, xlim = range(t), ylim = c(0, Ymax), 
          xlab = "Time into Trip (s)",
@@ -859,7 +861,7 @@ for (i in 1:length(days)) {
     lines(t[tw1], d1 <- DIST[[i]][1, tw1], col = "#990000", lwd = 2)
     lines(t[tw2], d2 <- DIST[[i]][2, tw2], col = "#000099", lwd = 2)
     
-    par(mar = c(5.1, 0, 4.1, 4.1))
+    par(mar = c(5.1, 0, 4.1, 0))
     plot(NA, ylim = c(0, Ymax), xlim = c(0, Vmax),
          xlab = "Speed (m/s)", yaxt = "n")
     lines(s1 <- SPEED[[i]][1, tw1], d1, col = "#990000", lwd = 1, lty = 3)
@@ -868,14 +870,128 @@ for (i in 1:length(days)) {
     dn2 <- lowess(s2, f = 1/5)
     lines(dn1$y, d1, col = "#990000", lwd = 2)
     lines(dn2$y, d2, col = "#000099", lwd = 2)
-    
     axis(1)
-    axis(4)
-}; dev.off()
+    
+    tw <- tw1[which(tw1 %in% tw2)]
+    speed.diff <- apply(SPEED[[i]][, tw], 2, diff)
+    dist.both <- DIST[[i]][1, tw]
+    speed.smooth <- lowess(speed.diff, f = 1/10)
+    
+    par(mar = c(5.1, 0, 4.1, 4.1))
+    plot(NA, ylim = c(0, Ymax), xlim = range(speed.diff),
+         xlab = "Speed differential", yaxt = "n")
+    abline(v = 0, lty = 3)
+    lines(speed.diff, dist.both, col = "#009900", lwd = 1, lty = 3)
+    lines(speed.smooth$y, dist.both, col = "#009900", lwd = 2)
+    axis(1)
+    axis(4) 
+}
+jpeg("hist/route090_1115_1215_%02d.jpg", width = 120*9, height = 120*5)
+for (i in 1:length(days)) {
+    plotfn(i)
+}
+dev.off() -> out
+@ 
+
+<<collection_corr_trips,fig.width=11,fig.height=5,out.width="0.8\\textwidth",fig.cap='A selection of historical trips, comparing 11:15am and 12:15pm trips.',fig.env='figure',fig.subcap=days[c(3, 8, 11)],results='hide',fig.align="center">>=
+for( i in c(3, 8, 11) ) plotfn(i)
 @ 
 
 
+%Actual correlation?
+<<eval=FALSE,echo=FALSE,speed_correlation,fig.width=5,fig.height=5,out.width="0.3\\textwidth",fig.cap='Speed at equal distance into trip',fig.env='figure',fig.subcap=days>>=
+for (i in 1:length(days)) {
+    ti1 <- range(r1[r1$trip_start_date == days[i], "time.zero"])
+    ti2 <- range(r2[r2$trip_start_date == days[i], "time.zero"])
+    tw1 <- which(t >= ti1[1] & t <= ti1[2])
+    tw2 <- which(t >= ti2[1] & t <= ti2[2])
+    tw <- tw1[which(tw1 %in% tw2)]
+    sp <- SPEED[[i]][, tw]
+    plot(sp[1, ], sp[2, ], xlab = "Speed 11.15", ylab = "Speed 12.15",
+         pch = 19, col = "#00000050", main = round(cor(t(sp))[1, 2], 2))
+}
+@ 
 
+
+\subsection{Weighting historical trips}
+\label{sec:weighting_trips}
+
+Knowing about how ``correlated'' trips are isn't all that useful ---
+in most cases, it is a very short space in which two consecutive trips diverge.
+For example, Figure~2(c) diverges at the very beginning,
+but afterwards are mostly in sync.
+
+The idea of using ``velocity'' to measure how correlated two trips are could be useful,
+but as shown in Figure~2, speed needs to be smoothed somewhat before similarities 
+can easily be seen.
+
+We need to find some easy (can be done in real time) measure of how related two (or more)
+trips are.
+That way, in real time, we can decide which of the historical trips to give higher weighting
+when making predictions.
+The first attempt at this is going to be done by taking just the 12:15 trip again,
+and looking at the speed across historical trips.
+
+<<compare_historical_speeds,fig.width=9,fig.height=5>>=
+tripHistPlot <- function(col = rgb(0,0,0,1), h, v, hist.cols = rep(col, nrow(HIST))) {
+    ti <- do.call(rbind, lapply(days, function(d) range(r1[r1$trip_start_date == d, "time.zero"])))
+    ti <- c(max(ti[, 1]), min(ti[, 2]))
+    tw <- which(t >= ti[1] & t <= ti[2])
+    hist.dists <- do.call(rbind, lapply(DIST, function(d) d[1, tw]))
+    HIST <- hist.dists[-nrow(hist.speeds), ]
+    PRED <- hist.dists[nrow(hist.speeds), ]
+    hist.speeds <- do.call(rbind, lapply(SPEED, function(s) s[1, tw]))
+    HIST1 <- hist.speeds[-nrow(hist.speeds), ]
+    PRED1 <- hist.speeds[nrow(hist.speeds), ]
+    
+    layout(rbind(c(1, 2)), widths = c(5, 1))
+    par(mar = c(5.1, 4.1, 4.1, 0))
+    plot(NA, xlim = range(t[tw]), ylim = range(hist.dists),
+         xlab = "Time into Trip (s)", ylab = "Distance into Trip (m)")
+    sapply(1:nrow(HIST), 
+           function(i) lines(t[tw], HIST[i, ], lty = 3, col = hist.cols[i]))
+    lines(t[tw], PRED, col = "#990000", lwd = 2)
+    
+    if (!missing(h)) abline(h = h, col = "#009900", lty = 3)
+    if (!missing(v)) abline(h = h, col = "#009900", lty = 3)
+    
+    par(mar = c(5.1, 0, 4.1, 4.1))
+    plot(NA, xlim = range(hist.speeds), ylim = range(hist.dists),
+         xlab = "Speed (m/s)", yaxt = "n")
+    axis(4)
+    sapply(1:nrow(HIST), function(i) lines(HIST1[i, ], HIST[i, ], lty = 3))
+    lines(PRED1, PRED, col = "#990000", lwd = 2)
+    if (!missing(h)) abline(h = h, col = "#009900", lty = 3)
+}
+tripHistPlot()
+@ 
+
+Lets say just for argument sake that we are at $d_k = 5000$, 
+then the speeds of the historical trips are:
+<<historical_speeds_5000m>>=
+D5000 <- sapply(hist.paired, function(h) {
+    ## convert distance to time, time to ["speed", "acceleration"]
+    t <- optimize(
+        function(x) (h$r1(x) - 5000)^2,
+        interval = c(0, 1500)
+    )$minimum
+    h$r1(t, deriv = 1)
+})
+vhist <- D5000[-length(D5000)]
+vpred <- D5000[length(D5000)]
+
+vhist
+@ 
+and the speed for the ``current'' trip is
+<<current_speed_5000m>>=
+vpred
+@ 
+
+<<speed_diff_5000m,fig.width=9,fig.height=5>>=
+pr <- dnorm(vpred - vhist, sd = sd(vhist))
+wt <- pr / sum(pr)
+tripHistPlot(col = rgb(0,0,0, wt / max(wt)), h = 5000)
+@ 
 
 
 \end{document}

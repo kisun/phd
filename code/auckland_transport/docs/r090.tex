@@ -58,7 +58,10 @@
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{caption}
+% \usepackage{subfig}
 \usepackage{subcaption}
+\newcommand{\subfloat}[2][need a sub-caption]{\subcaptionbox{#1}{#2}}
+% \usepackage{subfig}
 % \usepackage{movie15}
 % \usepackage{animate}
 
@@ -358,7 +361,7 @@ We can also see the arrival distribution for stops, in a table:
     \hlkwc{table.placement} \hlstd{=} \hlstr{"p"}\hlstd{)}
 \end{alltt}
 \end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
-% Thu Feb 25 13:32:10 2016
+% Fri Mar  4 12:39:03 2016
 \begin{table}[p]
 \centering
 \begin{tabular}{llllll}
@@ -429,12 +432,12 @@ We can also see the arrival distribution for stops, in a table:
     \hlstd{xtable}\hlopt{::}\hlkwd{xtable}\hlstd{(}\hlkwd{cbind}\hlstd{(}\hlkwc{stop} \hlstd{=} \hlkwd{as.character}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(tab)),}
                          \hlkwd{round}\hlstd{(tab} \hlopt{/} \hlnum{60}\hlstd{)),}
                    \hlkwc{caption} \hlstd{=} \hlstr{"All-in-one Predictions"}\hlstd{,}
-                   \hlkwc{label} \hlstd{=} \hlstr{"tab:arrival_time_1"}\hlstd{),}
+                   \hlkwc{label} \hlstd{=} \hlstr{"tab:arrival_time_2"}\hlstd{),}
     \hlkwc{booktabs} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{floating} \hlstd{=} \hlnum{TRUE}\hlstd{,}
     \hlkwc{table.placement} \hlstd{=} \hlstr{"p"}\hlstd{)}
 \end{alltt}
 \end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
-% Thu Feb 25 13:32:10 2016
+% Fri Mar  4 12:39:03 2016
 \begin{table}[p]
 \centering
 \begin{tabular}{llllll}
@@ -459,7 +462,7 @@ stop & mean & sd & 2.5\% & 50\% & 97.5\% \\
    \bottomrule
 \end{tabular}
 \caption{All-in-one Predictions} 
-\label{tab:arrival_time_1}
+\label{tab:arrival_time_2}
 \end{table}
 
 
@@ -563,7 +566,7 @@ Next step, repeat! Update the stop arrival time predictions.
     \hlkwc{table.placement} \hlstd{=} \hlstr{"tb"}\hlstd{)}
 \end{alltt}
 \end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
-% Thu Feb 25 13:32:11 2016
+% Fri Mar  4 12:39:03 2016
 \begin{table}[tb]
 \centering
 \begin{tabular}{llllll}
@@ -1065,14 +1068,13 @@ Now we'll look at historical relatedness over the course of history.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlkwd{jpeg}\hlstd{(}\hlstr{"hist/route090_1115_1215_%02d.jpg"}\hlstd{,} \hlkwc{width} \hlstd{=} \hlnum{620}\hlstd{,} \hlkwc{height} \hlstd{=} \hlnum{480}\hlstd{)}
-\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlkwd{length}\hlstd{(days)) \{}
+\hlstd{plotfn} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{) \{}
     \hlstd{ti1} \hlkwb{<-} \hlkwd{range}\hlstd{(r1[r1}\hlopt{$}\hlstd{trip_start_date} \hlopt{==} \hlstd{days[i],} \hlstr{"time.zero"}\hlstd{])}
     \hlstd{ti2} \hlkwb{<-} \hlkwd{range}\hlstd{(r2[r2}\hlopt{$}\hlstd{trip_start_date} \hlopt{==} \hlstd{days[i],} \hlstr{"time.zero"}\hlstd{])}
     \hlstd{tw1} \hlkwb{<-} \hlkwd{which}\hlstd{(t} \hlopt{>=} \hlstd{ti1[}\hlnum{1}\hlstd{]} \hlopt{&} \hlstd{t} \hlopt{<=} \hlstd{ti1[}\hlnum{2}\hlstd{])}
     \hlstd{tw2} \hlkwb{<-} \hlkwd{which}\hlstd{(t} \hlopt{>=} \hlstd{ti2[}\hlnum{1}\hlstd{]} \hlopt{&} \hlstd{t} \hlopt{<=} \hlstd{ti2[}\hlnum{2}\hlstd{])}
 
-    \hlkwd{layout}\hlstd{(}\hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,}\hlnum{2}\hlstd{)),} \hlkwc{width} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{5}\hlstd{,} \hlnum{2}\hlstd{))}
+    \hlkwd{layout}\hlstd{(}\hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,}\hlnum{2}\hlstd{,} \hlnum{3}\hlstd{)),} \hlkwc{width} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{10}\hlstd{,} \hlnum{2}\hlstd{,} \hlnum{2}\hlstd{))}
     \hlkwd{par}\hlstd{(}\hlkwc{mar} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{5.1}\hlstd{,} \hlnum{4.1}\hlstd{,} \hlnum{4.1}\hlstd{,} \hlnum{0}\hlstd{))}
     \hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(t),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{, Ymax),}
          \hlkwc{xlab} \hlstd{=} \hlstr{"Time into Trip (s)"}\hlstd{,}
@@ -1080,7 +1082,7 @@ Now we'll look at historical relatedness over the course of history.
     \hlkwd{lines}\hlstd{(t[tw1], d1} \hlkwb{<-} \hlstd{DIST[[i]][}\hlnum{1}\hlstd{, tw1],} \hlkwc{col} \hlstd{=} \hlstr{"#990000"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{2}\hlstd{)}
     \hlkwd{lines}\hlstd{(t[tw2], d2} \hlkwb{<-} \hlstd{DIST[[i]][}\hlnum{2}\hlstd{, tw2],} \hlkwc{col} \hlstd{=} \hlstr{"#000099"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{2}\hlstd{)}
 
-    \hlkwd{par}\hlstd{(}\hlkwc{mar} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{5.1}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{4.1}\hlstd{,} \hlnum{4.1}\hlstd{))}
+    \hlkwd{par}\hlstd{(}\hlkwc{mar} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{5.1}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{4.1}\hlstd{,} \hlnum{0}\hlstd{))}
     \hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{, Ymax),} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{, Vmax),}
          \hlkwc{xlab} \hlstd{=} \hlstr{"Speed (m/s)"}\hlstd{,} \hlkwc{yaxt} \hlstd{=} \hlstr{"n"}\hlstd{)}
     \hlkwd{lines}\hlstd{(s1} \hlkwb{<-} \hlstd{SPEED[[i]][}\hlnum{1}\hlstd{, tw1], d1,} \hlkwc{col} \hlstd{=} \hlstr{"#990000"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
@@ -1089,16 +1091,164 @@ Now we'll look at historical relatedness over the course of history.
     \hlstd{dn2} \hlkwb{<-} \hlkwd{lowess}\hlstd{(s2,} \hlkwc{f} \hlstd{=} \hlnum{1}\hlopt{/}\hlnum{5}\hlstd{)}
     \hlkwd{lines}\hlstd{(dn1}\hlopt{$}\hlstd{y, d1,} \hlkwc{col} \hlstd{=} \hlstr{"#990000"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{2}\hlstd{)}
     \hlkwd{lines}\hlstd{(dn2}\hlopt{$}\hlstd{y, d2,} \hlkwc{col} \hlstd{=} \hlstr{"#000099"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{2}\hlstd{)}
+    \hlkwd{axis}\hlstd{(}\hlnum{1}\hlstd{)}
 
+    \hlstd{tw} \hlkwb{<-} \hlstd{tw1[}\hlkwd{which}\hlstd{(tw1} \hlopt{%in%} \hlstd{tw2)]}
+    \hlstd{speed.diff} \hlkwb{<-} \hlkwd{apply}\hlstd{(SPEED[[i]][, tw],} \hlnum{2}\hlstd{, diff)}
+    \hlstd{dist.both} \hlkwb{<-} \hlstd{DIST[[i]][}\hlnum{1}\hlstd{, tw]}
+    \hlstd{speed.smooth} \hlkwb{<-} \hlkwd{lowess}\hlstd{(speed.diff,} \hlkwc{f} \hlstd{=} \hlnum{1}\hlopt{/}\hlnum{10}\hlstd{)}
+
+    \hlkwd{par}\hlstd{(}\hlkwc{mar} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{5.1}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{4.1}\hlstd{,} \hlnum{4.1}\hlstd{))}
+    \hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{, Ymax),} \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(speed.diff),}
+         \hlkwc{xlab} \hlstd{=} \hlstr{"Speed differential"}\hlstd{,} \hlkwc{yaxt} \hlstd{=} \hlstr{"n"}\hlstd{)}
+    \hlkwd{abline}\hlstd{(}\hlkwc{v} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+    \hlkwd{lines}\hlstd{(speed.diff, dist.both,} \hlkwc{col} \hlstd{=} \hlstr{"#009900"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+    \hlkwd{lines}\hlstd{(speed.smooth}\hlopt{$}\hlstd{y, dist.both,} \hlkwc{col} \hlstd{=} \hlstr{"#009900"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{2}\hlstd{)}
     \hlkwd{axis}\hlstd{(}\hlnum{1}\hlstd{)}
     \hlkwd{axis}\hlstd{(}\hlnum{4}\hlstd{)}
-\hlstd{\};} \hlkwd{dev.off}\hlstd{()}
+\hlstd{\}}
+\hlkwd{jpeg}\hlstd{(}\hlstr{"hist/route090_1115_1215_%02d.jpg"}\hlstd{,} \hlkwc{width} \hlstd{=} \hlnum{120}\hlopt{*}\hlnum{9}\hlstd{,} \hlkwc{height} \hlstd{=} \hlnum{120}\hlopt{*}\hlnum{5}\hlstd{)}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlkwd{length}\hlstd{(days)) \{}
+    \hlkwd{plotfn}\hlstd{(i)}
+\hlstd{\}}
+\hlkwd{dev.off}\hlstd{()} \hlkwb{->} \hlstd{out}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
 
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwa{for}\hlstd{( i} \hlkwa{in} \hlkwd{c}\hlstd{(}\hlnum{3}\hlstd{,} \hlnum{8}\hlstd{,} \hlnum{11}\hlstd{) )} \hlkwd{plotfn}\hlstd{(i)}
+\end{alltt}
+\end{kframe}\begin{figure}
+
+{\centering \subfloat[2016-01-19\label{fig:collection_corr_trips1}]{\includegraphics[width=0.8\textwidth]{figure/collection_corr_trips-1} }
+\subfloat[2016-01-25\label{fig:collection_corr_trips2}]{\includegraphics[width=0.8\textwidth]{figure/collection_corr_trips-2} }
+\subfloat[2016-02-09\label{fig:collection_corr_trips3}]{\includegraphics[width=0.8\textwidth]{figure/collection_corr_trips-3} }
+
+}
+
+\caption[A selection of historical trips, comparing 11]{A selection of historical trips, comparing 11:15am and 12:15pm trips.}\label{fig:collection_corr_trips}
+\end{figure}
 
 
+\end{knitrout}
+
+
+%Actual correlation?
+
+
+
+\subsection{Weighting historical trips}
+\label{sec:weighting_trips}
+
+Knowing about how ``correlated'' trips are isn't all that useful ---
+in most cases, it is a very short space in which two consecutive trips diverge.
+For example, Figure~2(c) diverges at the very beginning,
+but afterwards are mostly in sync.
+
+The idea of using ``velocity'' to measure how correlated two trips are could be useful,
+but as shown in Figure~2, speed needs to be smoothed somewhat before similarities 
+can easily be seen.
+
+We need to find some easy (can be done in real time) measure of how related two (or more)
+trips are.
+That way, in real time, we can decide which of the historical trips to give higher weighting
+when making predictions.
+The first attempt at this is going to be done by taking just the 12:15 trip again,
+and looking at the speed across historical trips.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{tripHistPlot} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{col} \hlstd{=} \hlkwd{rgb}\hlstd{(}\hlnum{0}\hlstd{,}\hlnum{0}\hlstd{,}\hlnum{0}\hlstd{,}\hlnum{1}\hlstd{),} \hlkwc{h}\hlstd{,} \hlkwc{v}\hlstd{,} \hlkwc{hist.cols} \hlstd{=} \hlkwd{rep}\hlstd{(col,} \hlkwd{nrow}\hlstd{(HIST))) \{}
+    \hlstd{ti} \hlkwb{<-} \hlkwd{do.call}\hlstd{(rbind,} \hlkwd{lapply}\hlstd{(days,} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{)} \hlkwd{range}\hlstd{(r1[r1}\hlopt{$}\hlstd{trip_start_date} \hlopt{==} \hlstd{d,} \hlstr{"time.zero"}\hlstd{])))}
+    \hlstd{ti} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{max}\hlstd{(ti[,} \hlnum{1}\hlstd{]),} \hlkwd{min}\hlstd{(ti[,} \hlnum{2}\hlstd{]))}
+    \hlstd{tw} \hlkwb{<-} \hlkwd{which}\hlstd{(t} \hlopt{>=} \hlstd{ti[}\hlnum{1}\hlstd{]} \hlopt{&} \hlstd{t} \hlopt{<=} \hlstd{ti[}\hlnum{2}\hlstd{])}
+    \hlstd{hist.dists} \hlkwb{<-} \hlkwd{do.call}\hlstd{(rbind,} \hlkwd{lapply}\hlstd{(DIST,} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{) d[}\hlnum{1}\hlstd{, tw]))}
+    \hlstd{HIST} \hlkwb{<-} \hlstd{hist.dists[}\hlopt{-}\hlkwd{nrow}\hlstd{(hist.speeds), ]}
+    \hlstd{PRED} \hlkwb{<-} \hlstd{hist.dists[}\hlkwd{nrow}\hlstd{(hist.speeds), ]}
+    \hlstd{hist.speeds} \hlkwb{<-} \hlkwd{do.call}\hlstd{(rbind,} \hlkwd{lapply}\hlstd{(SPEED,} \hlkwa{function}\hlstd{(}\hlkwc{s}\hlstd{) s[}\hlnum{1}\hlstd{, tw]))}
+    \hlstd{HIST1} \hlkwb{<-} \hlstd{hist.speeds[}\hlopt{-}\hlkwd{nrow}\hlstd{(hist.speeds), ]}
+    \hlstd{PRED1} \hlkwb{<-} \hlstd{hist.speeds[}\hlkwd{nrow}\hlstd{(hist.speeds), ]}
+
+    \hlkwd{layout}\hlstd{(}\hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{2}\hlstd{)),} \hlkwc{widths} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{5}\hlstd{,} \hlnum{1}\hlstd{))}
+    \hlkwd{par}\hlstd{(}\hlkwc{mar} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{5.1}\hlstd{,} \hlnum{4.1}\hlstd{,} \hlnum{4.1}\hlstd{,} \hlnum{0}\hlstd{))}
+    \hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(t[tw]),} \hlkwc{ylim} \hlstd{=} \hlkwd{range}\hlstd{(hist.dists),}
+         \hlkwc{xlab} \hlstd{=} \hlstr{"Time into Trip (s)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Distance into Trip (m)"}\hlstd{)}
+    \hlkwd{sapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(HIST),}
+           \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{)} \hlkwd{lines}\hlstd{(t[tw], HIST[i, ],} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{col} \hlstd{= hist.cols[i]))}
+    \hlkwd{lines}\hlstd{(t[tw], PRED,} \hlkwc{col} \hlstd{=} \hlstr{"#990000"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{2}\hlstd{)}
+
+    \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{missing}\hlstd{(h))} \hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{= h,} \hlkwc{col} \hlstd{=} \hlstr{"#009900"}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+    \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{missing}\hlstd{(v))} \hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{= h,} \hlkwc{col} \hlstd{=} \hlstr{"#009900"}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+
+    \hlkwd{par}\hlstd{(}\hlkwc{mar} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{5.1}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{4.1}\hlstd{,} \hlnum{4.1}\hlstd{))}
+    \hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(hist.speeds),} \hlkwc{ylim} \hlstd{=} \hlkwd{range}\hlstd{(hist.dists),}
+         \hlkwc{xlab} \hlstd{=} \hlstr{"Speed (m/s)"}\hlstd{,} \hlkwc{yaxt} \hlstd{=} \hlstr{"n"}\hlstd{)}
+    \hlkwd{axis}\hlstd{(}\hlnum{4}\hlstd{)}
+    \hlkwd{sapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(HIST),} \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{)} \hlkwd{lines}\hlstd{(HIST1[i, ], HIST[i, ],} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{))}
+    \hlkwd{lines}\hlstd{(PRED1, PRED,} \hlkwc{col} \hlstd{=} \hlstr{"#990000"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{2}\hlstd{)}
+    \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{missing}\hlstd{(h))} \hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{= h,} \hlkwc{col} \hlstd{=} \hlstr{"#009900"}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+\hlstd{\}}
+\hlkwd{tripHistPlot}\hlstd{()}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/compare_historical_speeds-1} 
+
+\end{knitrout}
+
+Lets say just for argument sake that we are at $d_k = 5000$, 
+then the speeds of the historical trips are:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{D5000} \hlkwb{<-} \hlkwd{sapply}\hlstd{(hist.paired,} \hlkwa{function}\hlstd{(}\hlkwc{h}\hlstd{) \{}
+    \hlcom{## convert distance to time, time to ["speed", "acceleration"]}
+    \hlstd{t} \hlkwb{<-} \hlkwd{optimize}\hlstd{(}
+        \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) (h}\hlopt{$}\hlkwd{r1}\hlstd{(x)} \hlopt{-} \hlnum{5000}\hlstd{)}\hlopt{^}\hlnum{2}\hlstd{,}
+        \hlkwc{interval} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{1500}\hlstd{)}
+    \hlstd{)}\hlopt{$}\hlstd{minimum}
+    \hlstd{h}\hlopt{$}\hlkwd{r1}\hlstd{(t,} \hlkwc{deriv} \hlstd{=} \hlnum{1}\hlstd{)}
+\hlstd{\})}
+\hlstd{vhist} \hlkwb{<-} \hlstd{D5000[}\hlopt{-}\hlkwd{length}\hlstd{(D5000)]}
+\hlstd{vpred} \hlkwb{<-} \hlstd{D5000[}\hlkwd{length}\hlstd{(D5000)]}
+
+\hlstd{vhist}
+\end{alltt}
+\begin{verbatim}
+## 2016-01-15 2016-01-16 2016-01-19 2016-01-20 2016-01-21 2016-01-22 
+##   8.485373   6.149211  10.274791  16.768915  11.526228  15.182605 
+## 2016-01-23 2016-01-25 2016-01-26 2016-01-29 
+##  11.238868  10.760644   0.000000  12.060710
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+and the speed for the ``current'' trip is
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{vpred}
+\end{alltt}
+\begin{verbatim}
+## 2016-02-09 
+##   10.79415
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{pr} \hlkwb{<-} \hlkwd{dnorm}\hlstd{(vpred} \hlopt{-} \hlstd{vhist,} \hlkwc{sd} \hlstd{=} \hlkwd{sd}\hlstd{(vhist))}
+\hlstd{wt} \hlkwb{<-} \hlstd{pr} \hlopt{/} \hlkwd{sum}\hlstd{(pr)}
+\hlkwd{tripHistPlot}\hlstd{(}\hlkwc{col} \hlstd{=} \hlkwd{rgb}\hlstd{(}\hlnum{0}\hlstd{,}\hlnum{0}\hlstd{,}\hlnum{0}\hlstd{, wt} \hlopt{/} \hlkwd{max}\hlstd{(wt)),} \hlkwc{h} \hlstd{=} \hlnum{5000}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/speed_diff_5000m-1} 
+
+\end{knitrout}
 
 
 \end{document}
