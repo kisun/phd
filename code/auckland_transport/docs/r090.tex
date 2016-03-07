@@ -155,6 +155,16 @@ as well as remove some impossibly fast trips.
                 \hlstd{dx} \hlkwb{<-} \hlkwd{diff}\hlstd{(hist090}\hlopt{$}\hlstd{distance[i])}
                 \hlkwa{if} \hlstd{(}\hlkwd{max}\hlstd{(dx}\hlopt{/}\hlstd{dt)} \hlopt{<} \hlnum{50}\hlstd{)} \hlkwd{return}\hlstd{(i)} \hlkwa{else} \hlkwd{numeric}\hlstd{()}
             \hlstd{\})))}
+\end{alltt}
+
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}\begin{alltt}
 \hlstd{hist090} \hlkwb{<-} \hlstd{hist090[which.keep, ]}
 \hlkwd{with}\hlstd{(hist090,} \hlkwd{plot}\hlstd{(time.hour, distance,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,}
                    \hlkwc{main} \hlstd{=} \hlstr{"History of Route 090"}\hlstd{,} \hlkwc{xlab} \hlstd{=} \hlstr{"Time (h)"}\hlstd{,}
@@ -360,29 +370,29 @@ We can also see the arrival distribution for stops, in a table:
     \hlkwc{booktabs} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{floating} \hlstd{=} \hlnum{TRUE}\hlstd{,}
     \hlkwc{table.placement} \hlstd{=} \hlstr{"p"}\hlstd{)}
 \end{alltt}
-\end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
-% Fri Mar  4 12:39:03 2016
+\end{kframe}% latex table generated in R 3.2.2 by xtable 1.8-2 package
+% Mon Mar  7 10:56:48 2016
 \begin{table}[p]
 \centering
 \begin{tabular}{llllll}
   \toprule
 stop & mean & sd & 2.5\% & 50\% & 97.5\% \\ 
   \midrule
-1 & 5 & 2 & 2 & 5 & 9 \\ 
-  2 & 9 & 2 & 5 & 9 & 13 \\ 
+1 & 5 & 1 & 3 & 5 & 8 \\ 
+  2 & 9 & 2 & 6 & 9 & 12 \\ 
   3 & 13 & 2 & 9 & 13 & 17 \\ 
-  4 & 17 & 2 & 12 & 17 & 21 \\ 
-  5 & 22 & 2 & 17 & 22 & 26 \\ 
-  6 & 27 & 3 & 22 & 27 & 32 \\ 
+  4 & 17 & 2 & 13 & 17 & 21 \\ 
+  5 & 21 & 2 & 17 & 21 & 25 \\ 
+  6 & 27 & 2 & 23 & 27 & 32 \\ 
   7 & 33 & 3 & 28 & 33 & 38 \\ 
-  8 & 40 & 3 & 34 & 40 & 45 \\ 
-  9 & 45 & 3 & 38 & 45 & 50 \\ 
-  10 & 48 & 3 & 41 & 48 & 54 \\ 
-  11 & 50 & 3 & 44 & 50 & 56 \\ 
-  12 & 52 & 3 & 46 & 52 & 58 \\ 
-  13 & 55 & 3 & 49 & 55 & 61 \\ 
-  14 & 59 & 3 & 51 & 59 & 65 \\ 
-  15 & 63 & 4 & 56 & 64 & 70 \\ 
+  8 & 40 & 3 & 34 & 40 & 46 \\ 
+  9 & 45 & 4 & 37 & 46 & 54 \\ 
+  10 & 49 & 4 & 41 & 49 & 58 \\ 
+  11 & 52 & 5 & 43 & 52 & 61 \\ 
+  12 & 53 & 5 & 44 & 53 & 62 \\ 
+  13 & 56 & 5 & 47 & 56 & 65 \\ 
+  14 & 60 & 5 & 51 & 60 & 69 \\ 
+  15 & 65 & 5 & 56 & 65 & 75 \\ 
    \bottomrule
 \end{tabular}
 \caption{Sequential Predictions} 
@@ -436,29 +446,29 @@ We can also see the arrival distribution for stops, in a table:
     \hlkwc{booktabs} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{floating} \hlstd{=} \hlnum{TRUE}\hlstd{,}
     \hlkwc{table.placement} \hlstd{=} \hlstr{"p"}\hlstd{)}
 \end{alltt}
-\end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
-% Fri Mar  4 12:39:03 2016
+\end{kframe}% latex table generated in R 3.2.2 by xtable 1.8-2 package
+% Mon Mar  7 10:56:48 2016
 \begin{table}[p]
 \centering
 \begin{tabular}{llllll}
   \toprule
 stop & mean & sd & 2.5\% & 50\% & 97.5\% \\ 
   \midrule
-1 & 5 & 2 & 2 & 5 & 9 \\ 
+1 & 5 & 1 & 3 & 5 & 8 \\ 
   2 & 9 & 2 & 6 & 9 & 12 \\ 
-  3 & 13 & 2 & 9 & 13 & 17 \\ 
-  4 & 17 & 2 & 13 & 17 & 20 \\ 
-  5 & 22 & 2 & 16 & 22 & 27 \\ 
+  3 & 13 & 2 & 10 & 13 & 17 \\ 
+  4 & 17 & 2 & 13 & 17 & 21 \\ 
+  5 & 21 & 2 & 17 & 21 & 26 \\ 
   6 & 27 & 2 & 23 & 27 & 32 \\ 
-  7 & 33 & 2 & 29 & 33 & 37 \\ 
-  8 & 40 & 3 & 34 & 40 & 46 \\ 
-  9 & 45 & 3 & 39 & 45 & 50 \\ 
-  10 & 48 & 2 & 44 & 48 & 52 \\ 
-  11 & 50 & 2 & 46 & 50 & 55 \\ 
-  12 & 52 & 2 & 48 & 52 & 57 \\ 
-  13 & 55 & 2 & 50 & 55 & 60 \\ 
-  14 & 59 & 3 & 53 & 59 & 64 \\ 
-  15 & 64 & 3 & 58 & 64 & 68 \\ 
+  7 & 33 & 2 & 28 & 33 & 38 \\ 
+  8 & 40 & 4 & 32 & 40 & 47 \\ 
+  9 & 45 & 4 & 38 & 45 & 52 \\ 
+  10 & 49 & 4 & 41 & 49 & 57 \\ 
+  11 & 52 & 4 & 45 & 52 & 58 \\ 
+  12 & 53 & 3 & 47 & 53 & 60 \\ 
+  13 & 56 & 4 & 49 & 56 & 63 \\ 
+  14 & 60 & 4 & 52 & 60 & 68 \\ 
+  15 & 65 & 5 & 55 & 65 & 75 \\ 
    \bottomrule
 \end{tabular}
 \caption{All-in-one Predictions} 
@@ -565,29 +575,29 @@ Next step, repeat! Update the stop arrival time predictions.
     \hlkwc{booktabs} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{floating} \hlstd{=} \hlnum{TRUE}\hlstd{,}
     \hlkwc{table.placement} \hlstd{=} \hlstr{"tb"}\hlstd{)}
 \end{alltt}
-\end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
-% Fri Mar  4 12:39:03 2016
+\end{kframe}% latex table generated in R 3.2.2 by xtable 1.8-2 package
+% Mon Mar  7 10:56:49 2016
 \begin{table}[tb]
 \centering
 \begin{tabular}{llllll}
   \toprule
 stop & mean & sd & 2.5\% & 50\% & 97.5\% \\ 
   \midrule
-1 & 2 & -10 & 0 & 2 & 5 \\ 
-  2 & 7 & -10 & 3 & 7 & 10 \\ 
-  3 & 11 & -10 & 7 & 11 & 15 \\ 
-  4 & 15 & -10 & 11 & 15 & 19 \\ 
-  5 & 20 & -9 & 15 & 20 & 25 \\ 
-  6 & 25 & -9 & 20 & 25 & 31 \\ 
-  7 & 31 & -9 & 25 & 31 & 37 \\ 
-  8 & 38 & -8 & 31 & 38 & 44 \\ 
-  9 & 42 & -9 & 36 & 42 & 48 \\ 
-  10 & 46 & -9 & 40 & 46 & 51 \\ 
-  11 & 48 & -9 & 43 & 48 & 54 \\ 
-  12 & 50 & -9 & 45 & 50 & 55 \\ 
-  13 & 53 & -9 & 46 & 53 & 59 \\ 
-  14 & 57 & -8 & 51 & 57 & 63 \\ 
-  15 & 61 & -8 & 56 & 61 & 67 \\ 
+1 & 3 & -9 & 0 & 3 & 5 \\ 
+  2 & 7 & -9 & 5 & 7 & 10 \\ 
+  3 & 11 & -9 & 8 & 11 & 14 \\ 
+  4 & 15 & -8 & 12 & 15 & 18 \\ 
+  5 & 19 & -8 & 16 & 19 & 24 \\ 
+  6 & 25 & -8 & 22 & 25 & 29 \\ 
+  7 & 31 & -8 & 27 & 31 & 37 \\ 
+  8 & 38 & -7 & 32 & 38 & 44 \\ 
+  9 & 44 & -7 & 37 & 44 & 50 \\ 
+  10 & 47 & -6 & 38 & 47 & 55 \\ 
+  11 & 50 & -6 & 42 & 50 & 57 \\ 
+  12 & 51 & -6 & 44 & 51 & 59 \\ 
+  13 & 55 & -6 & 47 & 55 & 62 \\ 
+  14 & 58 & -6 & 50 & 58 & 66 \\ 
+  15 & 63 & -5 & 55 & 63 & 72 \\ 
    \bottomrule
 \end{tabular}
 \caption{Predictions after one observation} 
@@ -950,6 +960,14 @@ For the variance, we'll just use the variance at that point \ldots
                                  \hlstd{pred2),}
                        \hlkwd{apply}\hlstd{(pred1,} \hlnum{2}\hlstd{, sd),} \hlkwc{lower} \hlstd{= w[}\hlnum{1}\hlstd{,,i}\hlopt{-}\hlnum{1}\hlstd{])}
     \hlstd{pi} \hlkwb{<-} \hlkwd{dnorm}\hlstd{(w0[}\hlnum{1}\hlstd{,,i], test.trip}\hlopt{$}\hlstd{distance[i],} \hlnum{20}\hlstd{)}
+    \hlkwa{if} \hlstd{(}\hlkwd{sum}\hlstd{(pi)} \hlopt{==} \hlnum{0}\hlstd{) \{}
+        \hlstd{w0[ , , i]} \hlkwb{<-} \hlkwd{runif}\hlstd{(M,} \hlnum{0}\hlstd{,} \hlkwc{max} \hlstd{=} \hlkwd{max}\hlstd{(w0[, , i]))}
+        \hlstd{pi} \hlkwb{<-} \hlkwd{dnorm}\hlstd{(w0[}\hlnum{1}\hlstd{,,i], test.trip}\hlopt{$}\hlstd{distance[i],} \hlnum{20}\hlstd{)}
+        \hlkwa{if} \hlstd{(}\hlkwd{sum}\hlstd{(pi)} \hlopt{==} \hlnum{0}\hlstd{) \{}
+            \hlstd{w0[ , , i]} \hlkwb{<-} \hlkwd{runif}\hlstd{(M,} \hlnum{0}\hlstd{,} \hlkwc{max} \hlstd{=} \hlnum{2} \hlopt{*} \hlkwd{max}\hlstd{(w0[, , i]))}
+            \hlstd{pi} \hlkwb{<-} \hlkwd{dnorm}\hlstd{(w0[}\hlnum{1}\hlstd{,,i], test.trip}\hlopt{$}\hlstd{distance[i],} \hlnum{20}\hlstd{)}
+        \hlstd{\}}
+    \hlstd{\}}
     \hlstd{wi} \hlkwb{<-} \hlstd{pi} \hlopt{/} \hlkwd{sum}\hlstd{(pi)}
     \hlstd{w[,,i]} \hlkwb{<<-} \hlstd{w0[,} \hlkwd{sample}\hlstd{(M,} \hlkwc{replace} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{prob} \hlstd{= wi), i]}
 
@@ -1167,13 +1185,13 @@ and looking at the speed across historical trips.
     \hlstd{ti} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{max}\hlstd{(ti[,} \hlnum{1}\hlstd{]),} \hlkwd{min}\hlstd{(ti[,} \hlnum{2}\hlstd{]))}
     \hlstd{tw} \hlkwb{<-} \hlkwd{which}\hlstd{(t} \hlopt{>=} \hlstd{ti[}\hlnum{1}\hlstd{]} \hlopt{&} \hlstd{t} \hlopt{<=} \hlstd{ti[}\hlnum{2}\hlstd{])}
     \hlstd{hist.dists} \hlkwb{<-} \hlkwd{do.call}\hlstd{(rbind,} \hlkwd{lapply}\hlstd{(DIST,} \hlkwa{function}\hlstd{(}\hlkwc{d}\hlstd{) d[}\hlnum{1}\hlstd{, tw]))}
-    \hlstd{HIST} \hlkwb{<-} \hlstd{hist.dists[}\hlopt{-}\hlkwd{nrow}\hlstd{(hist.speeds), ]}
-    \hlstd{PRED} \hlkwb{<-} \hlstd{hist.dists[}\hlkwd{nrow}\hlstd{(hist.speeds), ]}
+    \hlstd{HIST} \hlkwb{<-} \hlstd{hist.dists[}\hlopt{-}\hlkwd{nrow}\hlstd{(hist.dists), ]}
+    \hlstd{PRED} \hlkwb{<-} \hlstd{hist.dists[}\hlkwd{nrow}\hlstd{(hist.dists), ]}
     \hlstd{hist.speeds} \hlkwb{<-} \hlkwd{do.call}\hlstd{(rbind,} \hlkwd{lapply}\hlstd{(SPEED,} \hlkwa{function}\hlstd{(}\hlkwc{s}\hlstd{) s[}\hlnum{1}\hlstd{, tw]))}
     \hlstd{HIST1} \hlkwb{<-} \hlstd{hist.speeds[}\hlopt{-}\hlkwd{nrow}\hlstd{(hist.speeds), ]}
     \hlstd{PRED1} \hlkwb{<-} \hlstd{hist.speeds[}\hlkwd{nrow}\hlstd{(hist.speeds), ]}
 
-    \hlkwd{layout}\hlstd{(}\hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{2}\hlstd{)),} \hlkwc{widths} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{5}\hlstd{,} \hlnum{1}\hlstd{))}
+    \hlkwd{layout}\hlstd{(}\hlkwd{rbind}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{2}\hlstd{)),} \hlkwc{widths} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{4}\hlstd{,} \hlnum{1}\hlstd{))}
     \hlkwd{par}\hlstd{(}\hlkwc{mar} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{5.1}\hlstd{,} \hlnum{4.1}\hlstd{,} \hlnum{4.1}\hlstd{,} \hlnum{0}\hlstd{))}
     \hlkwd{plot}\hlstd{(}\hlnum{NA}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwd{range}\hlstd{(t[tw]),} \hlkwc{ylim} \hlstd{=} \hlkwd{range}\hlstd{(hist.dists),}
          \hlkwc{xlab} \hlstd{=} \hlstr{"Time into Trip (s)"}\hlstd{,} \hlkwc{ylab} \hlstd{=} \hlstr{"Distance into Trip (m)"}\hlstd{)}
@@ -1220,8 +1238,10 @@ then the speeds of the historical trips are:
 \begin{verbatim}
 ## 2016-01-15 2016-01-16 2016-01-19 2016-01-20 2016-01-21 2016-01-22 
 ##   8.485373   6.149211  10.274791  16.768915  11.526228  15.182605 
-## 2016-01-23 2016-01-25 2016-01-26 2016-01-29 
-##  11.238868  10.760644   0.000000  12.060710
+## 2016-01-23 2016-01-25 2016-01-26 2016-01-29 2016-02-09 2016-02-18 
+##  11.238868  10.760644   0.000000  12.060710  10.794153   8.124656 
+## 2016-02-19 
+##  11.562566
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -1232,8 +1252,8 @@ and the speed for the ``current'' trip is
 \hlstd{vpred}
 \end{alltt}
 \begin{verbatim}
-## 2016-02-09 
-##   10.79415
+## 2016-02-20 
+##   12.45735
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -1248,6 +1268,186 @@ and the speed for the ``current'' trip is
 \end{kframe}
 \includegraphics[width=\maxwidth]{figure/speed_diff_5000m-1} 
 
+\end{knitrout}
+
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{N} \hlkwb{<-} \hlkwd{nrow}\hlstd{(test.trip)}
+\hlstd{w} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwc{nrow} \hlstd{= N,} \hlkwc{ncol} \hlstd{= M)}
+\hlstd{w[}\hlnum{1}\hlstd{, ]} \hlkwb{<-} \hlnum{0}
+\hlstd{w0} \hlkwb{<-} \hlstd{w}  \hlcom{## matrix for the original estimates}
+
+\hlstd{test.trip}\hlopt{$}\hlstd{time_into_trip} \hlkwb{<-} \hlstd{test.trip}\hlopt{$}\hlstd{time_into_trip} \hlopt{+} \hlnum{60} \hlopt{*} \hlnum{10}
+\hlstd{t} \hlkwb{<-} \hlstd{test.trip}\hlopt{$}\hlstd{time_into_trip}
+\hlstd{delta.t} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{diff}\hlstd{(t))}
+
+\hlstd{colWtMeans} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{wt}\hlstd{,} \hlkwc{...}\hlstd{)}
+    \hlkwd{apply}\hlstd{(x,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{)} \hlkwd{sum}\hlstd{(x} \hlopt{*} \hlstd{wt, ...)} \hlopt{/} \hlkwd{sum}\hlstd{(wt, ...))}
+
+\hlstd{pred} \hlkwb{<-} \hlkwd{history.fnD}\hlstd{(w[}\hlnum{1}\hlstd{, ], delta.t[}\hlnum{2}\hlstd{])}
+\hlstd{pred.v} \hlkwb{<-} \hlkwd{history.fnD}\hlstd{(w[}\hlnum{1}\hlstd{, ],} \hlnum{0}\hlstd{,} \hlnum{1}\hlstd{)}
+\hlstd{wt} \hlkwb{<-} \hlkwd{rep}\hlstd{(}\hlnum{1}\hlstd{,} \hlkwd{nrow}\hlstd{(pred.v))}
+
+\hlstd{w0[}\hlnum{2}\hlstd{, ]} \hlkwb{<-} \hlkwd{rtnorm}\hlstd{(}\hlkwd{ncol}\hlstd{(w),} \hlkwd{colWtMeans}\hlstd{(pred, wt),} \hlkwd{apply}\hlstd{(pred,} \hlnum{2}\hlstd{, sd),} \hlkwc{lower} \hlstd{= w[}\hlnum{1}\hlstd{, ])}
+\hlstd{pi} \hlkwb{<-} \hlkwd{dnorm}\hlstd{(w0[}\hlnum{2}\hlstd{, ], test.trip}\hlopt{$}\hlstd{distance[}\hlnum{2}\hlstd{],} \hlnum{20}\hlstd{)}
+\hlstd{wi} \hlkwb{<-} \hlstd{pi} \hlopt{/} \hlkwd{sum}\hlstd{(pi)}
+\hlstd{w[}\hlnum{2}\hlstd{, ]} \hlkwb{<-} \hlkwd{sample}\hlstd{(w0[}\hlnum{2}\hlstd{, ], M,} \hlnum{TRUE}\hlstd{, wi)}
+\hlkwd{draw}\hlstd{(}\hlnum{1}\hlstd{,} \hlkwc{a} \hlstd{= a[}\hlnum{2}\hlstd{, ],} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{1000}\hlstd{),} \hlkwc{ylim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5200}\hlstd{))}
+\hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[}\hlnum{2}\hlstd{], M), w0[}\hlnum{2}\hlstd{, ],} \hlkwc{col} \hlstd{=} \hlstr{"#009900"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.3}\hlstd{)}
+\hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[}\hlnum{2}\hlstd{], M), w[}\hlnum{2}\hlstd{, ],} \hlkwc{col} \hlstd{=} \hlstr{"#000099"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.3}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/weighted-predictions-1} 
+\begin{kframe}\begin{alltt}
+\hlstd{a} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwc{nrow} \hlstd{=} \hlnum{15}\hlstd{,} \hlkwc{ncol} \hlstd{= M)}
+
+\hlstd{colSds} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{...}\hlstd{)} \hlkwd{apply}\hlstd{(x,} \hlnum{2}\hlstd{, sd, ...)}
+
+\hlstd{ti} \hlkwb{<-} \hlstd{test.trip}\hlopt{$}\hlstd{time_into_trip[}\hlnum{2}\hlstd{]}
+\hlstd{a1j} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[}\hlnum{1}\hlstd{])[}\hlnum{2}\hlstd{,}\hlnum{1}\hlstd{]}
+\hlstd{adj} \hlkwb{<-} \hlopt{-} \hlkwd{sweep}\hlstd{(}\hlkwd{arrivalTime}\hlstd{(w[}\hlnum{2}\hlstd{, ]),} \hlnum{1}\hlstd{, a1j)}
+\hlstd{adj[adj} \hlopt{<} \hlnum{0}\hlstd{]} \hlkwb{<-} \hlnum{0}
+\hlstd{a1} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M,} \hlkwd{colWtMeans}\hlstd{(adj, wt,} \hlkwc{na.rm} \hlstd{=} \hlnum{TRUE}\hlstd{),}
+                  \hlkwd{colSds}\hlstd{(adj,} \hlkwc{na.rm} \hlstd{=} \hlnum{TRUE}\hlstd{),} \hlkwc{lower} \hlstd{=} \hlnum{0}\hlstd{)}
+\hlkwd{draw}\hlstd{(}\hlnum{1}\hlstd{,} \hlkwc{a} \hlstd{= a1)}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/weighted-predictions-2} 
+\begin{kframe}\begin{alltt}
+\hlstd{a[}\hlnum{1}\hlstd{, ]} \hlkwb{<-} \hlstd{a1}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{2}\hlopt{:}\hlnum{15}\hlstd{) \{}
+    \hlstd{aij} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[i])[,} \hlnum{1}\hlstd{]}
+    \hlstd{adj} \hlkwb{<-} \hlopt{-} \hlkwd{sweep}\hlstd{(}\hlkwd{arrivalTime}\hlstd{(w[}\hlnum{2}\hlstd{, ]),} \hlnum{1}\hlstd{, aij)}
+    \hlstd{adj[adj} \hlopt{<} \hlnum{0}\hlstd{]} \hlkwb{<-} \hlnum{0}
+    \hlstd{a[i, ]} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M,} \hlkwd{colWtMeans}\hlstd{(adj, wt),}
+                          \hlkwd{colSds}\hlstd{(adj),} \hlkwc{lower} \hlstd{=} \hlnum{0}\hlstd{)}
+\hlstd{\}}
+
+\hlstd{draw} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{s} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{a}\hlstd{,} \hlkwc{labs} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwa{NULL}\hlstd{,} \hlkwc{ylim} \hlstd{=} \hlkwa{NULL}\hlstd{,}
+                 \hlkwc{stop.pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{stop.col} \hlstd{=} \hlstr{"red"}\hlstd{,} \hlkwc{hist.weights}\hlstd{) \{}
+    \hlkwd{with}\hlstd{(hist,} \hlkwd{plot}\hlstd{(time_into_trip, distance,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,}
+                    \hlkwc{main} \hlstd{=} \hlkwd{ifelse}\hlstd{(}
+                        \hlstd{labs,}
+                        \hlstr{"History of Route 090 12:15pm trip"}\hlstd{,}
+                        \hlstr{""}\hlstd{),}
+                    \hlkwc{xlab} \hlstd{=} \hlkwd{ifelse}\hlstd{(labs,} \hlstr{"Time into Trip (s)"}\hlstd{,} \hlstr{""}\hlstd{),}
+                    \hlkwc{ylab} \hlstd{=} \hlkwd{ifelse}\hlstd{(labs,} \hlstr{"Distance into Trip (m)"}\hlstd{,} \hlstr{""}\hlstd{),}
+                    \hlkwc{xlim} \hlstd{= xlim,} \hlkwc{ylim} \hlstd{= ylim,}
+                    \hlkwc{axes} \hlstd{= labs))}
+    \hlkwd{box}\hlstd{()}
+    \hlkwa{if} \hlstd{(}\hlkwd{missing}\hlstd{(hist.weights)) hist.weights} \hlkwb{<-} \hlkwd{rep}\hlstd{(}\hlnum{1}\hlstd{,} \hlkwd{length}\hlstd{(history.fn))}
+    \hlkwa{else} \hlstd{hist.weights} \hlkwb{<-} \hlkwd{as.numeric}\hlstd{(hist.weights)} \hlopt{/} \hlkwd{max}\hlstd{(hist.weights)}
+
+    \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlkwd{length}\hlstd{(history.fn)) \{}
+        \hlstd{f} \hlkwb{<-} \hlstd{history.fn[[i]]}
+        \hlkwd{curve}\hlstd{(}\hlkwd{f}\hlstd{(x),} \hlnum{0}\hlstd{,} \hlkwd{attr}\hlstd{(f,} \hlstr{"max"}\hlstd{),} \hlkwc{n} \hlstd{=} \hlnum{101}\hlstd{,} \hlkwc{add} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{2}\hlstd{,}
+              \hlkwc{col} \hlstd{=} \hlkwd{rgb}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{, hist.weights[i]))}
+    \hlstd{\}}
+    \hlcom{#curve(rpred.fn(x - 600), 600, attr(rpred.fn, "max") + 600, }
+    \hlcom{#      n = 101, add = TRUE, col = "#990000", lwd = 3)}
+    \hlkwa{if} \hlstd{(}\hlkwd{any}\hlstd{(s} \hlopt{==} \hlnum{0}\hlstd{))}
+        \hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{, stops),} \hlkwc{col} \hlstd{=} \hlstr{"#0000ff"}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+    \hlkwa{else if} \hlstd{(}\hlkwd{all}\hlstd{(s} \hlopt{>} \hlnum{0}\hlstd{))}
+        \hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{= stops[s],} \hlkwc{col} \hlstd{=} \hlstr{"#0000ff"}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
+
+    \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{missing}\hlstd{(a)} \hlopt{&&} \hlkwd{all}\hlstd{(s} \hlopt{>} \hlnum{0}\hlstd{)) \{}
+        \hlkwa{if} \hlstd{(}\hlopt{!}\hlkwd{is.matrix}\hlstd{(a)) a} \hlkwb{<-} \hlkwd{rbind}\hlstd{(a)}
+        \hlkwa{if} \hlstd{(}\hlkwd{length}\hlstd{(s)} \hlopt{==} \hlkwd{nrow}\hlstd{(a)) \{}
+            \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlkwd{nrow}\hlstd{(a))}
+                \hlkwd{points}\hlstd{(a[i, ],} \hlkwd{rep}\hlstd{(stops[s[i]],} \hlkwd{ncol}\hlstd{(a)),}
+                       \hlkwc{pch} \hlstd{= stop.pch,} \hlkwc{col} \hlstd{= stop.col,} \hlkwc{cex} \hlstd{=} \hlnum{0.3}\hlstd{)}
+        \hlstd{\}}
+    \hlstd{\}}
+\hlstd{\}}
+
+\hlkwd{draw}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{15}\hlstd{, a)}
+\hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[}\hlnum{2}\hlstd{], M), w0[}\hlnum{2}\hlstd{, ],} \hlkwc{col} \hlstd{=} \hlstr{"#009900"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.3}\hlstd{)}
+\hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[}\hlnum{2}\hlstd{], M), w[}\hlnum{2}\hlstd{, ],} \hlkwc{col} \hlstd{=} \hlstr{"#000099"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.3}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/weighted-predictions-3} 
+\begin{kframe}\begin{alltt}
+\hlstd{predict} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{,} \hlkwc{draw} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{...}\hlstd{) \{}
+    \hlstd{pred} \hlkwb{<-} \hlkwd{history.fnD}\hlstd{(w[i} \hlopt{-} \hlnum{1}\hlstd{, ], delta.t[i])}
+    \hlstd{pred.v} \hlkwb{<-} \hlkwd{history.fnD}\hlstd{(w[i} \hlopt{-} \hlnum{1}\hlstd{, ],} \hlnum{0}\hlstd{,} \hlnum{1}\hlstd{)}
+    \hlstd{cur.v} \hlkwb{<-} \hlkwd{mean}\hlstd{((w[i} \hlopt{-} \hlnum{1}\hlstd{, ]} \hlopt{-} \hlstd{w[i} \hlopt{-} \hlnum{2}\hlstd{, ])} \hlopt{/} \hlstd{delta.t[i} \hlopt{-} \hlnum{1}\hlstd{])}
+    \hlstd{pr} \hlkwb{<-} \hlkwd{dnorm}\hlstd{(pred.v} \hlopt{-} \hlstd{cur.v,} \hlkwc{sd} \hlstd{=} \hlkwd{sd}\hlstd{(pred.v))}
+    \hlstd{wt} \hlkwb{<-} \hlkwd{sweep}\hlstd{(pr,} \hlnum{2}\hlstd{,} \hlkwd{colSums}\hlstd{(pr),} \hlstr{"/"}\hlstd{)}
+    \hlstd{wtMeans} \hlkwb{<-} \hlkwd{colSums}\hlstd{(pred} \hlopt{*} \hlstd{wt)} \hlopt{/} \hlkwd{colSums}\hlstd{(wt)}
+
+    \hlstd{w0[i, ]} \hlkwb{<<-} \hlkwd{rtnorm}\hlstd{(}\hlkwd{ncol}\hlstd{(w), wtMeans,} \hlkwd{apply}\hlstd{(pred,} \hlnum{2}\hlstd{, sd),} \hlkwc{lower} \hlstd{= w[i} \hlopt{-} \hlnum{1}\hlstd{, ])}
+    \hlstd{pi} \hlkwb{<-} \hlkwd{dnorm}\hlstd{(w0[i, ], test.trip}\hlopt{$}\hlstd{distance[i],} \hlnum{20}\hlstd{)}
+    \hlkwa{if} \hlstd{(}\hlkwd{all}\hlstd{(pi} \hlopt{==} \hlnum{0}\hlstd{)) \{}
+        \hlstd{w0[i, ]} \hlkwb{<<-} \hlkwd{runif}\hlstd{(}\hlkwd{ncol}\hlstd{(w),} \hlnum{0}\hlstd{,} \hlkwd{max}\hlstd{(w0[i, ]))}
+        \hlstd{pi} \hlkwb{<-} \hlkwd{dnorm}\hlstd{(w0[i, ], test.trip}\hlopt{$}\hlstd{distance[i],} \hlnum{20}\hlstd{)}
+    \hlstd{\}}
+    \hlstd{wi} \hlkwb{<-} \hlstd{pi} \hlopt{/} \hlkwd{sum}\hlstd{(pi)}
+    \hlstd{w[i, ]} \hlkwb{<<-} \hlkwd{sample}\hlstd{(w0[i, ], M,} \hlnum{TRUE}\hlstd{, wi)}
+
+    \hlstd{wstops} \hlkwb{<-} \hlkwd{which}\hlstd{(stops} \hlopt{>} \hlkwd{min}\hlstd{(w[i, ]))}
+    \hlstd{stops} \hlkwb{<-} \hlstd{stops[wstops]}
+
+    \hlstd{a} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwc{nrow} \hlstd{=} \hlkwd{length}\hlstd{(stops),} \hlkwc{ncol} \hlstd{= M)}
+    \hlstd{ti} \hlkwb{<-} \hlstd{test.trip}\hlopt{$}\hlstd{time_into_trip[i]}
+
+    \hlstd{a1j} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[}\hlnum{1}\hlstd{])[,}\hlnum{1}\hlstd{]}
+    \hlstd{adj} \hlkwb{<-} \hlopt{-} \hlkwd{sweep}\hlstd{(}\hlkwd{arrivalTime}\hlstd{(w[i, ]),} \hlnum{1}\hlstd{, a1j)}
+    \hlstd{adj[adj} \hlopt{<} \hlnum{0}\hlstd{]} \hlkwb{<-} \hlnum{0}
+    \hlstd{wtMeans} \hlkwb{<-} \hlkwd{colSums}\hlstd{(adj} \hlopt{*} \hlstd{wt)} \hlopt{/} \hlkwd{colSums}\hlstd{(wt)}
+    \hlstd{a[}\hlnum{1}\hlstd{, ]} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M, wtMeans,}
+                          \hlkwd{colSds}\hlstd{(adj),} \hlkwc{lower} \hlstd{=} \hlnum{0}\hlstd{)}
+
+    \hlkwa{for} \hlstd{(j} \hlkwa{in} \hlnum{2}\hlopt{:}\hlkwd{length}\hlstd{(stops)) \{}
+        \hlstd{ajj} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[j])[,}\hlnum{1}\hlstd{]}
+        \hlstd{adj} \hlkwb{<-} \hlopt{-} \hlkwd{sweep}\hlstd{(}\hlkwd{arrivalTime}\hlstd{(w[i, ]),} \hlnum{1}\hlstd{, ajj)}
+        \hlstd{adj[adj} \hlopt{<} \hlnum{0}\hlstd{]} \hlkwb{<-} \hlnum{0}
+        \hlstd{wtMeans} \hlkwb{<-} \hlkwd{colSums}\hlstd{(adj} \hlopt{*} \hlstd{wt)} \hlopt{/} \hlkwd{colSums}\hlstd{(wt)}
+        \hlstd{a[j, ]} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M, wtMeans,}
+                              \hlkwd{colSds}\hlstd{(adj),} \hlkwc{lower} \hlstd{=} \hlnum{0}\hlstd{)}
+    \hlstd{\}}
+    \hlkwa{if} \hlstd{(draw) \{}
+        \hlstd{Wt} \hlkwb{<-} \hlkwd{rowSums}\hlstd{(wt)} \hlopt{/} \hlkwd{sum}\hlstd{(wt)}
+
+        \hlkwd{draw}\hlstd{(wstops, a,} \hlkwc{hist.weights} \hlstd{= Wt,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{max}\hlstd{(a)), ...)}
+
+        \hlkwd{with}\hlstd{(test.trip,} \hlkwd{lines}\hlstd{(time_into_trip[}\hlnum{1}\hlopt{:}\hlstd{i], distance[}\hlnum{1}\hlopt{:}\hlstd{i],}
+                              \hlkwc{col} \hlstd{=} \hlstr{"#000099"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{4}\hlstd{))}
+        \hlkwd{with}\hlstd{(test.trip,} \hlkwd{lines}\hlstd{(time_into_trip[}\hlopt{-}\hlstd{(}\hlnum{1}\hlopt{:}\hlstd{i)], distance[}\hlopt{-}\hlstd{(}\hlnum{1}\hlopt{:}\hlstd{i)],}
+                              \hlkwc{col} \hlstd{=} \hlstr{"#009999"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{))}
+
+        \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i], M), w0[i, ],} \hlkwc{col} \hlstd{=} \hlstr{"#009900"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.3}\hlstd{)}
+        \hlkwd{points}\hlstd{(}\hlkwd{rep}\hlstd{(t[i], M), w[i, ],} \hlkwc{col} \hlstd{=} \hlstr{"#000099"}\hlstd{,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex} \hlstd{=} \hlnum{0.3}\hlstd{)}
+    \hlstd{\}}
+\hlstd{\}}
+\hlkwd{predict}\hlstd{(}\hlnum{3}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/weighted-predictions-4} 
+
+\end{knitrout}
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{4}\hlopt{:}\hlkwd{nrow}\hlstd{(test.trip)) \{}
+    \hlkwd{predict}\hlstd{(i)}
+    \hlstd{grid}\hlopt{::}\hlkwd{grid.locator}\hlstd{()}
+\hlstd{\}}
+
+
+\hlstd{pb} \hlkwb{<-} \hlkwd{txtProgressBar}\hlstd{(}\hlnum{3}\hlstd{,} \hlnum{94}\hlstd{,} \hlkwc{initial} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{style} \hlstd{=} \hlnum{3}\hlstd{)}
+\hlkwd{jpeg}\hlstd{(}\hlstr{"hist/route090_1215-2_%03d.jpg"}\hlstd{,} \hlkwc{width} \hlstd{=} \hlnum{620}\hlstd{,} \hlkwc{height} \hlstd{=} \hlnum{480}\hlstd{)}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{3}\hlopt{:}\hlnum{94}\hlstd{) \{}
+   \hlkwd{predict}\hlstd{(i)}
+   \hlkwd{setTxtProgressBar}\hlstd{(pb, i)}
+   \hlkwd{Sys.sleep}\hlstd{(}\hlnum{1}\hlstd{)}
+\hlstd{\};}\hlkwd{dev.off}\hlstd{();}\hlkwd{close}\hlstd{(pb)}
+\end{alltt}
+\end{kframe}
 \end{knitrout}
 
 

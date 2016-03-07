@@ -743,6 +743,14 @@ predict <- function(i, draw = TRUE, ...) {
                                  pred2), 
                        apply(pred1, 2, sd), lower = w[1,,i-1])
     pi <- dnorm(w0[1,,i], test.trip$distance[i], 20)
+    if (sum(pi) == 0) {
+        w0[ , , i] <- runif(M, 0, max = max(w0[, , i]))
+        pi <- dnorm(w0[1,,i], test.trip$distance[i], 20)
+        if (sum(pi) == 0) {
+            w0[ , , i] <- runif(M, 0, max = 2 * max(w0[, , i]))
+            pi <- dnorm(w0[1,,i], test.trip$distance[i], 20)
+        }
+    }
     wi <- pi / sum(pi)
     w[,,i] <<- w0[, sample(M, replace = TRUE, prob = wi), i]
     
@@ -938,13 +946,13 @@ tripHistPlot <- function(col = rgb(0,0,0,1), h, v, hist.cols = rep(col, nrow(HIS
     ti <- c(max(ti[, 1]), min(ti[, 2]))
     tw <- which(t >= ti[1] & t <= ti[2])
     hist.dists <- do.call(rbind, lapply(DIST, function(d) d[1, tw]))
-    HIST <- hist.dists[-nrow(hist.speeds), ]
-    PRED <- hist.dists[nrow(hist.speeds), ]
+    HIST <- hist.dists[-nrow(hist.dists), ]
+    PRED <- hist.dists[nrow(hist.dists), ]
     hist.speeds <- do.call(rbind, lapply(SPEED, function(s) s[1, tw]))
     HIST1 <- hist.speeds[-nrow(hist.speeds), ]
     PRED1 <- hist.speeds[nrow(hist.speeds), ]
     
-    layout(rbind(c(1, 2)), widths = c(5, 1))
+    layout(rbind(c(1, 2)), widths = c(4, 1))
     par(mar = c(5.1, 4.1, 4.1, 0))
     plot(NA, xlim = range(t[tw]), ylim = range(hist.dists),
          xlab = "Time into Trip (s)", ylab = "Distance into Trip (m)")
@@ -991,6 +999,163 @@ vpred
 pr <- dnorm(vpred - vhist, sd = sd(vhist))
 wt <- pr / sum(pr)
 tripHistPlot(col = rgb(0,0,0, wt / max(wt)), h = 5000)
+@ 
+
+
+
+<<weighted-predictions,fig.width=9,fig.height=5,cache=TRUE>>=
+N <- nrow(test.trip)
+w <- matrix(nrow = N, ncol = M)
+w[1, ] <- 0
+w0 <- w  ## matrix for the original estimates
+
+test.trip$time_into_trip <- test.trip$time_into_trip + 60 * 10
+t <- test.trip$time_into_trip
+delta.t <- c(0, diff(t))
+
+colWtMeans <- function(x, wt, ...)
+    apply(x, 2, function(x) sum(x * wt, ...) / sum(wt, ...))
+
+pred <- history.fnD(w[1, ], delta.t[2])
+pred.v <- history.fnD(w[1, ], 0, 1)
+wt <- rep(1, nrow(pred.v))
+
+w0[2, ] <- rtnorm(ncol(w), colWtMeans(pred, wt), apply(pred, 2, sd), lower = w[1, ])
+pi <- dnorm(w0[2, ], test.trip$distance[2], 20)
+wi <- pi / sum(pi)
+w[2, ] <- sample(w0[2, ], M, TRUE, wi)
+draw(1, a = a[2, ], xlim = c(0, 1000), ylim = c(0, 5200))
+points(rep(t[2], M), w0[2, ], col = "#009900", pch = 19, cex = 0.3)
+points(rep(t[2], M), w[2, ], col = "#000099", pch = 19, cex = 0.3)
+
+a <- matrix(nrow = 15, ncol = M)
+
+colSds <- function(x, ...) apply(x, 2, sd, ...)
+
+ti <- test.trip$time_into_trip[2]
+a1j <- arrivalTime(stops[1])[2,1]
+adj <- - sweep(arrivalTime(w[2, ]), 1, a1j)
+adj[adj < 0] <- 0
+a1 <- ti + rtnorm(M, colWtMeans(adj, wt, na.rm = TRUE),
+                  colSds(adj, na.rm = TRUE), lower = 0)
+draw(1, a = a1)
+
+a[1, ] <- a1
+for (i in 2:15) {
+    aij <- arrivalTime(stops[i])[, 1]
+    adj <- - sweep(arrivalTime(w[2, ]), 1, aij)
+    adj[adj < 0] <- 0
+    a[i, ] <- ti + rtnorm(M, colWtMeans(adj, wt), 
+                          colSds(adj), lower = 0)
+}
+
+draw <- function(s = 0, a, labs = TRUE, xlim = NULL, ylim = NULL, 
+                 stop.pch = 19, stop.col = "red", hist.weights) {
+    with(hist, plot(time_into_trip, distance, type = "n",
+                    main = ifelse(
+                        labs, 
+                        "History of Route 090 12:15pm trip", 
+                        ""), 
+                    xlab = ifelse(labs, "Time into Trip (s)", ""),
+                    ylab = ifelse(labs, "Distance into Trip (m)", ""),
+                    xlim = xlim, ylim = ylim,
+                    axes = labs))
+    box()
+    if (missing(hist.weights)) hist.weights <- rep(1, length(history.fn))
+    else hist.weights <- as.numeric(hist.weights) / max(hist.weights)
+
+    for (i in 1:length(history.fn)) {
+        f <- history.fn[[i]]
+        curve(f(x), 0, attr(f, "max"), n = 101, add = TRUE, lty = 2, 
+              col = rgb(0, 0, 0, hist.weights[i]))
+    }
+    #curve(rpred.fn(x - 600), 600, attr(rpred.fn, "max") + 600, 
+    #      n = 101, add = TRUE, col = "#990000", lwd = 3)
+    if (any(s == 0))
+        abline(h = c(0, stops), col = "#0000ff", lty = 3)
+    else if (all(s > 0))
+        abline(h = stops[s], col = "#0000ff", lty = 3)
+    
+    if (!missing(a) && all(s > 0)) {
+        if (!is.matrix(a)) a <- rbind(a)
+        if (length(s) == nrow(a)) {
+            for (i in 1:nrow(a))
+                points(a[i, ], rep(stops[s[i]], ncol(a)), 
+                       pch = stop.pch, col = stop.col, cex = 0.3)
+        }
+    }
+}
+
+draw(1:15, a)
+points(rep(t[2], M), w0[2, ], col = "#009900", pch = 19, cex = 0.3)
+points(rep(t[2], M), w[2, ], col = "#000099", pch = 19, cex = 0.3)
+
+predict <- function(i, draw = TRUE, ...) {
+    pred <- history.fnD(w[i - 1, ], delta.t[i])
+    pred.v <- history.fnD(w[i - 1, ], 0, 1)
+    cur.v <- mean((w[i - 1, ] - w[i - 2, ]) / delta.t[i - 1])
+    pr <- dnorm(pred.v - cur.v, sd = sd(pred.v))
+    wt <- sweep(pr, 2, colSums(pr), "/")
+    wtMeans <- colSums(pred * wt) / colSums(wt)
+        
+    w0[i, ] <<- rtnorm(ncol(w), wtMeans, apply(pred, 2, sd), lower = w[i - 1, ])
+    pi <- dnorm(w0[i, ], test.trip$distance[i], 20)
+    if (all(pi == 0)) {
+        w0[i, ] <<- runif(ncol(w), 0, max(w0[i, ]))
+        pi <- dnorm(w0[i, ], test.trip$distance[i], 20)
+    }
+    wi <- pi / sum(pi)
+    w[i, ] <<- sample(w0[i, ], M, TRUE, wi)
+    
+    wstops <- which(stops > min(w[i, ]))
+    stops <- stops[wstops]
+    
+    a <- matrix(nrow = length(stops), ncol = M)    
+    ti <- test.trip$time_into_trip[i]
+    
+    a1j <- arrivalTime(stops[1])[,1]
+    adj <- - sweep(arrivalTime(w[i, ]), 1, a1j)
+    adj[adj < 0] <- 0
+    wtMeans <- colSums(adj * wt) / colSums(wt)
+    a[1, ] <- ti + rtnorm(M, ifelse(wtMeans == 0, 10, wtMeans), 
+                          colSds(adj), lower = 0)
+    a[1, wtMeans == 0] <- pmax(0, a[1, wtMeans == 0] - 10)
+    
+    for (j in 2:length(stops)) {
+        ajj <- arrivalTime(stops[j])[,1]
+        adj <- - sweep(arrivalTime(w[i, ]), 1, ajj)
+        adj[adj < 0] <- 0
+        wtMeans <- colSums(adj * wt) / colSums(wt)
+        a[j, ] <- ti + rtnorm(M, ifelse(wtMeans == 0, 10, wtMeans), 
+                              colSds(adj), lower = 0)
+        a[j, wtMeans == 0] <- pmax(0, a[j, wtMeans == 0] - 10)
+    }
+    if (draw) {
+        Wt <- rowSums(wt) / sum(wt)
+        
+        draw(wstops, a, hist.weights = Wt, xlim = c(0, max(a)), ...)
+        
+        with(test.trip, lines(time_into_trip[1:i], distance[1:i],
+                              col = "#000099", lwd = 4))
+        with(test.trip, lines(time_into_trip[-(1:i)], distance[-(1:i)],
+                              col = "#009999", lwd = 3, lty = 3))
+        
+        points(rep(t[i], M), w0[i, ], col = "#009900", pch = 19, cex = 0.3)
+        points(rep(t[i], M), w[i, ], col = "#000099", pch = 19, cex = 0.3)
+    }
+}
+predict(3)
+@ 
+
+
+<<eval=FALSE>>=
+pb <- txtProgressBar(3, nrow(test.trip), initial = 3, style = 3)
+jpeg("hist/route090_1215-weighted_%03d.jpg", width = 900, height = 500)
+for (i in 3:nrow(test.trip)) {
+   predict(i)
+   setTxtProgressBar(pb, i)
+   Sys.sleep(1)
+};dev.off();close(pb)
 @ 
 
 
