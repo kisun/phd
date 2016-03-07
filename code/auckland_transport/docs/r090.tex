@@ -155,16 +155,6 @@ as well as remove some impossibly fast trips.
                 \hlstd{dx} \hlkwb{<-} \hlkwd{diff}\hlstd{(hist090}\hlopt{$}\hlstd{distance[i])}
                 \hlkwa{if} \hlstd{(}\hlkwd{max}\hlstd{(dx}\hlopt{/}\hlstd{dt)} \hlopt{<} \hlnum{50}\hlstd{)} \hlkwd{return}\hlstd{(i)} \hlkwa{else} \hlkwd{numeric}\hlstd{()}
             \hlstd{\})))}
-\end{alltt}
-
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}\begin{alltt}
 \hlstd{hist090} \hlkwb{<-} \hlstd{hist090[which.keep, ]}
 \hlkwd{with}\hlstd{(hist090,} \hlkwd{plot}\hlstd{(time.hour, distance,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,}
                    \hlkwc{main} \hlstd{=} \hlstr{"History of Route 090"}\hlstd{,} \hlkwc{xlab} \hlstd{=} \hlstr{"Time (h)"}\hlstd{,}
@@ -370,29 +360,29 @@ We can also see the arrival distribution for stops, in a table:
     \hlkwc{booktabs} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{floating} \hlstd{=} \hlnum{TRUE}\hlstd{,}
     \hlkwc{table.placement} \hlstd{=} \hlstr{"p"}\hlstd{)}
 \end{alltt}
-\end{kframe}% latex table generated in R 3.2.2 by xtable 1.8-2 package
-% Mon Mar  7 10:56:48 2016
+\end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
+% Mon Mar  7 15:41:54 2016
 \begin{table}[p]
 \centering
 \begin{tabular}{llllll}
   \toprule
 stop & mean & sd & 2.5\% & 50\% & 97.5\% \\ 
   \midrule
-1 & 5 & 1 & 3 & 5 & 8 \\ 
-  2 & 9 & 2 & 6 & 9 & 12 \\ 
-  3 & 13 & 2 & 9 & 13 & 17 \\ 
-  4 & 17 & 2 & 13 & 17 & 21 \\ 
-  5 & 21 & 2 & 17 & 21 & 25 \\ 
-  6 & 27 & 2 & 23 & 27 & 32 \\ 
-  7 & 33 & 3 & 28 & 33 & 38 \\ 
-  8 & 40 & 3 & 34 & 40 & 46 \\ 
-  9 & 45 & 4 & 37 & 46 & 54 \\ 
-  10 & 49 & 4 & 41 & 49 & 58 \\ 
-  11 & 52 & 5 & 43 & 52 & 61 \\ 
-  12 & 53 & 5 & 44 & 53 & 62 \\ 
-  13 & 56 & 5 & 47 & 56 & 65 \\ 
-  14 & 60 & 5 & 51 & 60 & 69 \\ 
-  15 & 65 & 5 & 56 & 65 & 75 \\ 
+1 & 5 & 2 & 2 & 5 & 9 \\ 
+  2 & 9 & 2 & 5 & 9 & 13 \\ 
+  3 & 13 & 2 & 8 & 13 & 18 \\ 
+  4 & 17 & 2 & 12 & 17 & 22 \\ 
+  5 & 22 & 3 & 16 & 22 & 27 \\ 
+  6 & 27 & 3 & 21 & 28 & 33 \\ 
+  7 & 33 & 3 & 27 & 33 & 39 \\ 
+  8 & 40 & 3 & 33 & 40 & 46 \\ 
+  9 & 45 & 4 & 37 & 45 & 51 \\ 
+  10 & 48 & 4 & 40 & 48 & 55 \\ 
+  11 & 50 & 4 & 43 & 51 & 57 \\ 
+  12 & 52 & 4 & 45 & 52 & 59 \\ 
+  13 & 55 & 4 & 47 & 55 & 62 \\ 
+  14 & 59 & 4 & 51 & 59 & 66 \\ 
+  15 & 64 & 4 & 56 & 64 & 71 \\ 
    \bottomrule
 \end{tabular}
 \caption{Sequential Predictions} 
@@ -446,29 +436,29 @@ We can also see the arrival distribution for stops, in a table:
     \hlkwc{booktabs} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{floating} \hlstd{=} \hlnum{TRUE}\hlstd{,}
     \hlkwc{table.placement} \hlstd{=} \hlstr{"p"}\hlstd{)}
 \end{alltt}
-\end{kframe}% latex table generated in R 3.2.2 by xtable 1.8-2 package
-% Mon Mar  7 10:56:48 2016
+\end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
+% Mon Mar  7 15:41:54 2016
 \begin{table}[p]
 \centering
 \begin{tabular}{llllll}
   \toprule
 stop & mean & sd & 2.5\% & 50\% & 97.5\% \\ 
   \midrule
-1 & 5 & 1 & 3 & 5 & 8 \\ 
+1 & 5 & 2 & 2 & 5 & 9 \\ 
   2 & 9 & 2 & 6 & 9 & 12 \\ 
-  3 & 13 & 2 & 10 & 13 & 17 \\ 
+  3 & 13 & 2 & 9 & 13 & 17 \\ 
   4 & 17 & 2 & 13 & 17 & 21 \\ 
-  5 & 21 & 2 & 17 & 21 & 26 \\ 
-  6 & 27 & 2 & 23 & 27 & 32 \\ 
-  7 & 33 & 2 & 28 & 33 & 38 \\ 
-  8 & 40 & 4 & 32 & 40 & 47 \\ 
-  9 & 45 & 4 & 38 & 45 & 52 \\ 
-  10 & 49 & 4 & 41 & 49 & 57 \\ 
-  11 & 52 & 4 & 45 & 52 & 58 \\ 
-  12 & 53 & 3 & 47 & 53 & 60 \\ 
-  13 & 56 & 4 & 49 & 56 & 63 \\ 
-  14 & 60 & 4 & 52 & 60 & 68 \\ 
-  15 & 65 & 5 & 55 & 65 & 75 \\ 
+  5 & 22 & 2 & 17 & 22 & 26 \\ 
+  6 & 28 & 2 & 23 & 28 & 32 \\ 
+  7 & 33 & 2 & 29 & 33 & 37 \\ 
+  8 & 40 & 3 & 34 & 40 & 46 \\ 
+  9 & 45 & 2 & 40 & 45 & 49 \\ 
+  10 & 48 & 3 & 43 & 48 & 53 \\ 
+  11 & 51 & 2 & 46 & 51 & 55 \\ 
+  12 & 52 & 2 & 48 & 52 & 57 \\ 
+  13 & 55 & 2 & 50 & 55 & 60 \\ 
+  14 & 59 & 3 & 54 & 59 & 64 \\ 
+  15 & 63 & 3 & 58 & 64 & 69 \\ 
    \bottomrule
 \end{tabular}
 \caption{All-in-one Predictions} 
@@ -575,29 +565,29 @@ Next step, repeat! Update the stop arrival time predictions.
     \hlkwc{booktabs} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{floating} \hlstd{=} \hlnum{TRUE}\hlstd{,}
     \hlkwc{table.placement} \hlstd{=} \hlstr{"tb"}\hlstd{)}
 \end{alltt}
-\end{kframe}% latex table generated in R 3.2.2 by xtable 1.8-2 package
-% Mon Mar  7 10:56:49 2016
+\end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
+% Mon Mar  7 15:41:54 2016
 \begin{table}[tb]
 \centering
 \begin{tabular}{llllll}
   \toprule
 stop & mean & sd & 2.5\% & 50\% & 97.5\% \\ 
   \midrule
-1 & 3 & -9 & 0 & 3 & 5 \\ 
-  2 & 7 & -9 & 5 & 7 & 10 \\ 
-  3 & 11 & -9 & 8 & 11 & 14 \\ 
-  4 & 15 & -8 & 12 & 15 & 18 \\ 
-  5 & 19 & -8 & 16 & 19 & 24 \\ 
-  6 & 25 & -8 & 22 & 25 & 29 \\ 
-  7 & 31 & -8 & 27 & 31 & 37 \\ 
-  8 & 38 & -7 & 32 & 38 & 44 \\ 
-  9 & 44 & -7 & 37 & 44 & 50 \\ 
-  10 & 47 & -6 & 38 & 47 & 55 \\ 
-  11 & 50 & -6 & 42 & 50 & 57 \\ 
-  12 & 51 & -6 & 44 & 51 & 59 \\ 
-  13 & 55 & -6 & 47 & 55 & 62 \\ 
-  14 & 58 & -6 & 50 & 58 & 66 \\ 
-  15 & 63 & -5 & 55 & 63 & 72 \\ 
+1 & 2 & -10 & 0 & 2 & 5 \\ 
+  2 & 7 & -10 & 3 & 7 & 10 \\ 
+  3 & 11 & -10 & 7 & 11 & 15 \\ 
+  4 & 15 & -10 & 11 & 15 & 19 \\ 
+  5 & 20 & -9 & 15 & 20 & 25 \\ 
+  6 & 25 & -9 & 20 & 25 & 31 \\ 
+  7 & 31 & -9 & 25 & 31 & 37 \\ 
+  8 & 38 & -8 & 31 & 38 & 44 \\ 
+  9 & 42 & -9 & 36 & 42 & 48 \\ 
+  10 & 46 & -9 & 40 & 46 & 51 \\ 
+  11 & 48 & -9 & 43 & 48 & 54 \\ 
+  12 & 50 & -9 & 45 & 50 & 55 \\ 
+  13 & 53 & -9 & 46 & 53 & 59 \\ 
+  14 & 57 & -8 & 51 & 57 & 63 \\ 
+  15 & 61 & -8 & 56 & 61 & 67 \\ 
    \bottomrule
 \end{tabular}
 \caption{Predictions after one observation} 
@@ -1238,10 +1228,8 @@ then the speeds of the historical trips are:
 \begin{verbatim}
 ## 2016-01-15 2016-01-16 2016-01-19 2016-01-20 2016-01-21 2016-01-22 
 ##   8.485373   6.149211  10.274791  16.768915  11.526228  15.182605 
-## 2016-01-23 2016-01-25 2016-01-26 2016-01-29 2016-02-09 2016-02-18 
-##  11.238868  10.760644   0.000000  12.060710  10.794153   8.124656 
-## 2016-02-19 
-##  11.562566
+## 2016-01-23 2016-01-25 2016-01-26 2016-01-29 
+##  11.238868  10.760644   0.000000  12.060710
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -1252,8 +1240,8 @@ and the speed for the ``current'' trip is
 \hlstd{vpred}
 \end{alltt}
 \begin{verbatim}
-## 2016-02-20 
-##   12.45735
+## 2016-02-09 
+##   10.79415
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -1346,8 +1334,6 @@ and the speed for the ``current'' trip is
         \hlkwd{curve}\hlstd{(}\hlkwd{f}\hlstd{(x),} \hlnum{0}\hlstd{,} \hlkwd{attr}\hlstd{(f,} \hlstr{"max"}\hlstd{),} \hlkwc{n} \hlstd{=} \hlnum{101}\hlstd{,} \hlkwc{add} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{2}\hlstd{,}
               \hlkwc{col} \hlstd{=} \hlkwd{rgb}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{, hist.weights[i]))}
     \hlstd{\}}
-    \hlcom{#curve(rpred.fn(x - 600), 600, attr(rpred.fn, "max") + 600, }
-    \hlcom{#      n = 101, add = TRUE, col = "#990000", lwd = 3)}
     \hlkwa{if} \hlstd{(}\hlkwd{any}\hlstd{(s} \hlopt{==} \hlnum{0}\hlstd{))}
         \hlkwd{abline}\hlstd{(}\hlkwc{h} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{, stops),} \hlkwc{col} \hlstd{=} \hlstr{"#0000ff"}\hlstd{,} \hlkwc{lty} \hlstd{=} \hlnum{3}\hlstd{)}
     \hlkwa{else if} \hlstd{(}\hlkwd{all}\hlstd{(s} \hlopt{>} \hlnum{0}\hlstd{))}
@@ -1397,21 +1383,23 @@ and the speed for the ``current'' trip is
     \hlstd{adj} \hlkwb{<-} \hlopt{-} \hlkwd{sweep}\hlstd{(}\hlkwd{arrivalTime}\hlstd{(w[i, ]),} \hlnum{1}\hlstd{, a1j)}
     \hlstd{adj[adj} \hlopt{<} \hlnum{0}\hlstd{]} \hlkwb{<-} \hlnum{0}
     \hlstd{wtMeans} \hlkwb{<-} \hlkwd{colSums}\hlstd{(adj} \hlopt{*} \hlstd{wt)} \hlopt{/} \hlkwd{colSums}\hlstd{(wt)}
-    \hlstd{a[}\hlnum{1}\hlstd{, ]} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M, wtMeans,}
+    \hlstd{a[}\hlnum{1}\hlstd{, ]} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M,} \hlkwd{ifelse}\hlstd{(wtMeans} \hlopt{==} \hlnum{0}\hlstd{,} \hlnum{10}\hlstd{, wtMeans),}
                           \hlkwd{colSds}\hlstd{(adj),} \hlkwc{lower} \hlstd{=} \hlnum{0}\hlstd{)}
+    \hlstd{a[}\hlnum{1}\hlstd{, wtMeans} \hlopt{==} \hlnum{0}\hlstd{]} \hlkwb{<-} \hlkwd{pmax}\hlstd{(}\hlnum{0}\hlstd{, a[}\hlnum{1}\hlstd{, wtMeans} \hlopt{==} \hlnum{0}\hlstd{]} \hlopt{-} \hlnum{10}\hlstd{)}
 
     \hlkwa{for} \hlstd{(j} \hlkwa{in} \hlnum{2}\hlopt{:}\hlkwd{length}\hlstd{(stops)) \{}
         \hlstd{ajj} \hlkwb{<-} \hlkwd{arrivalTime}\hlstd{(stops[j])[,}\hlnum{1}\hlstd{]}
         \hlstd{adj} \hlkwb{<-} \hlopt{-} \hlkwd{sweep}\hlstd{(}\hlkwd{arrivalTime}\hlstd{(w[i, ]),} \hlnum{1}\hlstd{, ajj)}
         \hlstd{adj[adj} \hlopt{<} \hlnum{0}\hlstd{]} \hlkwb{<-} \hlnum{0}
         \hlstd{wtMeans} \hlkwb{<-} \hlkwd{colSums}\hlstd{(adj} \hlopt{*} \hlstd{wt)} \hlopt{/} \hlkwd{colSums}\hlstd{(wt)}
-        \hlstd{a[j, ]} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M, wtMeans,}
+        \hlstd{a[j, ]} \hlkwb{<-} \hlstd{ti} \hlopt{+} \hlkwd{rtnorm}\hlstd{(M,} \hlkwd{ifelse}\hlstd{(wtMeans} \hlopt{==} \hlnum{0}\hlstd{,} \hlnum{10}\hlstd{, wtMeans),}
                               \hlkwd{colSds}\hlstd{(adj),} \hlkwc{lower} \hlstd{=} \hlnum{0}\hlstd{)}
+        \hlstd{a[j, wtMeans} \hlopt{==} \hlnum{0}\hlstd{]} \hlkwb{<-} \hlkwd{pmax}\hlstd{(}\hlnum{0}\hlstd{, a[j, wtMeans} \hlopt{==} \hlnum{0}\hlstd{]} \hlopt{-} \hlnum{10}\hlstd{)}
     \hlstd{\}}
     \hlkwa{if} \hlstd{(draw) \{}
         \hlstd{Wt} \hlkwb{<-} \hlkwd{rowSums}\hlstd{(wt)} \hlopt{/} \hlkwd{sum}\hlstd{(wt)}
 
-        \hlkwd{draw}\hlstd{(wstops, a,} \hlkwc{hist.weights} \hlstd{= Wt,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{max}\hlstd{(a)), ...)}
+        \hlkwd{draw}\hlstd{(wstops, a,} \hlkwc{hist.weights} \hlstd{= Wt,} \hlkwc{xlim} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{6000}\hlstd{), ...)}
 
         \hlkwd{with}\hlstd{(test.trip,} \hlkwd{lines}\hlstd{(time_into_trip[}\hlnum{1}\hlopt{:}\hlstd{i], distance[}\hlnum{1}\hlopt{:}\hlstd{i],}
                               \hlkwc{col} \hlstd{=} \hlstr{"#000099"}\hlstd{,} \hlkwc{lwd} \hlstd{=} \hlnum{4}\hlstd{))}
@@ -1433,19 +1421,15 @@ and the speed for the ``current'' trip is
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{4}\hlopt{:}\hlkwd{nrow}\hlstd{(test.trip)) \{}
-    \hlkwd{predict}\hlstd{(i)}
-    \hlstd{grid}\hlopt{::}\hlkwd{grid.locator}\hlstd{()}
-\hlstd{\}}
-
-
-\hlstd{pb} \hlkwb{<-} \hlkwd{txtProgressBar}\hlstd{(}\hlnum{3}\hlstd{,} \hlnum{94}\hlstd{,} \hlkwc{initial} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{style} \hlstd{=} \hlnum{3}\hlstd{)}
-\hlkwd{jpeg}\hlstd{(}\hlstr{"hist/route090_1215-2_%03d.jpg"}\hlstd{,} \hlkwc{width} \hlstd{=} \hlnum{620}\hlstd{,} \hlkwc{height} \hlstd{=} \hlnum{480}\hlstd{)}
-\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{3}\hlopt{:}\hlnum{94}\hlstd{) \{}
+\hlstd{pb} \hlkwb{<-} \hlkwd{txtProgressBar}\hlstd{(}\hlnum{3}\hlstd{,} \hlkwd{nrow}\hlstd{(test.trip),} \hlkwc{initial} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{style} \hlstd{=} \hlnum{3}\hlstd{)}
+\hlkwd{jpeg}\hlstd{(}\hlstr{"hist/route090_1215-weighted_%03d.jpg"}\hlstd{,} \hlkwc{width} \hlstd{=} \hlnum{900}\hlstd{,} \hlkwc{height} \hlstd{=} \hlnum{500}\hlstd{)}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{3}\hlopt{:}\hlkwd{nrow}\hlstd{(test.trip)) \{}
    \hlkwd{predict}\hlstd{(i)}
    \hlkwd{setTxtProgressBar}\hlstd{(pb, i)}
    \hlkwd{Sys.sleep}\hlstd{(}\hlnum{1}\hlstd{)}
 \hlstd{\};}\hlkwd{dev.off}\hlstd{();}\hlkwd{close}\hlstd{(pb)}
+\hlkwd{unlink}\hlstd{(}\hlstr{"hist/route090_1215-weighted.gif"}\hlstd{)}
+\hlkwd{system}\hlstd{(}\hlstr{"convert -delay 30 hist/route090_1215-weighted_*.jpg hist/route090_1215-weighted.gif"}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}

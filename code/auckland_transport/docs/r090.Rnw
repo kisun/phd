@@ -1069,8 +1069,6 @@ draw <- function(s = 0, a, labs = TRUE, xlim = NULL, ylim = NULL,
         curve(f(x), 0, attr(f, "max"), n = 101, add = TRUE, lty = 2, 
               col = rgb(0, 0, 0, hist.weights[i]))
     }
-    #curve(rpred.fn(x - 600), 600, attr(rpred.fn, "max") + 600, 
-    #      n = 101, add = TRUE, col = "#990000", lwd = 3)
     if (any(s == 0))
         abline(h = c(0, stops), col = "#0000ff", lty = 3)
     else if (all(s > 0))
@@ -1133,7 +1131,7 @@ predict <- function(i, draw = TRUE, ...) {
     if (draw) {
         Wt <- rowSums(wt) / sum(wt)
         
-        draw(wstops, a, hist.weights = Wt, xlim = c(0, max(a)), ...)
+        draw(wstops, a, hist.weights = Wt, xlim = c(0, 6000), ...)
         
         with(test.trip, lines(time_into_trip[1:i], distance[1:i],
                               col = "#000099", lwd = 4))
@@ -1148,14 +1146,16 @@ predict(3)
 @ 
 
 
-<<eval=FALSE>>=
-pb <- txtProgressBar(3, nrow(test.trip), initial = 3, style = 3)
+<<eval=FALSE>>=p
+b <- txtProgressBar(3, nrow(test.trip), initial = 3, style = 3)
 jpeg("hist/route090_1215-weighted_%03d.jpg", width = 900, height = 500)
 for (i in 3:nrow(test.trip)) {
    predict(i)
    setTxtProgressBar(pb, i)
    Sys.sleep(1)
 };dev.off();close(pb)
+unlink("hist/route090_1215-weighted.gif")
+system("convert -delay 30 hist/route090_1215-weighted_*.jpg hist/route090_1215-weighted.gif")
 @ 
 
 
