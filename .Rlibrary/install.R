@@ -4,11 +4,12 @@ lib = ".Rlibrary"
 ## Packages to install from CRAN:
 
 packages = c(
-  "DBI", "RSQLite",
-  "BH", "devtools",
-  "abind",
-  "knitr", "xtable",
-  "msm"  
+    "DBI", "RSQLite",
+    "BH", "devtools",
+    "abind",
+    "knitr", "xtable",
+    "msm",
+    "colorspace", "dichromat"
 )
 
 options(repos = "http://cran.stat.auckland.ac.nz")
@@ -22,5 +23,5 @@ install.packages(packages,
 .libPaths(lib)
 devtools::install_github("iNZightVIT/iNZightRegression")
 devtools::install_github("iNZightVIT/iNZightMR")
-devtools::install_github("iNZightVIT/iNZightPlots@dev-plotmethods")
-devtools::install_github("iNZightVIT/iNZightMaps@dev-integrateplots")
+devtools::install_github("iNZightVIT/iNZightPlots")
+devtools::install_github("iNZightVIT/iNZightMaps")

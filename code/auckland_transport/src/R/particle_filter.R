@@ -478,8 +478,6 @@ vehicle = R6Class("vehicle",
 distanceFlat <- function(y, z, R = 6371000) {
     ## computes the distance between {y} and {z}
     ## different R (such as in km) give results in those units
-
-    mode(y) <- mode(z) <- "numeric"
     
     if (length(dim(y)) < 2)
         y <- cbind(y)

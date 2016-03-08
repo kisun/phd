@@ -107,6 +107,7 @@ ORDER BY stop_sequence", id)
 
     }
 
+    mode(resp$stop_lat) <- mode(resp$stop_lon) <- "numeric"
     resp
 }
 
@@ -206,6 +207,7 @@ ORDER BY st.departure_time, s.shape_pt_sequence", tids)
       }
     }
 
+    mode(resp$shape_pt_lat) <- mode(resp$shape_pt_lon) <- "numeric"
     resp
 }
 
@@ -255,22 +257,24 @@ getShapeDist <- function(sched, shape) {
             wv <- w %*% v
             vv <- v %*% v
             ww <- w %*% w
-                        
-            if (wv < 0) {
-                r2 <- ww
-                di[ji] <- 0
-                ri[ji] <- sqrt(r2)
-            } else if (wv <= vv) {
-                d2 <- wv^2 / vv
-                r2 <- ww - d2
-                ri[ji] <- sqrt(r2)
-                di[ji] <- sqrt(d2)
-            } else {
-                r2 <- (w - v) %*% (w - v)
-                d2 <- vv
-                ri[ji] <- sqrt(r2)
-                di[ji] <- sqrt(d2)
-            }
+
+            suppressWarnings({
+                if (wv < 0) {
+                    r2 <- ww
+                    di[ji] <- 0
+                    ri[ji] <- sqrt(r2)
+                } else if (wv <= vv) {
+                    d2 <- wv^2 / vv
+                    r2 <- ww - d2
+                    ri[ji] <- sqrt(r2)
+                    di[ji] <- sqrt(d2)
+                } else {
+                    r2 <- (w - v) %*% (w - v)
+                    d2 <- vv
+                    ri[ji] <- sqrt(r2)
+                    di[ji] <- sqrt(d2)
+                }
+            })
             
             pxy[ji, ] <- q1 + di[ji] / sqrt(vv) * v
         }
