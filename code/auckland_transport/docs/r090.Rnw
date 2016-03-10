@@ -225,6 +225,7 @@ arrivalTime <- Vectorize(.arrivalTime, "d")
            })
 }
 history.fnD <- Vectorize(.history.fnD, "d")
+
 draw <- function(s = 0, a, labs = TRUE, xlim = NULL, ylim = NULL) {
     with(hist, plot(time_into_trip, distance, type = "n",
                     main = ifelse(labs, "History of Route 090, 12:15 trip", ""), 
@@ -1160,8 +1161,10 @@ system("convert -delay 30 hist/route090_1215-weighted_*.jpg hist/route090_1215-w
 
 It's time we attempt to obtain real bus stops.
 <<real_stops,fig.width=9,fig.height=5,cache=TRUE>>=
-Shape <- getPattern(id = test.trip$trip_id[1], con = "gtfs-static.db")
-Sched <- getSchedule(id = test.trip$trip_id[1], con = "gtfs-static.db")
+Shape <- getPattern(id = test.trip$trip_id[1], con = "gtfs-static.db", 
+                    verbose = FALSE)
+Sched <- getSchedule(id = test.trip$trip_id[1], con = "gtfs-static.db",
+                     verbose = FALSE)
 Sched$distance_into_trip <- getShapeDist(Sched, Shape)
 
 stops <- Sched$distance_into_trip
@@ -1323,7 +1326,7 @@ plotTravelTimes <- function(origin, destination, history) {
     T <- histTravelTime(origin, destination, history = history)
     iNZightPlots::iNZightPlot(y = travel_time, x = start_hour, boxplot = FALSE,
                               ylab = "Travel Time (s)", xlab = "Trip Start Time",
-                              colby = date, pch = 19, cex.pt = 0.1, col.fun = rainbow_hcl,
+                              colby = date, pch = 19, cex.pt = 0.1, col.fun = colorspace::rainbow_hcl,
                               bg = "#252525", join = TRUE, data = T,
                               main = paste0("Time to travel from ", origin, "m to ", destination, "m"))
 }

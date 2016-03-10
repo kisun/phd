@@ -155,24 +155,6 @@ as well as remove some impossibly fast trips.
                 \hlstd{dx} \hlkwb{<-} \hlkwd{diff}\hlstd{(hist090}\hlopt{$}\hlstd{distance[i])}
                 \hlkwa{if} \hlstd{(}\hlkwd{max}\hlstd{(dx}\hlopt{/}\hlstd{dt)} \hlopt{<} \hlnum{50}\hlstd{)} \hlkwd{return}\hlstd{(i)} \hlkwa{else} \hlkwd{numeric}\hlstd{()}
             \hlstd{\})))}
-\end{alltt}
-
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in max(dx/dt): no non-missing arguments to max; returning -Inf}}\begin{alltt}
 \hlstd{hist090} \hlkwb{<-} \hlstd{hist090[which.keep, ]}
 \hlkwd{with}\hlstd{(hist090,} \hlkwd{plot}\hlstd{(time.hour, distance,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,}
                    \hlkwc{main} \hlstd{=} \hlstr{"History of Route 090"}\hlstd{,} \hlkwc{xlab} \hlstd{=} \hlstr{"Time (h)"}\hlstd{,}
@@ -298,6 +280,7 @@ and some fancy optimisation techniques to find $a_{1|\boldsymbol{j}}$
            \hlstd{\})}
 \hlstd{\}}
 \hlstd{history.fnD} \hlkwb{<-} \hlkwd{Vectorize}\hlstd{(.history.fnD,} \hlstr{"d"}\hlstd{)}
+
 \hlstd{draw} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{s} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{a}\hlstd{,} \hlkwc{labs} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{xlim} \hlstd{=} \hlkwa{NULL}\hlstd{,} \hlkwc{ylim} \hlstd{=} \hlkwa{NULL}\hlstd{) \{}
     \hlkwd{with}\hlstd{(hist,} \hlkwd{plot}\hlstd{(time_into_trip, distance,} \hlkwc{type} \hlstd{=} \hlstr{"n"}\hlstd{,}
                     \hlkwc{main} \hlstd{=} \hlkwd{ifelse}\hlstd{(labs,} \hlstr{"History of Route 090, 12:15 trip"}\hlstd{,} \hlstr{""}\hlstd{),}
@@ -378,29 +361,29 @@ We can also see the arrival distribution for stops, in a table:
     \hlkwc{booktabs} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{floating} \hlstd{=} \hlnum{TRUE}\hlstd{,}
     \hlkwc{table.placement} \hlstd{=} \hlstr{"p"}\hlstd{)}
 \end{alltt}
-\end{kframe}% latex table generated in R 3.2.2 by xtable 1.8-2 package
-% Tue Mar  8 16:13:40 2016
+\end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
+% Fri Mar 11 09:33:32 2016
 \begin{table}[p]
 \centering
 \begin{tabular}{llllll}
   \toprule
 stop & mean & sd & 2.5\% & 50\% & 97.5\% \\ 
   \midrule
-1 & 6 & 3 & 1 & 6 & 12 \\ 
-  2 & 10 & 3 & 4 & 10 & 17 \\ 
-  3 & 14 & 3 & 8 & 14 & 20 \\ 
-  4 & 18 & 3 & 12 & 18 & 24 \\ 
-  5 & 22 & 4 & 16 & 22 & 29 \\ 
-  6 & 28 & 4 & 22 & 28 & 35 \\ 
-  7 & 34 & 4 & 27 & 34 & 42 \\ 
-  8 & 41 & 4 & 32 & 41 & 49 \\ 
-  9 & 46 & 5 & 37 & 46 & 56 \\ 
-  10 & 50 & 5 & 39 & 49 & 60 \\ 
-  11 & 52 & 5 & 42 & 52 & 62 \\ 
-  12 & 54 & 5 & 44 & 54 & 64 \\ 
-  13 & 57 & 5 & 47 & 57 & 67 \\ 
-  14 & 61 & 6 & 50 & 61 & 71 \\ 
-  15 & 66 & 6 & 55 & 66 & 77 \\ 
+1 & 5 & 2 & 2 & 5 & 9 \\ 
+  2 & 9 & 2 & 5 & 9 & 13 \\ 
+  3 & 13 & 2 & 9 & 13 & 17 \\ 
+  4 & 17 & 2 & 13 & 17 & 21 \\ 
+  5 & 22 & 2 & 17 & 22 & 26 \\ 
+  6 & 27 & 3 & 22 & 27 & 33 \\ 
+  7 & 33 & 3 & 27 & 33 & 38 \\ 
+  8 & 40 & 3 & 34 & 40 & 46 \\ 
+  9 & 45 & 3 & 38 & 45 & 51 \\ 
+  10 & 48 & 4 & 41 & 48 & 55 \\ 
+  11 & 51 & 4 & 44 & 51 & 58 \\ 
+  12 & 52 & 4 & 46 & 52 & 60 \\ 
+  13 & 55 & 4 & 49 & 55 & 63 \\ 
+  14 & 59 & 4 & 52 & 59 & 66 \\ 
+  15 & 64 & 4 & 57 & 64 & 71 \\ 
    \bottomrule
 \end{tabular}
 \caption{Sequential Predictions} 
@@ -454,29 +437,29 @@ We can also see the arrival distribution for stops, in a table:
     \hlkwc{booktabs} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{floating} \hlstd{=} \hlnum{TRUE}\hlstd{,}
     \hlkwc{table.placement} \hlstd{=} \hlstr{"p"}\hlstd{)}
 \end{alltt}
-\end{kframe}% latex table generated in R 3.2.2 by xtable 1.8-2 package
-% Tue Mar  8 16:13:41 2016
+\end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
+% Fri Mar 11 09:33:32 2016
 \begin{table}[p]
 \centering
 \begin{tabular}{llllll}
   \toprule
 stop & mean & sd & 2.5\% & 50\% & 97.5\% \\ 
   \midrule
-1 & 6 & 3 & 1 & 6 & 12 \\ 
-  2 & 10 & 3 & 4 & 10 & 16 \\ 
-  3 & 14 & 3 & 7 & 14 & 20 \\ 
-  4 & 18 & 3 & 10 & 18 & 24 \\ 
-  5 & 22 & 3 & 16 & 22 & 28 \\ 
-  6 & 28 & 3 & 22 & 28 & 33 \\ 
-  7 & 34 & 3 & 27 & 34 & 39 \\ 
-  8 & 41 & 4 & 33 & 41 & 49 \\ 
-  9 & 46 & 4 & 39 & 46 & 53 \\ 
-  10 & 50 & 4 & 41 & 50 & 58 \\ 
-  11 & 52 & 4 & 45 & 52 & 61 \\ 
-  12 & 54 & 4 & 47 & 54 & 62 \\ 
-  13 & 57 & 4 & 50 & 57 & 64 \\ 
-  14 & 60 & 4 & 51 & 60 & 68 \\ 
-  15 & 65 & 5 & 56 & 65 & 75 \\ 
+1 & 5 & 2 & 2 & 5 & 9 \\ 
+  2 & 9 & 2 & 6 & 9 & 12 \\ 
+  3 & 13 & 2 & 9 & 13 & 17 \\ 
+  4 & 17 & 2 & 13 & 17 & 21 \\ 
+  5 & 22 & 2 & 17 & 22 & 26 \\ 
+  6 & 27 & 2 & 23 & 28 & 32 \\ 
+  7 & 33 & 2 & 29 & 33 & 37 \\ 
+  8 & 40 & 3 & 34 & 40 & 45 \\ 
+  9 & 45 & 3 & 39 & 45 & 49 \\ 
+  10 & 48 & 2 & 44 & 48 & 53 \\ 
+  11 & 50 & 2 & 45 & 51 & 55 \\ 
+  12 & 52 & 2 & 48 & 52 & 57 \\ 
+  13 & 55 & 2 & 51 & 55 & 60 \\ 
+  14 & 59 & 3 & 53 & 59 & 64 \\ 
+  15 & 64 & 3 & 58 & 64 & 69 \\ 
    \bottomrule
 \end{tabular}
 \caption{All-in-one Predictions} 
@@ -583,29 +566,29 @@ Next step, repeat! Update the stop arrival time predictions.
     \hlkwc{booktabs} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{floating} \hlstd{=} \hlnum{TRUE}\hlstd{,}
     \hlkwc{table.placement} \hlstd{=} \hlstr{"tb"}\hlstd{)}
 \end{alltt}
-\end{kframe}% latex table generated in R 3.2.2 by xtable 1.8-2 package
-% Tue Mar  8 12:34:14 2016
+\end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
+% Fri Mar 11 09:20:13 2016
 \begin{table}[tb]
 \centering
 \begin{tabular}{llllll}
   \toprule
 stop & mean & sd & 2.5\% & 50\% & 97.5\% \\ 
   \midrule
-1 & 2 & -11 & 0 & 2 & 5 \\ 
-  2 & 8 & -10 & 4 & 8 & 11 \\ 
-  3 & 12 & -10 & 8 & 12 & 15 \\ 
-  4 & 15 & -10 & 11 & 16 & 20 \\ 
-  5 & 20 & -10 & 16 & 20 & 24 \\ 
-  6 & 25 & -10 & 21 & 25 & 29 \\ 
-  7 & 31 & -10 & 27 & 32 & 36 \\ 
-  8 & 38 & -9 & 32 & 38 & 44 \\ 
-  9 & 44 & -9 & 37 & 43 & 50 \\ 
-  10 & 47 & -8 & 39 & 47 & 55 \\ 
-  11 & 50 & -8 & 44 & 50 & 57 \\ 
-  12 & 51 & -8 & 44 & 52 & 59 \\ 
-  13 & 54 & -8 & 48 & 55 & 61 \\ 
-  14 & 58 & -8 & 50 & 58 & 65 \\ 
-  15 & 63 & -7 & 54 & 63 & 72 \\ 
+1 & 2 & -10 & 0 & 2 & 6 \\ 
+  2 & 7 & -10 & 3 & 7 & 10 \\ 
+  3 & 11 & -10 & 7 & 11 & 15 \\ 
+  4 & 15 & -10 & 11 & 15 & 19 \\ 
+  5 & 20 & -9 & 15 & 20 & 24 \\ 
+  6 & 25 & -9 & 20 & 25 & 30 \\ 
+  7 & 31 & -9 & 25 & 31 & 36 \\ 
+  8 & 38 & -8 & 31 & 38 & 44 \\ 
+  9 & 42 & -9 & 37 & 43 & 48 \\ 
+  10 & 46 & -9 & 40 & 46 & 52 \\ 
+  11 & 48 & -9 & 43 & 48 & 53 \\ 
+  12 & 50 & -9 & 45 & 50 & 56 \\ 
+  13 & 53 & -8 & 47 & 53 & 59 \\ 
+  14 & 57 & -8 & 51 & 57 & 63 \\ 
+  15 & 62 & -8 & 56 & 62 & 69 \\ 
    \bottomrule
 \end{tabular}
 \caption{Predictions after one observation} 
@@ -1246,10 +1229,8 @@ then the speeds of the historical trips are:
 \begin{verbatim}
 ## 2016-01-15 2016-01-16 2016-01-19 2016-01-20 2016-01-21 2016-01-22 
 ##   8.485373   6.149211  10.274791  16.768915  11.526228  15.182605 
-## 2016-01-23 2016-01-25 2016-01-26 2016-01-29 2016-02-09 2016-02-18 
-##  11.238868  10.760644   0.000000  12.060710  10.794153   8.124656 
-## 2016-02-19 
-##  11.562566
+## 2016-01-23 2016-01-25 2016-01-26 2016-01-29 
+##  11.238868  10.760644   0.000000  12.060710
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -1260,8 +1241,8 @@ and the speed for the ``current'' trip is
 \hlstd{vpred}
 \end{alltt}
 \begin{verbatim}
-## 2016-02-20 
-##   12.45735
+## 2016-02-09 
+##   10.79415
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -1458,32 +1439,12 @@ It's time we attempt to obtain real bus stops.
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{Shape} \hlkwb{<-} \hlkwd{getPattern}\hlstd{(}\hlkwc{id} \hlstd{= test.trip}\hlopt{$}\hlstd{trip_id[}\hlnum{1}\hlstd{],} \hlkwc{con} \hlstd{=} \hlstr{"gtfs-static.db"}\hlstd{)}
-\end{alltt}
-\begin{verbatim}
-## SELECT DISTINCT t.trip_id, st.departure_time, t.route_id, t.shape_id,
-##        s.shape_pt_lat, s.shape_pt_lon, s.shape_pt_sequence
-## FROM trips AS t, stop_times AS st, shapes AS s
-## WHERE t.trip_id IN ('3090020609-20160126172118_v37.18') AND t.trip_id = st.trip_id AND st.stop_sequence = 1 AND t.shape_id = s.shape_id
-## ORDER BY st.departure_time, s.shape_pt_sequence
-\end{verbatim}
-\begin{alltt}
-\hlstd{Sched} \hlkwb{<-} \hlkwd{getSchedule}\hlstd{(}\hlkwc{id} \hlstd{= test.trip}\hlopt{$}\hlstd{trip_id[}\hlnum{1}\hlstd{],} \hlkwc{con} \hlstd{=} \hlstr{"gtfs-static.db"}\hlstd{)}
-\end{alltt}
-\begin{verbatim}
-## SELECT st.trip_id, st.arrival_time, st.departure_time, st.stop_id, s.stop_lon, s.stop_lat, st.stop_sequence
-## FROM stop_times AS st, stops AS s
-## WHERE st.stop_id = s.stop_id AND st.trip_id = '3090020609-20160126172118_v37.18'
-## ORDER BY stop_sequence
-\end{verbatim}
-\begin{alltt}
+\hlstd{Shape} \hlkwb{<-} \hlkwd{getPattern}\hlstd{(}\hlkwc{id} \hlstd{= test.trip}\hlopt{$}\hlstd{trip_id[}\hlnum{1}\hlstd{],} \hlkwc{con} \hlstd{=} \hlstr{"gtfs-static.db"}\hlstd{,}
+                    \hlkwc{verbose} \hlstd{=} \hlnum{FALSE}\hlstd{)}
+\hlstd{Sched} \hlkwb{<-} \hlkwd{getSchedule}\hlstd{(}\hlkwc{id} \hlstd{= test.trip}\hlopt{$}\hlstd{trip_id[}\hlnum{1}\hlstd{],} \hlkwc{con} \hlstd{=} \hlstr{"gtfs-static.db"}\hlstd{,}
+                     \hlkwc{verbose} \hlstd{=} \hlnum{FALSE}\hlstd{)}
 \hlstd{Sched}\hlopt{$}\hlstd{distance_into_trip} \hlkwb{<-} \hlkwd{getShapeDist}\hlstd{(Sched, Shape)}
-\end{alltt}
 
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in sqrt(r2): NaNs produced}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning in sqrt(r2): NaNs produced}}\begin{alltt}
 \hlstd{stops} \hlkwb{<-} \hlstd{Sched}\hlopt{$}\hlstd{distance_into_trip}
 \hlkwd{draw}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{length}\hlstd{(stops))}
 \end{alltt}
@@ -1671,7 +1632,7 @@ We need to
     \hlstd{T} \hlkwb{<-} \hlkwd{histTravelTime}\hlstd{(origin, destination,} \hlkwc{history} \hlstd{= history)}
     \hlstd{iNZightPlots}\hlopt{::}\hlkwd{iNZightPlot}\hlstd{(}\hlkwc{y} \hlstd{= travel_time,} \hlkwc{x} \hlstd{= start_hour,} \hlkwc{boxplot} \hlstd{=} \hlnum{FALSE}\hlstd{,}
                               \hlkwc{ylab} \hlstd{=} \hlstr{"Travel Time (s)"}\hlstd{,} \hlkwc{xlab} \hlstd{=} \hlstr{"Trip Start Time"}\hlstd{,}
-                              \hlkwc{colby} \hlstd{= date,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex.pt} \hlstd{=} \hlnum{0.1}\hlstd{,} \hlkwc{col.fun} \hlstd{= rainbow_hcl,}
+                              \hlkwc{colby} \hlstd{= date,} \hlkwc{pch} \hlstd{=} \hlnum{19}\hlstd{,} \hlkwc{cex.pt} \hlstd{=} \hlnum{0.1}\hlstd{,} \hlkwc{col.fun} \hlstd{= colorspace}\hlopt{::}\hlstd{rainbow_hcl,}
                               \hlkwc{bg} \hlstd{=} \hlstr{"#252525"}\hlstd{,} \hlkwc{join} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{data} \hlstd{= T,}
                               \hlkwc{main} \hlstd{=} \hlkwd{paste0}\hlstd{(}\hlstr{"Time to travel from "}\hlstd{, origin,} \hlstr{"m to "}\hlstd{, destination,} \hlstr{"m"}\hlstd{))}
 \hlstd{\}}
