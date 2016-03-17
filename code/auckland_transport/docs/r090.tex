@@ -361,8 +361,8 @@ We can also see the arrival distribution for stops, in a table:
     \hlkwc{booktabs} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{floating} \hlstd{=} \hlnum{TRUE}\hlstd{,}
     \hlkwc{table.placement} \hlstd{=} \hlstr{"p"}\hlstd{)}
 \end{alltt}
-\end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
-% Fri Mar 11 09:33:32 2016
+\end{kframe}% latex table generated in R 3.2.4 by xtable 1.8-2 package
+% Fri Mar 18 10:22:07 2016
 \begin{table}[p]
 \centering
 \begin{tabular}{llllll}
@@ -437,8 +437,8 @@ We can also see the arrival distribution for stops, in a table:
     \hlkwc{booktabs} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{floating} \hlstd{=} \hlnum{TRUE}\hlstd{,}
     \hlkwc{table.placement} \hlstd{=} \hlstr{"p"}\hlstd{)}
 \end{alltt}
-\end{kframe}% latex table generated in R 3.2.3 by xtable 1.8-2 package
-% Fri Mar 11 09:33:32 2016
+\end{kframe}% latex table generated in R 3.2.4 by xtable 1.8-2 package
+% Fri Mar 18 10:22:07 2016
 \begin{table}[p]
 \centering
 \begin{tabular}{llllll}
@@ -1469,7 +1469,9 @@ It's time we attempt to obtain real bus stops.
 \hlstd{pred.v} \hlkwb{<-} \hlkwd{history.fnD}\hlstd{(w[}\hlnum{1}\hlstd{, ],} \hlnum{0}\hlstd{,} \hlnum{1}\hlstd{)}
 \hlstd{wt} \hlkwb{<-} \hlkwd{rep}\hlstd{(}\hlnum{1}\hlstd{,} \hlkwd{nrow}\hlstd{(pred.v))}
 
-\hlstd{w0[}\hlnum{2}\hlstd{, ]} \hlkwb{<-} \hlkwd{rtnorm}\hlstd{(}\hlkwd{ncol}\hlstd{(w),} \hlkwd{colWtMeans}\hlstd{(pred, wt),} \hlkwd{apply}\hlstd{(pred,} \hlnum{2}\hlstd{, sd),} \hlkwc{lower} \hlstd{= w[}\hlnum{1}\hlstd{, ])}
+\hlstd{w0[}\hlnum{2}\hlstd{, ]} \hlkwb{<-} \hlkwd{rtnorm}\hlstd{(}\hlkwd{ncol}\hlstd{(w),} \hlkwd{colWtMeans}\hlstd{(pred, wt),}
+                  \hlkwd{apply}\hlstd{(pred,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{)} \hlkwd{sd}\hlstd{(x,} \hlkwc{na.rm} \hlstd{=} \hlnum{TRUE}\hlstd{)} \hlopt{/} \hlkwd{sqrt}\hlstd{(}\hlkwd{sum}\hlstd{(}\hlopt{!}\hlkwd{is.na}\hlstd{(x)))),}
+                        \hlkwc{lower} \hlstd{= w[}\hlnum{1}\hlstd{, ])}
 \hlstd{Pi} \hlkwb{<-} \hlkwd{dnorm}\hlstd{(w0[}\hlnum{2}\hlstd{, ], test.trip}\hlopt{$}\hlstd{distance[}\hlnum{2}\hlstd{],} \hlnum{20}\hlstd{)}
 \hlstd{wi} \hlkwb{<-} \hlstd{Pi} \hlopt{/} \hlkwd{sum}\hlstd{(Pi)}
 \hlstd{w[}\hlnum{2}\hlstd{, ]} \hlkwb{<-} \hlkwd{sample}\hlstd{(w0[}\hlnum{2}\hlstd{, ], M,} \hlnum{TRUE}\hlstd{, wi)}
