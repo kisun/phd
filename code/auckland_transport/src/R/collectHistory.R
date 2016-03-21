@@ -45,10 +45,14 @@ collectHistory <- function(route, day, data.clean = list(),
         tmp <- dat[dat$route_id == route, ]
         
         trips <- unique(tmp$trip_id)
-        trips.check <- dbGetQuery(hist.db,
-                               sprintf("SELECT DISTINCT trip_id FROM history WHERE trip_start_date='%s' AND route_id='%s'",
-                                       day, route))
-        trips.use <- ! trips %in% trips.check$trip_id
+        if ("history" %in% dbListTables(hist.db)) {
+            trips.check <- dbGetQuery(hist.db,
+                                      sprintf("SELECT DISTINCT trip_id FROM history WHERE trip_start_date='%s' AND route_id='%s'",
+                                              day, route))$trip_id
+        } else {
+            trips.check <- character()
+        }
+        trips.use <- ! trips %in% trips.check
         if (verbose) cat("Processing ", sum(trips.use), " of ", length(trips), "trips ...\n")
         if (all(! trips.use)) next
 
@@ -141,13 +145,13 @@ collectHistory <- function(route, day, data.clean = list(),
             ##try({
                 
             out <- try(data.frame(cbind(
-                tmp3[, c("trip_id", "vehicle_id", "route_id", "timestamp", "trip_start_date", "trip_start_time")],
+                tmp3[, c("trip_id", "vehicle_id", "route_id", "timestamp", "trip_start_date", "trip_start_time", "position_longitude", "position_latitude")],
                 t(apply(v$getParticles()$xhat, 3, function(x) apply(x, 1, median, na.rm = TRUE))[, -1])
                 )), silent = TRUE)
 
             if (inherits(out, "try-error")) {
                 print("Unable to extract info ... rows don't match???")
-                out <- tmp3[, c("trip_id", "vehicle_id", "route_id", "timestamp", "trip_start_date", "trip_start_time")]
+                out <- tmp3[, c("trip_id", "vehicle_id", "route_id", "timestamp", "trip_start_date", "trip_start_time", "position_longitude", "position_latitude")]
                 dbWriteTable(dbConnect(SQLite(), "db/historical-data.db"),
                              "history",
                              data.frame(trip_id = out$trip_id[1],
@@ -156,11 +160,14 @@ collectHistory <- function(route, day, data.clean = list(),
                                         timestamp = out$timestamp[1],
                                         trip_start_date = out$trip_start_date[1],
                                         trip_start_time = out$trip_start_time[1],
+                                        position_latitude = out$position_latitude[1],
+                                        position_longitude = out$position_longitude[1],
                                         distance = 0,
                                         velocity = 0,
                                         acceleration = 0,
                                         trip.timestamp = 0,
-                                        message = "error"), append = TRUE)
+                                        message = "error"),
+                             append = TRUE)#"history" %in% dbListTables(dbConnect(SQLite(), "db/historical-data.db")))
                 next
             }
             
@@ -215,11 +222,14 @@ collectHistory <- function(route, day, data.clean = list(),
                                         timestamp = out$timestamp[1],
                                         trip_start_date = out$trip_start_date[1],
                                         trip_start_time = out$trip_start_time[1],
+                                        position_latitude = out$position_latitude[1],
+                                        position_longitude = out$position_longitude[1],
                                         distance = 0,
                                         velocity = 0,
                                         acceleration = 0,
                                         trip.timestamp = 0,
-                                        message = "error"), append = TRUE)
+                                        message = "error"),
+                             append = TRUE)#"history" %in% dbListTables(dbConnect(SQLite(), "db/historical-data.db")))
                 next
             } else {
                 out <- out.tmp
@@ -276,11 +286,14 @@ collectHistory <- function(route, day, data.clean = list(),
                                         timestamp = out$timestamp[1],
                                         trip_start_date = out$trip_start_date[1],
                                         trip_start_time = out$trip_start_time[1],
+                                        position_latitude = out$position_latitude[1],
+                                        position_longitude = out$position_longitude[1],
                                         distance = 0,
                                         velocity = 0,
                                         acceleration = 0,
                                         trip.timestamp = 0,
-                                        message = msg), append = TRUE)
+                                        message = msg),
+                             append = TRUE)#"history" %in% dbListTables(dbConnect(SQLite(), "db/historical-data.db")))
             }
             
             ##}, silent = TRUE) -> tryy

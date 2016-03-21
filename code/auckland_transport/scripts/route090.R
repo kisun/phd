@@ -26,7 +26,8 @@ collectHistory(day = DAY)
 
 ## ## tr <- as.numeric(format(as.POSIXct(days[1]), format = "%s")) + c(0, 60 * 60 * 24)
 ## allroutes <- unique(dbGetQuery(dbConnect(SQLite(), "db/historical-data.db"),
-##                                "SELECT DISTINCT route_id FROM history")$route_id)
+##                                "SELECT DISTINCT route_id FROM history")$route_i
+d)
 
 ## ##for (r in allroutes) {
 
