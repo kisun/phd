@@ -145,13 +145,15 @@ collectHistory <- function(route, day, data.clean = list(),
             ##try({
                 
             out <- try(data.frame(cbind(
-                tmp3[, c("trip_id", "vehicle_id", "route_id", "timestamp", "trip_start_date", "trip_start_time", "position_longitude", "position_latitude")],
+                tmp3[, c("trip_id", "vehicle_id", "route_id", "timestamp", "trip_start_date", "trip_start_time",
+                         "position_latitude", "position_longitude")],
                 t(apply(v$getParticles()$xhat, 3, function(x) apply(x, 1, median, na.rm = TRUE))[, -1])
                 )), silent = TRUE)
 
             if (inherits(out, "try-error")) {
                 print("Unable to extract info ... rows don't match???")
-                out <- tmp3[, c("trip_id", "vehicle_id", "route_id", "timestamp", "trip_start_date", "trip_start_time", "position_longitude", "position_latitude")]
+                out <- tmp3[, c("trip_id", "vehicle_id", "route_id", "timestamp", "trip_start_date", "trip_start_time",
+                                "position_latitude", "position_longitude")]
                 dbWriteTable(dbConnect(SQLite(), "db/historical-data.db"),
                              "history",
                              data.frame(trip_id = out$trip_id[1],
