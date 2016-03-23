@@ -51,9 +51,8 @@ area.subset <- area[area$position_longitude > box[1] &
 
 obj <- iNZightMap(~position_latitude, ~position_longitude,
                   data = area.subset[grepl("^090", area.subset$route_id), ])
-plot(obj, colby = velocity2, cex.pt = 0.2, alpha = 0.2, col.fun = diverge_hcl, g1=route_id)
+plot(obj, colby = velocity2, cex.pt = 0.2, alpha = 0.2, col.fun = diverge_hcl)
 
-ClickOnZoom(0.05)
 
 
 
@@ -131,3 +130,67 @@ match <- as.logical(rep(mi, ni))
 SEGS <- c(1, cumsum(abs(diff(match))) + 1)
 sh2$match <- match
 sh2$seg <- SEGS
+
+for (i in unique(sh2[!sh2$match, "seg"])) {
+    ID <- paste0("S", as.numeric(gsub("S", "", max(shape.segments$id))) + 1)
+    new.df <- data.frame(sh2[sh2$seg == i, 1:2], id = ID, coord = sh2[sh2$seg == i, 3])
+    shape.segments <- rbind(shape.segments, new.df)
+}
+
+shape2 <- c("S1", "S8", "S3", "S9", "S5", "S10", "S7") 
+
+plotShape <- function(ids, add = FALSE, ...) {
+    s <- do.call(rbind, lapply(ids, function(id) shape.segments[shape.segments$id == id, ]))
+    if (add) with(s, lines(shape_pt_lon, shape_pt_lat, ...))
+    else with(s, plot(shape_pt_lon, shape_pt_lat, type = "l", ...))
+}
+plotShape(shape1, xlim = range(shape.segments$shape_pt_lon), ylim = range(shape.segments$shape_pt_lat))
+plotShape(shape2, add=TRUE, col = "blue")
+
+
+## ALL the data:
+hist <- dbConnect(SQLite(), "db/historical-data.db")
+dat <- dbGetQuery(hist,
+                  "SELECT * FROM history WHERE route_id LIKE '09001%' OR route_id LIKE '08001%'")
+swap <- dat$position_longitude < 0
+pl <- dat$position_longitude
+dat$position_longitude[swap] <- dat$position_latitude[swap]
+dat$position_latitude[swap] <- pl[swap]
+dat$velocity <- pmin(30, pmax(0, dat$velocity))
+
+dat$delta <- c(0, dat$trip.timestamp[-1] - dat$trip.timestamp[-nrow(dat)])
+dat$delta <- ifelse(dat$delta < 0, NA, dat$delta)
+dat$velocity2 <- c(NA, (dat$distance[-1] - dat$distance[-nrow(dat)]) / dat$delta[-1])
+dat$velocity2 <- pmin(30, dat$velocity)
+
+box <- c(174.58, 174.78, -36.8, -36.91)
+dat <- dat[dat$position_longitude > box[1] &
+                 dat$position_longitude < box[2] &
+                     dat$position_latitude < box[3] &
+                         dat$position_latitude > box[4], ]
+
+mobj <- iNZightMap(~position_latitude, ~position_longitude, data = dat, name = "090 and 080 History")
+plot(mobj, colby = route_id, col.fun = rainbow_hcl, alpha = 0.2, cex.pt = 0.5)
+
+
+## "speed vs distance into segment"
+shape.segments$distance_into_segment<- NA
+for (s in unique(shape.segments$id)) {
+    i <- shape.segments$id == s
+    z <- t(shape.segments[i, 1:2])
+    shape.segments$distance_into_segment[i] <- c(0, cumsum(distanceFlat(z[, -ncol(z)], z[, -1])))
+}
+
+getShape <- function(ids) {
+    s <- do.call(rbind, lapply(ids, function(id) shape.segments[shape.segments$id == id, ]))
+    z <- t(s[, 1:2])
+    s$distance_into_shape <- c(0, cumsum(distanceFlat(z[, -ncol(z)], z[, -1])))
+    s
+}
+
+s1 <- getShape(shape1)
+s2 <- getShape(shape2)
+
+for (s in unique(shape.segments$id)) {
+    
+}
