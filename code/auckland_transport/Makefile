@@ -20,11 +20,14 @@ default:
 
 database:
 	@echo Adding GTFS schedule data to SQLite database ...
+	@bin/fetch-gtfs
+
+old:
 	@echo
 	@mkdir -p db/backups
 	-@mv db/gtfs-static.db db/backups/gtfs-static_$(shell date +%Y%m%d%H%M%S).db
 	-@touch db/gtfs-static.db
-	@R -f scripts/build_gtfs_database.R --slave
+	@R -f scripts/build_gtfs_database.R
 
 
 saveRT:

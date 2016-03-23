@@ -3,3 +3,4 @@
 .libPaths("../../.Rlibrary")
 library(RSQLite)
 library(iNZightMaps)
+library(colorspace)
