@@ -183,14 +183,93 @@ for (s in unique(shape.segments$id)) {
 
 getShape <- function(ids) {
     s <- do.call(rbind, lapply(ids, function(id) shape.segments[shape.segments$id == id, ]))
-    z <- t(s[, 1:2])
-    s$distance_into_shape <- c(0, cumsum(distanceFlat(z[, -ncol(z)], z[, -1])))
+    ds <- tapply(s$distance_into_segment, s$id, max)
+    ds <- ds[ids]
+    dx <- cumsum(ds) - ds
+    s$distance_into_shape <- s$distance_into_segment + dx[s$id]
+    #z <- t(s[, 1:2])
+    #s$distance_into_shape <- c(0, cumsum(distanceFlat(z[, -ncol(z)], z[, -1])))
     s
 }
 
 s1 <- getShape(shape1)
 s2 <- getShape(shape2)
 
-for (s in unique(shape.segments$id)) {
-    
+SHAPES <- list(s1, s2)
+
+dat$segment_id <- NA
+for (i in 1:nrow(dat)) {
+    si <- ifelse(dat$route_id[i] == "09001-20160126172118_v37.18", 1, 2)
+    dit <- dat$distance[i]
+    s <- SHAPES[[si]]
+    dat$segment_id[i]<- s$id[max(1, which((dit - s$distance_into_shape) <= 0)[1] - 1)]
 }
+dat$segment_id <- as.factor(dat$segment_id)
+
+head(dat)
+
+
+## segment 7 - the longest with both routes
+SEG <- "S7"
+segi <- dat[dat$segment_id == SEG, ]
+## distance into SEGMENT = DISTANCE INTO TRIP - SEGMENT TRIP DISTANCE
+seg.trip.dist <- lapply(SHAPES, function(s) {
+    si <- tapply(s$distance_into_segment, s$id, max)
+    si <- si[unique(s$id)]
+    cumsum(si) - si
+})
+segi$distance_into_segment <-
+    segi$distance -
+    sapply(seg.trip.dist[ifelse(segi$route_id =="09001-20160126172118_v37.18", 1, 2)],
+           function(x) x[SEG])
+par(mar = c(5.1, 4.6, 4.1, 2.1))
+with(segi, plot(distance_into_segment, velocity, ylim = c(-10, 100), type = "n",
+                xlab = "Distance into Segment (m)",
+                ylab = expression(paste("Velocity (", ms^-1, ")"))))
+tapply(1:nrow(segi), paste(segi$trip_id, segi$trip_start_date, sep = ":"),
+       function(i) {
+           if (length(i) < 10) return()
+           f <- splinefun(segi$trip.timestamp[i], segi$distance_into_segment[i],
+                          method = "monoH.FC")
+           xx <- seq(min(segi$trip.timestamp[i]), max(segi$trip.timestamp[i]), length = 5001)
+           lines(f(xx), f(xx, deriv = 1),
+                 col = ifelse(segi$route_id[i[1]] == "09001-20160126172118_v37.18",
+                              "#00990060", "#00009960"))
+       }) -> o
+
+
+con <- dbConnect(SQLite(), "db/gtfs-static.db")
+sched <- dbGetQuery(con, "SELECT st.trip_id, st.arrival_time, st.departure_time, st.stop_id, s.stop_lon, s.stop_lat, st.stop_sequence
+FROM stop_times AS st, stops AS s
+WHERE st.stop_id = s.stop_id AND st.trip_id LIKE '3090020606-%'
+ORDER BY stop_sequence")
+shape <- dbGetQuery(con, "SELECT DISTINCT t.trip_id, st.departure_time, t.route_id, t.shape_id, t.direction_id,
+       s.shape_pt_lat, s.shape_pt_lon, s.shape_pt_sequence
+FROM trips AS t, stop_times AS st, shapes AS s
+WHERE t.trip_id LIKE '3090020606-%' AND t.trip_id = st.trip_id AND st.stop_sequence = 1 AND t.shape_id = s.shape_id
+ORDER BY st.departure_time, s.shape_pt_sequence")
+mode(shape$shape_pt_lon) <- mode(shape$shape_pt_lat) <- "numeric"
+sched$distance_into_trip <- getShapeDist(sched, shape)
+dd <- sched[which(sched$distance_into_trip >= min(segi$distance) &
+                  sched$distance_into_trip <= max(segi$distance)), "distance_into_trip"]
+dd <- dd - seg.trip.dist[[1]]["S7"]
+abline(v = dd, col = "#990000", lty = 2)
+
+
+sched2 <- dbGetQuery(con, "SELECT st.trip_id, st.arrival_time, st.departure_time, st.stop_id, s.stop_lon, s.stop_lat, st.stop_sequence
+FROM stop_times AS st, stops AS s
+WHERE st.stop_id = s.stop_id AND st.trip_id LIKE '3080026136-%'
+ORDER BY stop_sequence")
+shape2 <- dbGetQuery(con, "SELECT DISTINCT t.trip_id, st.departure_time, t.route_id, t.shape_id, t.direction_id,
+       s.shape_pt_lat, s.shape_pt_lon, s.shape_pt_sequence
+FROM trips AS t, stop_times AS st, shapes AS s
+WHERE t.trip_id LIKE '3080026136-%' AND t.trip_id = st.trip_id AND st.stop_sequence = 1 AND t.shape_id = s.shape_id
+ORDER BY st.departure_time, s.shape_pt_sequence")
+mode(shape2$shape_pt_lon) <- mode(shape2$shape_pt_lat) <- "numeric"
+sched2$distance_into_trip <- getShapeDist(sched2, shape2)
+dd2 <- sched2[which(sched2$distance_into_trip >= min(segi$distance) &
+                    sched2$distance_into_trip <= max(segi$distance)), "distance_into_trip"]
+dd2 <- dd2 - seg.trip.dist[[2]]["S7"]
+abline(v = dd2, col = "#666666", lwd = 2)
+
+lapply(SHAPES, function(s) max(s$distance_into_shape))
