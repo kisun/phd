@@ -319,6 +319,7 @@ for (SEG in unique(shape.segments$id)) {
 dev.off()
 
 
+
 jpeg("figs/multiple_routes_data.jpg", width = 1200, height = 800)
 dat$route_id <- factor(dat$route_id)
 levels(dat$route_id) <- c("080", "090")
@@ -328,3 +329,228 @@ plot(mobj, colby = route_id, col.fun = rainbow_hcl, alpha = 0.2, cex.pt = 0.5)
 addPoints(sched$stop_lon, sched$stop_lat)
 addPoints(sched2$stop_lon, sched2$stop_lat, gp=list(cex = 0.5))
 dev.off()
+
+
+
+
+############### SHAPES into DATABASE
+
+shape.segments$shape_pt_sequence <-
+    do.call(c, tapply(shape.segments$distance_into_segment, shape.segments$id, order)[unique(shape.segments$id)])
+segments <- shape.segments[, c("id", "shape_pt_lat", "shape_pt_lon", "shape_pt_sequence", "distance_into_segment")]
+colnames(segments) <- c("segment_id", "shape_pt_lat", "shape_pt_lon", "shape_pt_sequence", "distance_into_segment")
+
+con <- dbConnect(SQLite(), "db/gtfs-test.db")
+dbGetQuery(con, "DROP TABLE segments")
+dbGetQuery(con, "CREATE TABLE segments(
+segment_id TEXT,
+shape_pt_lat TEXT,
+shape_pt_lon TEXT,
+shape_pt_sequence INTEGER,
+distance_into_segment TEXT
+)")
+dbWriteTable(con, "segments", segments, row.names = FALSE, append = TRUE)
+
+
+shapes <- rbind(cbind("09001", shape1, 1:length(shape1)),
+                cbind("08001", shape2, 1:length(shape2)))
+shapes <- as.data.frame(shapes)
+colnames(shapes) <- c("shape_id", "segment_id", "segment_sequence")
+dbGetQuery(con, "DROP TABLE shapes")
+dbGetQuery(con, "CREATE TABLE shapes(
+shape_id TEXT,
+segment_id TEXT,
+segment_sequence INTEGER
+)")
+dbWriteTable(con, "shapes", shapes, row.names = FALSE, append = TRUE)
+dbDisconnect(con)
+
+
+
+
+
+
+###### Now add another route
+trips <- unique(area.subset[grepl("^07001", area.subset$route_id), "trip_id"])
+t1 <- gsub("-.*", "", trips[1])
+con <- dbConnect(SQLite(), "db/gtfs-static.db")
+s1 <- dbGetQuery(con,
+                 sprintf("SELECT shape_id FROM trips WHERE trip_id LIKE '%s%%'", t1))
+shape <- dbGetQuery(con,
+                    sprintf("SELECT * FROM shapes WHERE shape_id='%s'", s1[1]))
+mode(shape$shape_pt_lat) <- mode(shape$shape_pt_lon) <- "numeric"
+
+sh3 <- shape[, c("shape_pt_lat", "shape_pt_lon")]
+
+sh3$coord <- apply(sh3, 1, function(x) paste(round(x, 4), collapse = ","))
+
+match <- sh3$coord %in%
+    with(shape.segments, paste(round(shape_pt_lat, 4), round(shape_pt_lon, 4), sep = ","))
+SEGS <- c(1, cumsum(abs(diff(match))) + 1)
+ni <- tapply(1:length(SEGS), SEGS, length)
+mi <- tapply(match, SEGS, mean)
+## any "short" non-matches -> matches
+mi[mi == 0 & ni < 10] <- 1
+match <- as.logical(rep(mi, ni))
+SEGS <- c(1, cumsum(abs(diff(match))) + 1)
+sh3$match <- match
+sh3$seg <- SEGS
+
+mobj <- iNZightMap(~shape_pt_lat, ~shape_pt_lon, data = shape)
+plot(mobj, pch = 19, cex.pt = 0.05, col.pt = "#0000cc")
+addPoints(SH1$shape_pt_lon, SH1$shape_pt_lat, gp = list(col = "#cc000040", cex = 0.2), pch = 19)
+addPoints(sh2$shape_pt_lon, sh2$shape_pt_lat, gp = list(col = "#cc000040", cex = 0.2), pch = 19)
+with(sh3, addPoints(shape_pt_lon, shape_pt_lat,
+                    gp = list(col = ifelse(match, "#009999", "#990099"), cex = 0.2), pch = 19))
+
+## add Non-matching segments:
+con <- dbConnect(SQLite(), "db/gtfs-test.db")
+cur.ids <- dbGetQuery(con, "SELECT DISTINCT segment_id FROM segments")$segment_id
+seg.df <- NULL
+sh3$segment_id <- NA
+for (i in unique(sh3[!sh3$match, "seg"])) {
+    ID <- paste0("S", max(as.numeric(gsub("S", "", cur.ids))) + 1)
+    cur.ids <- c(cur.ids, ID)
+    new.df <- data.frame(segment_id = ID, sh3[sh3$seg == i, 1:2])
+    z <- t(new.df[, 2:3])
+    new.df$shape_pt_sequence <- 1:nrow(new.df)
+    new.df$distance_into_segment <- c(0, cumsum(distanceFlat(z[, -1], z[, -ncol(z)])))
+    seg.df <- rbind(seg.df, new.df)
+    sh3$segment_id[sh3$seg == i] <- ID
+}
+dbWriteTable(con, "segments", seg.df, row.names = FALSE, append = TRUE)
+dbDisconnect(con)
+
+
+
+## fix up matching segments:
+shape3 <- numeric()
+for (i in unique(sh3$seg)) { ##[sh3$match])) {
+    if (!i %in% sh3$seg[match]) {
+        shape3 <- c(shape3, sh3[sh3$seg == i, ]$segment_id[1])
+        next
+    }
+    segments <- dbGetQuery(dbConnect(SQLite(), "db/gtfs-test.db"),
+                           "SELECT * FROM segments")
+    mode(segments$shape_pt_lat) <- mode(segments$shape_pt_lon) <- mode(segments$distance_into_segment) <- "numeric"
+    ri <- sh3$seg == i
+    ## we know it matches - which segment(s) does it match??
+    seg.match <- tapply(with(segments, paste(round(shape_pt_lat, 4), round(shape_pt_lon, 4), sep = ",")),
+                        segments$segment_id,
+                        function(x) sum(x %in% sh3[ri, "coord"]) > 10)
+    seg.match <- names(seg.match)[seg.match]
+
+    for (s in seg.match) {
+        ss <- segments[segments$segment_id == s, ]
+        SEGcoord <- with(ss, paste(round(shape_pt_lat, 4), round(shape_pt_lon, 4), sep = ","))
+        match1 <- sh3[ri, "coord"] %in% SEGcoord
+        SEGS <- c(1, cumsum(abs(diff(match1))) + 1)
+        ni <- tapply(1:length(SEGS), SEGS, length)
+        mi <- tapply(match1, SEGS, mean)
+        mi[mi == 0 & ni < 10] <- 1
+        match2 <- as.logical(rep(mi, ni))      ## NEW in EXISTING
+
+        match3 <- SEGcoord %in% sh3$coord[ri][match2]
+        SEGS <- c(1, cumsum(abs(diff(match3))) + 1)
+        ni <- tapply(1:length(SEGS), SEGS, length)
+        mi <- tapply(match3, SEGS, mean)
+        ## any "short" non-matches -> matches
+        mi[mi == 0 & ni < 10] <- 1
+        match4 <- as.logical(rep(mi, ni))      ## EXISTING in NEW
+        
+        if (all(match4)) {
+            ## Yay! everything matches, so set that as the ID
+            ## sh3$segment_id[ri][match2] <- s
+            shape3 <- c(shape3, s)
+        } else {
+            con <- dbConnect(SQLite(), "db/gtfs-test.db")
+            cur.ids <- dbGetQuery(con, "SELECT DISTINCT segment_id FROM segments")$segment_id
+            ## it's a partial match - need to split the segment in the database!!
+            SEGS <- c(1, cumsum(abs(diff(match4))) + 1)
+            ## create NEW shapes
+            seg.df <- NULL
+            new.ids <- character()
+            for (segj in unique(SEGS)) {
+                j <- which(SEGS == segj)
+                tmp <- ss[j, ]
+                tmp$shape_pt_sequence <- order(tmp$shape_pt_sequence)
+                tmp$distance_into_segment <- tmp$distance_into_segment - min(tmp$distance_into_segment)
+                newID <- paste0("S", max(as.numeric(gsub("S", "", cur.ids))) + 1)
+                cur.ids <- c(cur.ids, newID)
+                new.ids <- c(new.ids, newID)
+                tmp$segment_id <- newID
+                seg.df <- rbind(seg.df, tmp)
+                
+                if (all(match4[j])) {
+                    shape3 <- c(shape3, newID)
+                }
+            }
+            dbWriteTable(con, "segments", seg.df, row.names = FALSE, append = TRUE)
+
+            ## fix up previous shapes:
+            ## s -> new.ids
+            sAffected <- dbGetQuery(con, sprintf("SELECT shape_id FROM shapes WHERE segment_id='%s'", s))$shape_id
+            oldShapes <- dbGetQuery(con, sprintf("SELECT * FROM shapes WHERE shape_id IN ('%s')",
+                                                 paste0(sAffected, collapse = "','")))
+            print(oldShapes)
+            ## w <- which(oldShapes$segment_id == s)
+            ## lapply(w, function(x) {
+            tapply(1:nrow(oldShapes), oldShapes$shape_id,
+                   function(k) {
+                       oSk <- oldShapes[k, ]
+                       wk <- which(oSk$segment_id == s)
+                       nk <- nrow(oSk)
+                       alt <- if (wk == 1) {
+                           rbind(cbind(oSk$shape_id[wk], new.ids,
+                                       as.numeric(oSk$segment_sequence[wk]) + (1:length(new.ids))/10),
+                                 oSk[(wk+1):nrow(oSk), ])
+                       } else if (wk == nk) {
+                           rbind(oS[1:(wk-1), ],
+                                 cbind(oSk$shape_id[wk], new.ids,
+                                       as.numeric(oSk$segment_sequence[wk]) + (1:length(new.ids))/10))
+                       } else {
+                           rbind(oSk[1:(wk-1), ],
+                                 cbind(shape_id = oSk$shape_id[wk], segment_id = new.ids,
+                                       segment_sequence =
+                                           as.numeric(oSk$segment_sequence[wk]) + (1:length(new.ids))/10),
+                                 oSk[(wk+1):nrow(oSk), ])
+                       }
+                       alt$segment_sequence <- order(as.numeric(alt$segment_sequence))
+                       alt
+                       ## }))
+                   }) -> newShapes
+            newShapes <- do.call(rbind, newShapes)
+            dbGetQuery(con, sprintf("DELETE FROM shapes WHERE shape_id IN ('%s')",
+                                    paste0(sAffected, collapse = "','")))
+            dbWriteTable(con, "shapes", newShapes, row.names = FALSE, append = TRUE)
+            ## and delete old segments
+            dbGetQuery(con, sprintf("DELETE FROM segments WHERE segment_id = '%s'", s))
+            dbDisconnect(con)
+        }
+    }
+}
+
+con <- dbConnect(SQLite(), "db/gtfs-test.db")
+
+dbWriteTable(con, "shapes", as.data.frame(cbind("shape_id" = "07001", "segment_id" = shape3,
+                                                "segment_sequence" = 1:length(shape3))),
+             row.names = FALSE, append = TRUE)
+
+
+
+
+shapes <- dbGetQuery(con, "SELECT sh.shape_id, sh.segment_id, sh.segment_sequence,
+                                  sg.shape_pt_lat, sg.shape_pt_lon, sg.shape_pt_sequence
+                             FROM shapes AS sh, segments AS sg
+                            WHERE sh.segment_id=sg.segment_id
+                            ORDER BY sh.shape_id, sh.segment_sequence, sg.shape_pt_sequence")
+mode(shapes$shape_pt_lat) <- mode(shapes$shape_pt_lon) <- "numeric"
+
+mobj <- iNZightMap(~position_latitude, ~position_longitude, data = dat, name = "090 and 080 History")
+plot(mobj, colby = route_id, col.fun = rainbow_hcl, alpha = 0.2, cex.pt = 0.5)
+cex <- as.numeric(as.factor(shapes$shape_id)) / 3
+tapply(1:nrow(shapes), shapes$shape_id, function(i) {
+           with(shapes[i, ], addPoints(shape_pt_lon, shape_pt_lat,
+                                       gp = list(cex = cex[i], col = "#444444")))
+       })
+
