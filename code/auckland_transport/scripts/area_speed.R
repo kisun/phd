@@ -546,6 +546,8 @@ shapes <- dbGetQuery(con, "SELECT sh.shape_id, sh.segment_id, sh.segment_sequenc
                             ORDER BY sh.shape_id, sh.segment_sequence, sg.shape_pt_sequence")
 mode(shapes$shape_pt_lat) <- mode(shapes$shape_pt_lon) <- "numeric"
 
+
+jpeg("figs/multiple_routes_automated_070.jpg", width = 1200, height = 800)
 mobj <- iNZightMap(~position_latitude, ~position_longitude, data = dat, name = "090 and 080 History")
 plot(mobj, colby = route_id, col.fun = rainbow_hcl, alpha = 0.2, cex.pt = 0.5)
 cex <- as.numeric(as.factor(shapes$shape_id)) / 3
@@ -553,4 +555,4 @@ tapply(1:nrow(shapes), shapes$shape_id, function(i) {
            with(shapes[i, ], addPoints(shape_pt_lon, shape_pt_lat,
                                        gp = list(cex = cex[i], col = "#444444")))
        })
-
+dev.off()

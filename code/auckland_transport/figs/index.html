@@ -32,10 +32,14 @@ img {
   <div class="one">
     <a href="multiple_route_segment_speed_01.jpg"><img   src="multiple_route_segment_speed_01.jpg"></a>
   </div>
+<p>Road works at Westgate back when the data was coming in (this is end of Jan/beginning Feb) so the 090 took a detour which seems to have messed it up.
   <div class="two">
     <a href="multiple_route_segment_speed_02.jpg"><img   src="multiple_route_segment_speed_02.jpg"></a>
     <a href="multiple_route_segment_speed_08.jpg"><img   src="multiple_route_segment_speed_08.jpg"></a>
   </div>
+  <p>
+    The massive arc will be because of the loop (just below "West Harbour" on map above). Need a proper KF filter to determine distances so that doesn't happen.
+  </p>
   <div class="one">
     <a href="multiple_route_segment_speed_03.jpg"><img   src="multiple_route_segment_speed_03.jpg"></a>
   </div>
@@ -50,8 +54,25 @@ img {
     <a href="multiple_route_segment_speed_06.jpg"><img   src="multiple_route_segment_speed_06.jpg"></a>
     <a href="multiple_route_segment_speed_10.jpg"><img   src="multiple_route_segment_speed_10.jpg"></a>
   </div>
+  <p>Just a stretch of motorway for the 080 on the right ...</p>
   <div class="one">
     <a href="multiple_route_segment_speed_07.jpg"><img   src="multiple_route_segment_speed_07.jpg"></a>
   </div>
+
+<p>
+  The little loops here and there again are due to brute-forcing the distance of observations - no monotonicity constraint - but that'll happen when I come up with a KF filter that uses shape segments ...
+</p>
+
+<p>This was half done by hand - need to figure out how to computationally split shapes into segments as new routes are added to the mix.</p>
+
+
+<h3>Automated Addition of 070</h3>
+
+<p>Not fully automated, but the script runs without any guidance for the particular route. Will see if this holds for additional routes ...</p>
+
+<a href="multiple_routes_automated_070.jpg">
+  <img src="multiple_routes_automated_070.jpg">
+</a>
+
 </body>
 </html>
