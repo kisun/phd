@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Multiple routes</title>
+  <style>
+.two, .one {
+  text-align: center
+}
+img {
+  width: 600px;
+  max-width: 40%
+}
+  </style>
+</head>
+<body>
+  <h1>Segment speed using multiple (2) routes:</h1>
+
+  <p>
+    Two routes: the 090 and 080 which travel via similar paths from Westgate to Downtown. A couple of weeks' data:
+  </p>
+  <a href="multiple_routes_data.jpg"><img src="multiple_routes_data.jpg" width=800></a>
+
+  <p>
+    Segments 1, 3, 5, and 7 are common. I haven't come up with a decent KF for estimating distance into trip yet, and what I was using was behaving badly, so instead I've just mapped the reported GPS location to the nearest shape point and used that (I could interpolate but they are pretty dense and most often within GPS error anyway).
+  </p>
+
+  <p>
+    Using the "snap to shape" distances, I fit a spline through time-into-trip vs distance, to get smoothed speed. Plotted against distance for each segment (<span style="font-weight:bold;color:#009900">090 on left</span>, <span style="font-weight:bold;color:#000099">080 on right</span>, and vertical lines at stops):
+  </p>
+
+  <div class="one">
+    <a href="multiple_route_segment_speed_01.jpg"><img   src="multiple_route_segment_speed_01.jpg"></a>
+  </div>
+  <div class="two">
+    <a href="multiple_route_segment_speed_02.jpg"><img   src="multiple_route_segment_speed_02.jpg"></a>
+    <a href="multiple_route_segment_speed_08.jpg"><img   src="multiple_route_segment_speed_08.jpg"></a>
+  </div>
+  <div class="one">
+    <a href="multiple_route_segment_speed_03.jpg"><img   src="multiple_route_segment_speed_03.jpg"></a>
+  </div>
+  <div class="two">
+    <a href="multiple_route_segment_speed_04.jpg"><img   src="multiple_route_segment_speed_04.jpg"></a>
+    <a href="multiple_route_segment_speed_09.jpg"><img   src="multiple_route_segment_speed_09.jpg"></a>
+  </div>
+  <div class="one">
+    <a href="multiple_route_segment_speed_05.jpg"><img   src="multiple_route_segment_speed_05.jpg"></a>
+  </div>
+  <div class="two">
+    <a href="multiple_route_segment_speed_06.jpg"><img   src="multiple_route_segment_speed_06.jpg"></a>
+    <a href="multiple_route_segment_speed_10.jpg"><img   src="multiple_route_segment_speed_10.jpg"></a>
+  </div>
+  <div class="one">
+    <a href="multiple_route_segment_speed_07.jpg"><img   src="multiple_route_segment_speed_07.jpg"></a>
+  </div>
+</body>
+</html>
