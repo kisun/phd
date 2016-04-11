@@ -1,5 +1,6 @@
 ## convert shape files into segment files
-shape2seg <- function(id, db = "db/gtfs-static2.db", ...,
+shape2seg <- function(id, db = "db/gtfs-static2.db",
+                      plot = FALSE, verbose = FALSE, ...,
                       .con = dbConnect(SQLite(), db)) {
     ## check ID exists:
     if (nrow(dbGetQuery(.con, sprintf("SELECT DISTINCT shape_id FROM shapes WHERE shape_id='%s'",
@@ -26,7 +27,8 @@ shape2seg <- function(id, db = "db/gtfs-static2.db", ...,
     match <- if (nrow(segments) == 0) {
                  rep(FALSE, length = nrow(shape))
              } else { 
-                 shape$coord %in% with(segments, paste(round(lat, 4), round(lon, 4), sep = ","))
+                 shape$coord %in% with(segments,
+                                       paste(round(lat, 4), round(lon, 4), sep = ","))
              }
 
     SEGS <- c(1, cumsum(abs(diff(match))) + 1)
@@ -63,10 +65,27 @@ shape2seg <- function(id, db = "db/gtfs-static2.db", ...,
     }
 
     ## --- deal with matching segments and create shape IDs
+
+    ## gotta split "matches" up into segmental matches: 1-1-1-1-1 -> 1-1-1-2-2
+    segments <- getSegments(.con)
+    for (i in unique(shape$seg)) {
+        ri <- shape$seg == i
+        tapply(paste(round(segments$lat, 4), round(segments$lon, 4), sep=","),
+               segments$segment_id, function(c) {
+                   x <- which(shape[ri, "coord"] %in% c)
+                   if (length(x) >= 1) return(x) else return(NULL)
+               }) -> x
+        x <- x[!sapply(x, is.null)]
+        shape$seg[ri] <- shape$seg[ri] + 
+            cumsum(1:nrow(shape[ri, ]) %in% sapply(x, min)) / 1000
+    }
+    
     shapeIDs <- numeric()
+    shapeDIR <- numeric()
     for (i in unique(shape$seg)) {
         if (!i %in% shape$seg[match]) {
             shapeIDs <- c(shapeIDs, shape[shape$seg == i, ]$segment_id[1])
+            shapeDIR <- c(shapeDIR, 0)
             next
         }
         
@@ -77,10 +96,13 @@ shape2seg <- function(id, db = "db/gtfs-static2.db", ...,
         seg.match <-
             tapply(with(segments, paste(round(lat, 4), round(lon, 4), sep = ",")),
                    segments$segment_id,
-                   function(x) sum(x %in% shape[ri, "coord"]) > 10)
+                   function(x) sum(x %in% shape[ri, "coord"]) >= min(10, sum(ri)))
         seg.match <- as.numeric(names(seg.match)[seg.match])
+
+        ## with(shape[ri, ], addLines(lon, lat, gpar = list(col = "blue")))
         
-        for (s in seg.match) {
+        for (si in seq_along(seg.match)) {
+            s <- seg.match[si]
             ss <- segments[segments$segment_id == s, ]
             SEGcoord <- with(ss, paste(round(lat, 4), round(lon, 4), sep = ","))
             match1 <- shape[ri, "coord"] %in% SEGcoord
@@ -101,6 +123,12 @@ shape2seg <- function(id, db = "db/gtfs-static2.db", ...,
             if (all(match4)) {
                 ## Yay! everything matches, so set that as the ID
                 shapeIDs <- c(shapeIDs, s)
+
+                ## match direction:
+                X <- shape[ri, c("lat", "lon")][match2, ][1, ]
+                z <- which.min(apply(ss[c(1, nrow(ss)), c("lat", "lon")], 1,
+                                     function(y) distanceFlat(y, as.numeric(X))))
+                shapeDIR <- c(shapeDIR, z == 2)
             } else {
                 cur.ids <- unique(segments$segment_id)
                 ## it's a partial match - need to split the segment in the database!!
@@ -114,6 +142,9 @@ shape2seg <- function(id, db = "db/gtfs-static2.db", ...,
                     tmp$shape_pt_sequence <- order(tmp$shape_pt_sequence)
                     tmp$distance <-
                         tmp$distance - min(tmp$distance)
+
+                    ## with(tmp, addLines(lon, lat, gpar = list(col = "red")))
+                    
                     newID <- if (length(cur.ids) == 0) 1 else max(cur.ids, na.rm = TRUE) + 1
                     cur.ids <- c(cur.ids, newID)
                     new.ids <- c(new.ids, newID)
@@ -121,6 +152,10 @@ shape2seg <- function(id, db = "db/gtfs-static2.db", ...,
                     seg.df <- rbind(seg.df, tmp)
                     if (all(match4[j])) {
                         shapeIDs <- c(shapeIDs, newID)
+                        X <- shape[ri, c("lat", "lon")][match2, ][1, ]
+                        z <- which.min(apply(tmp[c(1, nrow(tmp)), c("lat", "lon")], 1,
+                                             function(y) distanceFlat(y, as.numeric(X))))
+                        shapeDIR <- c(shapeDIR, z == 2)
                     }
                 }
                 if (!is.null(seg.df)) {
@@ -145,48 +180,55 @@ shape2seg <- function(id, db = "db/gtfs-static2.db", ...,
                                WS <- which(oSk$segment_id == s)
                                nk <- nrow(oSk)
                                lapply(WS, function(wk) {
+                                   newseq <- 1:length(new.ids)
+                                   newIDS <- if (oSk$direction[wk] == 1) rev(new.ids) else new.ids
                                    alt <- if (wk == 1) {
                                               if (nk == 1) {
                                                   data.frame(
                                                       shape_id = oSk$shape_id[wk],
-                                                      segment_id = new.ids,
+                                                      segment_id = newIDS,
                                                       segment_sequence =
                                                           as.numeric(oSk$segment_sequence[wk]) +
-                                                          (1:length(new.ids))/10)
+                                                          (1:length(new.ids))/10,
+                                                      direction = oSk$direction[wk])
                                               } else {
-                                                  tt <- cbind
                                                   rbind(data.frame(
                                                       shape_id = oSk$shape_id[wk],
-                                                      segment_id = new.ids,
+                                                      segment_id = newIDS,
                                                       segment_sequence =
                                                           as.numeric(oSk$segment_sequence[wk]) +
-                                                          (1:length(new.ids))/10),
+                                                          (1:length(new.ids))/10,
+                                                      direction = oSk$direction[wk]),
                                                       oSk[(wk+1):nk, ])
                                               }
                                           } else if (wk == nk) {
                                               rbind(oSk[1:(wk-1), ],
                                                     data.frame(
                                                         shape_id = oSk$shape_id[wk],
-                                                        segment_id = new.ids,
+                                                        segment_id = newIDS,
                                                         segment_sequence =
                                                             as.numeric(oSk$segment_sequence[wk]) +
-                                                            (1:length(new.ids))/10))
+                                                            (1:length(new.ids))/10,
+                                                      direction = oSk$direction[wk]))
                                           } else {
                                               rbind(oSk[1:(wk-1), ],
                                                     data.frame(
                                                         shape_id = oSk$shape_id[wk],
-                                                        segment_id = new.ids,
+                                                        segment_id = newIDS,
                                                         segment_sequence =
                                                             as.numeric(oSk$segment_sequence[wk]) +
-                                                            (1:length(new.ids))/10),
+                                                            (1:length(new.ids))/10,
+                                                      direction = oSk$direction[wk]),
                                                     oSk[(wk+1):nrow(oSk), ])
                                           }
+                                   
                                    alt$segment_sequence <- order(as.numeric(alt$segment_sequence))
                                    alt
                                }) -> p1
                                do.call(rbind, p1)
                            }) -> newShapes
                     newShapes <- do.call(rbind, newShapes)
+                    rownames(newShapes) <- NULL                    
                     dbGetQuery(.con, sprintf("DELETE FROM shapes_seg WHERE shape_id IN ('%s')",
                                              paste0(sAffected, collapse = "','")))
                     dbWriteTable(.con, "shapes_seg", newShapes, row.names = FALSE, append = TRUE)
@@ -196,18 +238,19 @@ shape2seg <- function(id, db = "db/gtfs-static2.db", ...,
             }
         }
     }
-
+    
     ## write shape ids to file
     newShape <- data.frame(shape_id = id, segment_id = shapeIDs,
-                           segment_sequence = 1:length(shapeIDs))
+                           segment_sequence = 1:length(shapeIDs),
+                           direction = shapeDIR)
     dbWriteTable(.con, "shapes_seg", newShape,
                  row.names = FALSE, append = TRUE)
 
     dbDisconnect(.con)
     
-    cat("Done adding shape ", id, " to segment database.\n")
+    if (verbose) cat("Done adding shape ", id, " to segment database.\n")
 
-    plotSegments()
+    if (plot) plotSegments()
     
     invisible(NULL)
 }
@@ -224,7 +267,7 @@ createSegmentTable <- function(db = "db/gtfs-static2.db", yes = FALSE,
     }
     if (add) {
         dbGetQuery(.con, "CREATE TABLE shapes_seg (shape_id VARCHAR(255), segment_id INTEGER,
-                                                   segment_sequence INTEGER)")
+                                                   segment_sequence INTEGER, direction INTEGER)")
         cat("New table `shapes_seg` created.\n")
     }
     
@@ -275,7 +318,7 @@ plotSegments <- function(id, db = "db/gtfs-static2.db",
         segments <-
             dbGetQuery(.con,
                        sprintf("SELECT sh.shape_id, sh.segment_id, sh.segment_sequence,
-                                       sg.shape_pt_sequence,
+                                       sh.direction, sg.shape_pt_sequence,
                                        CAST(sg.shape_pt_lat AS REAL) AS lat,
                                        CAST(sg.shape_pt_lon AS REAL) AS lon,
                                        CAST(sg.distance_into_segment AS REAL) AS distance
@@ -284,6 +327,16 @@ plotSegments <- function(id, db = "db/gtfs-static2.db",
                                    AND sh.shape_id IN ('%s')
                               ORDER BY sh.shape_id, sh.segment_sequence, sg.shape_pt_sequence",
                               paste(id, collapse = "','")))
+
+        ## fix up directions
+        A <- tapply(1:nrow(segments),
+                    paste(segments$shape_id, segments$segment_sequence),
+                    function(i)
+                        if (all(segments$direction[i] == 1)) rev(i) else i)
+        segments <-
+            segments[as.numeric(
+                do.call(c, A[unique(paste(segments$shape_id, segments$segment_sequence))])
+            ), ]
     }
 
     mobj <- iNZightMap(~lat, ~lon, data = segments, name = "Bus Route Segments")
