@@ -250,7 +250,7 @@ shape2seg <- function(id, db = "db/gtfs-static2.db",
     
     if (verbose) cat("Done adding shape ", id, " to segment database.\n")
 
-    if (plot) plotSegments()
+    if (plot) plotSegments(db = db)
     
     invisible(NULL)
 }
