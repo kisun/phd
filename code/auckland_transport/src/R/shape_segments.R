@@ -45,11 +45,25 @@ shape2seg <- function(id, db = "db/gtfs-static2.db",
     cur.ids <- dbGetQuery(.con, "SELECT DISTINCT segment_id FROM segments")$segment_id
     seg.df <- NULL
     shape$segment_id <- NA
+
+##    try(plotSegments(db ="db/gtfs-static-symonds.db"), TRUE)
+    
     if (!all(shape$match)) {
         for (i in unique(shape[!shape$match, "seg"])) {
             ID <- if (length(cur.ids) == 0) { 1 } else { max(cur.ids, na.rm = TRUE) + 1 }
             cur.ids <- c(cur.ids, ID)
-            new.df <- data.frame(segment_id = ID, shape[shape$seg == i, 1:2])
+            ## need to include the point before and after:
+            ssi <- which(shape$seg == i)
+            ##if (min(ssi) > 1) ssi <- c(min(ssi) - 1, ssi)
+            ##if (max(ssi) < nrow(shape)) ssi <- c(ssi, max(ssi) + 1)
+            
+            ##try({
+            ##    with(shape[ssi, ], addLines(lon, lat, gpar = list(col = "red")))
+            ##    grid::grid.locator()
+            ##}, TRUE)
+            
+            
+            new.df <- data.frame(segment_id = ID, shape[ssi, 1:2])
             z <- t(new.df[, 2:3])
             new.df$shape_pt_sequence <- 1:nrow(new.df)
             new.df$distance <- c(0, cumsum(distanceFlat(z[, -1], z[, -ncol(z)])))
@@ -68,6 +82,8 @@ shape2seg <- function(id, db = "db/gtfs-static2.db",
 
     ## gotta split "matches" up into segmental matches: 1-1-1-1-1 -> 1-1-1-2-2
     segments <- getSegments(.con)
+    ## plotSegments(db ="db/gtfs-static-symonds.db")
+    ## grid::grid.locator()
     for (i in unique(shape$seg)) {
         ri <- shape$seg == i
         tapply(paste(round(segments$lat, 4), round(segments$lon, 4), sep=","),

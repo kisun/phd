@@ -20,7 +20,7 @@ shapes <- unique(trips$shape_id)
 
 ## create their shape_segment files
 db <- "db/gtfs-static-symonds.db"
-createSegmentTable(db = db, yes = TRUE)
+createSegmentTable(db = db, yes = FALSE)
 for (i in seq_along(shapes))
     shape2seg(id = shapes[i], db = db, plot = TRUE)
 
@@ -38,7 +38,7 @@ day1 <- dbGetQuery(histcon,
                    sprintf("SELECT trip_id, route_id, vehicle_id, trip_start_time,
                                    position_latitude, position_longitude, timestamp
                               FROM vehicle_positions WHERE timestamp BETWEEN %s AND %s
-                               AND trip_id IN ('%s')",
+                               AND trip_id IN ('%s') ORDER BY timestamp",
                            ts1[1], ts1[2], paste(trips$trip_id, collapse = "','")))
 
 plotSegments(db = db)
@@ -63,10 +63,6 @@ for (i in seq_along(day1[[1]])) {
     }
 
     plotBus(V, db)
-
-    with(V$shapefull, addLines(lon, lat))
-    tapply(1:nrow(V$shapefull), V$shapefull$segment_id,
-           function(i) with(V$shapefull[i,], addLines(lon, lat, gpar = list(col = "white"))))
     
     V <- update(V)
 }
