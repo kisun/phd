@@ -17,10 +17,10 @@ trips <- dbGetQuery(con, "SELECT route_id, shape_id, trip_id FROM trips WHERE tr
                            (SELECT stop_id FROM stops WHERE stop_name LIKE 'Symonds%'))")
 shapes <- unique(trips$shape_id)
 
-
 ## create their shape_segment files
 db <- "db/gtfs-static-symonds.db"
-createSegmentTable(db = db, yes = FALSE)
+createSegmentTable(db = db)
+
 for (i in seq_along(shapes))
     shape2seg(id = shapes[i], db = db, plot = TRUE)
 
@@ -48,21 +48,36 @@ with(day1, addPoints(position_longitude, position_latitude, pch = 19,
 
 vehicles <- list()
 i <- 1
-for (i in seq_along(day1[[1]])) {
-    row <- day1[i, ]
 
+pb <- txtProgressBar(1, nrow(day1), style = 3)
+for (i in i:length(day1[[1]])) {
+    row <- day1[i, ]
     ## grab vehicle:
     vid <- row$vehicle_id
     ## does it exists?
     if (vid %in% names(vehicles)) {
-        V <- vehicles$vid
+        V <- vehicles[[vid]]     ## "read from database"
         V <- moveBus(V, row)
     } else {
         ## create a new one
-        V <- newBus(row, db)
+        V <- newBus(row, db, n.particles = 100)
     }
-
-    plotBus(V, db)
-    
     V <- update(V)
-}
+    ##plotBus(V, db)
+    setTxtProgressBar(pb, i)
+    vehicles[[vid]] <- V         ## "write to database"
+}; close(pb)
+
+lapply(vehicles, function(V) {
+    dev.flush()
+    if (dim(V$particles)[3] > 1){
+        t <- V$mat["t",]
+        t <- t - min(t)
+        Dhat <- apply(V$particles[1,,], 2, mean)
+        Dvar <- apply(V$particles[1,,], 2, range)
+        plot(t, Dhat, xlab = "Time (s)", ylab = "Distance (m)", type = "n")
+        arrows(t, Dvar[1,], y1=Dvar[2,], length = 0.05, angle = 90, code = 0)
+        points(t, Dhat, pch = 21, bg = "white", cex = 0.7)
+        locator(1)
+    }
+})

@@ -36,7 +36,7 @@ newBus <- function(row, db, n.particles = 10) {
     obj
 }
 moveBus <- function(obj, row) {
-    obj$mat <- cbind(mat,
+    obj$mat <- cbind(obj$mat,
                      rbind(as.numeric(row$position_latitude),
                            as.numeric(row$position_longitude),
                            as.numeric(row$timestamp), NA))
@@ -50,7 +50,13 @@ plotBus <- function(obj, db) {
     n <- ncol(obj$mat)
     plotSegments(id = obj$shape_id, db = db)
     with(obj$shapefull[1, ], addPoints(shape_pt_lon, shape_pt_lat, pch = 18, gp = list(cex = 0.6)))
-    addPoints(obj$mat["lon", n], obj$mat["lat", n], pch = 19, gpar = list(col = "red", cex = 0.5))
+    if (!all(is.na(obj$particles))) {
+        pos <- sapply(obj$particles[1,,dim(obj$particles)[3]], h, shape = obj$shapefull)
+        addPoints(pos[2,], pos[1,], gpar = list(col = "#00009930", cex = 0.3), pch = 4)
+    }
+    addPoints(obj$mat["lon", n], obj$mat["lat", n], pch = 3,
+              gpar = list(col = "red", cex = 0.5, alpha = 1, lwd = 2))
+    
     invisible(NULL)
 }
 h <- function(x, shape) {
@@ -77,20 +83,87 @@ update <- function(obj) {
     M <- ncol(obj$particles)
     if (all(is.na(obj$particles))) {
         ## need to find where the bus is on the route:
-        D <- runif(M, 0, max(obj$shapefull$distance_into_shape))
-        for (i in 1:10) {
-            d <- distanceFlat(mat[1:2, 1, drop = FALSE], r <- sapply(D, h, shape = obj$shapefull))
-            pr <- dnorm(d, 0, sqrt(1e12 / 10^i))
-            wt <- pr / sum(pr)
-            wt[is.na(wt)] <- 0
-            D <- msm::rtnorm(M, sample(D, replace = TRUE, prob = wt), sqrt(1e12 / 10^i),
-                             lower = 0, upper = max(obj$shapefull$distance_into_shape))
+        D <- runif(1e3, 0, max(obj$shapefull$distance_into_shape))
+        d <- distanceFlat(mat[1:2, 1, drop = FALSE], sapply(D, h, shape = obj$shapefull))
+        pr <- dnorm(d, 0, 20)
+        wt <- pr / sum(pr)
+        wt[is.na(wt)] <- 0
+        if (any(wt > 0)) {
+            D <- sample(D, size = M, replace = TRUE, prob = wt)
+            obj$particles[1,,1] <- D
         }
-        obj$particles[1,,1] <- D
-        obj$particles[2,,1] <- 0
-        obj$particles[3,,1] <- 0
     } else {
-        
+        k <- dim(obj$particles)[3]
+        X <- obj$particles[,,k]
+        dt <- mat["delta", n] 
+        ## use whatever to update the particles:
+        if (all(is.na(X[2,]))) {
+            ## no speed set - guess it?
+            new <- array(NA, dim = dim(X))
+            new[3,] <- rnorm(M, 0, 3)
+            new[2,] <- runif(M, 0, 30)  ## m/s
+            new[1,] <- ## X[1,] + msm::rtnorm(M, dt * new[2,], 3 * dt, lower = 0)
+                X[1,] + dt * new[2, ]
+        } else {
+            ## speed already there, adjust it:
+            new <- array(NA, dim = dim(X))
+            new[3,] <- rnorm(M, 0, 1)
+            new[2,] <- pmax(0, X[2,] + dt * new[3,])
+            new[1,] <- X[1,] + dt * new[2, ]
+        }
+
+        ## apply selection:
+        d <- distanceFlat(mat[1:2, n, drop = FALSE], sapply(new[1, ], h, shape = obj$shapefull))
+        pr <- dnorm(d, 0, 20)
+        wt <- pr / sum(pr)
+        wt[is.na(wt)] <- 0
+        wi <- sample(M, replace = TRUE, prob = wt)
+        new <- new[, wi]
+        obj$particles <- abind::abind(obj$particles, new)
     }
+    
     obj
+}
+
+
+
+createHistoricalDb <- function(db = "db/gtfs-static2.db", yes = FALSE,
+                               .con = dbConnect(SQLite(), db)) {
+    add <- TRUE
+    if ("history" %in% dbListTables(.con)) {
+        if (!yes)
+            yes <- readline("Table `history` exists ... overwrite? (y/n) ") == "y"
+        if (yes) dbGetQuery(.con, "DROP TABLE history")
+        else add <- FALSE
+    }
+    if (add) {
+        dbGetQuery(.con, "CREATE TABLE history (
+    oid INTEGER PRIMARY KEY,
+    trip_id VARCHAR(10),
+    route_id VARCHAR(10),
+    shape_id VARCHAR(10),
+    segment_id INTEGER,
+    segment_direction INTEGER,
+    trip_start_time VARCHAR(8),
+    trip_start_date VARCHAR(10),
+    vehicle_id VARCHAR(10),
+    position_latitude FLOAT,
+    position_longitude FLOAT,
+    timestamp BIGINT,
+    distance_mean FLOAT,
+    distance_median FLOAT,
+    distance_var FLOAT,
+    distance_min FLOAT,
+    distance_max FLOAT,
+    speed_mean FLOAT,
+    speed_median FLOAT,
+    speed_var FLOAT,
+    speed_min FLOAT,
+    speed_max FLOAT
+)")
+        cat("New table `history` created.\n")
+    }
+
+    dbDisconnect(.con)
+    invisible(NULL)
 }
