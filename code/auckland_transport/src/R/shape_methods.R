@@ -36,16 +36,28 @@ newBus <- function(row, db, n.particles = 10) {
     obj
 }
 moveBus <- function(obj, row) {
+    n <- ncol(obj$mat)
+    dt <- row$timestamp - obj$mat["t", n]
+    if (dt == 0) return(obj)
     obj$mat <- cbind(obj$mat,
                      rbind(as.numeric(row$position_latitude),
                            as.numeric(row$position_longitude),
                            as.numeric(row$timestamp), NA))
-    n <- ncol(obj$mat)
-    obj$mat["delta", n] <- diff(obj$mat["t", (n-1):n])
 
+    obj$mat["delta", n + 1] <- dt
     obj
 }
-
+resetBus <- function(obj, row, db) {
+    ## new trip ... so reset things
+    new <- newBus(row, db, dim(obj$particles)[2])
+    print(obj$mat)
+    print(new$mat)
+    new$mat <- cbind(obj$mat, new$mat)
+    print(new$mat)
+    new$particles <- abind::abind(obj$particles, obj$particles[,,dim(obj$particles)[3]])
+    new$particles[1,,dim(new$particles)[3]] <- 0
+    new
+}
 plotBus <- function(obj, db) {
     n <- ncol(obj$mat)
     plotSegments(id = obj$shape_id, db = db)
@@ -95,7 +107,10 @@ update <- function(obj) {
     } else {
         k <- dim(obj$particles)[3]
         X <- obj$particles[,,k]
-        dt <- mat["delta", n] 
+        dt <- mat["delta", n]
+        if (dt  == 0) return(obj)
+        dmax <- max(obj$shapefull$distance_into_shape)
+        if (all(X[1,] == dmax)) return(obj)
         ## use whatever to update the particles:
         if (all(is.na(X[2,]))) {
             ## no speed set - guess it?
@@ -103,22 +118,38 @@ update <- function(obj) {
             new[3,] <- rnorm(M, 0, 3)
             new[2,] <- runif(M, 0, 30)  ## m/s
             new[1,] <- ## X[1,] + msm::rtnorm(M, dt * new[2,], 3 * dt, lower = 0)
-                X[1,] + dt * new[2, ]
+                pmax(X[1,] + dt * new[2, ], dmax)
         } else {
             ## speed already there, adjust it:
             new <- array(NA, dim = dim(X))
             new[3,] <- rnorm(M, 0, 1)
             new[2,] <- pmax(0, X[2,] + dt * new[3,])
-            new[1,] <- X[1,] + dt * new[2, ]
+            new[1,] <- pmin(X[1,] + dt * new[2, ], dmax)
         }
-
         ## apply selection:
-        d <- distanceFlat(mat[1:2, n, drop = FALSE], sapply(new[1, ], h, shape = obj$shapefull))
-        pr <- dnorm(d, 0, 20)
-        wt <- pr / sum(pr)
-        wt[is.na(wt)] <- 0
-        wi <- sample(M, replace = TRUE, prob = wt)
-        new <- new[, wi]
+        if (any(new[1,] <=  dmax)) {
+            d <- distanceFlat(mat[1:2, n, drop = FALSE], sapply(new[1, ], h, shape = obj$shapefull))
+            var <- 20
+            pr <- dnorm(d, 0, var)
+            ## bus might have stopped!
+            if (all(distanceFlat(mat[1:2, n, drop = FALSE],
+                                 sapply(X[1, ], h, shape = obj$shapefull)) < d)) {
+                new[2,] <- runif(M, 0, 30)
+                new[1,] <- pmax(X[1,] + dt * new[2, ], dmax)
+                d <- distanceFlat(mat[1:2, n, drop = FALSE],
+                                  sapply(new[1, ], h, shape = obj$shapefull))
+                pr <- dnorm(d, 0, var)
+            }
+            while (all(pr < 1e-5)) {
+                var <- 2 * var
+                pr <- dnorm(d, 0, var)
+            }
+            wt <- pr / sum(pr)
+            wt[is.na(wt)] <- 0
+            
+            wi <- sample(M, replace = TRUE, prob = wt)
+            new <- new[, wi]
+        }
         obj$particles <- abind::abind(obj$particles, new)
     }
     
@@ -166,4 +197,11 @@ createHistoricalDb <- function(db = "db/gtfs-static2.db", yes = FALSE,
 
     dbDisconnect(.con)
     invisible(NULL)
+}
+writeHistory <- function(v, db) {
+    dbWriteTable(dbConnect(SQLite(), db),
+                 data.frame(trip_id = v$trip_id,
+                            route_id = v$route_id,
+                            shape_id = v$shape_id,
+                            v$segment_id))
 }

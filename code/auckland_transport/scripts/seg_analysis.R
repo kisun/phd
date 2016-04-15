@@ -45,6 +45,7 @@ plotSegments(db = db)
 with(day1, addPoints(position_longitude, position_latitude, pch = 19,
                      gp = list(cex = 0.3, col = "#990000")))
 
+createHistoricalDb(db)
 
 vehicles <- list()
 i <- 1
@@ -57,15 +58,22 @@ for (i in i:length(day1[[1]])) {
     ## does it exists?
     if (vid %in% names(vehicles)) {
         V <- vehicles[[vid]]     ## "read from database"
-        V <- moveBus(V, row)
+        ## has the trip changed?
+        if (row$trip_id != V$trip_id) {
+            V <- resetBus(V, row, db)
+        } else {
+            V <- moveBus(V, row)
+        }
     } else {
         ## create a new one
         V <- newBus(row, db, n.particles = 100)
     }
+    ## plotBus(V, db)
     V <- update(V)
-    ##plotBus(V, db)
+    ## plotBus(V, db)
     setTxtProgressBar(pb, i)
     vehicles[[vid]] <- V         ## "write to database"
+    ## writeHistory(V, db)
 }; close(pb)
 
 lapply(vehicles, function(V) {
