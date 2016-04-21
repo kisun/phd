@@ -7,7 +7,9 @@ newBus <- function(row, db, n.particles = 10) {
                 route_id = row$route_id,
                 shape_id = dbGetQuery(dbConnect(SQLite(), db),
                                        sprintf("SELECT shape_id FROM trips WHERE trip_id='%s'",
-                                               row$trip_id))$shape_id)
+                                               row$trip_id))$shape_id,
+                trip_start_time = row$trip_start_time,
+                trip_start_date = tsDate(row$timestamp))
     obj$shape <- dbGetQuery(dbConnect(SQLite(), db),
                             sprintf("SELECT shape_id, sh.segment_id, segment_sequence, direction,
                                             MAX( CAST(distance_into_segment AS real) ) AS segment_length
@@ -50,10 +52,7 @@ moveBus <- function(obj, row) {
 resetBus <- function(obj, row, db) {
     ## new trip ... so reset things
     new <- newBus(row, db, dim(obj$particles)[2])
-    print(obj$mat)
-    print(new$mat)
     new$mat <- cbind(obj$mat, new$mat)
-    print(new$mat)
     new$particles <- abind::abind(obj$particles, obj$particles[,,dim(obj$particles)[3]])
     new$particles[1,,dim(new$particles)[3]] <- 0
     new
@@ -175,6 +174,7 @@ createHistoricalDb <- function(db = "db/gtfs-static2.db", yes = FALSE,
     shape_id VARCHAR(10),
     segment_id INTEGER,
     segment_direction INTEGER,
+    segment_min_distance FLOAT,
     trip_start_time VARCHAR(8),
     trip_start_date VARCHAR(10),
     vehicle_id VARCHAR(10),
@@ -190,7 +190,8 @@ createHistoricalDb <- function(db = "db/gtfs-static2.db", yes = FALSE,
     speed_median FLOAT,
     speed_var FLOAT,
     speed_min FLOAT,
-    speed_max FLOAT
+    speed_max FLOAT,
+    nparticles INT
 )")
         cat("New table `history` created.\n")
     }
@@ -198,10 +199,35 @@ createHistoricalDb <- function(db = "db/gtfs-static2.db", yes = FALSE,
     dbDisconnect(.con)
     invisible(NULL)
 }
-writeHistory <- function(v, db) {
-    dbWriteTable(dbConnect(SQLite(), db),
-                 data.frame(trip_id = v$trip_id,
-                            route_id = v$route_id,
-                            shape_id = v$shape_id,
-                            v$segment_id))
+writeHistory <- function(v, vid, db) {
+    n <- ncol(v$mat)
+    m <- dim(v$particles)[3]
+    if (any(is.na(v$particles[,,m]))) return(invisible(NULL))
+    
+    d <- v$particles[1,,m]
+    s <- v$particles[2,,m]
+    shape <- v$shapefull
+    ## This could cause issues ... but hopefully not once the shape algorithms
+    ## have been fixed up so shapes actually join together at nodes.
+    si <- tail(which((median(d) - shape$distance_into_shape) >= 0), 1)        
+
+    con <- dbConnect(SQLite(), db)
+    dbGetQuery(con,
+               sprintf("INSERT INTO history ('trip_id', 'route_id', 'shape_id', 'segment_id',
+                            'segment_direction', 'segment_min_distance',
+                            'trip_start_time', 'trip_start_date', 'vehicle_id',
+                            'position_latitude', 'position_longitude', 'timestamp',
+                            'distance_mean', 'distance_median', 'distance_var',
+                            'distance_min', 'distance_max', 'speed_mean', 'speed_median',
+                            'speed_var', 'speed_min', 'speed_max', 'nparticles')
+                             VALUES ('%s')",
+                       paste(v$trip_id, v$route_id, v$shape_id, shape$segment_id[si],
+                             shape$direction[si],
+                             min(shape$distance_into_shape[shape$segment_id == shape$segment_id[si]]),
+                             v$trip_start_time, v$trip_start_date, vid, v$mat["lat", n],
+                             v$mat["lon", n], v$mat["t", n], mean(d), median(d), var(d),
+                             min(d), max(d), mean(s), median(s), var(s), min(s), max(s),
+                             dim(v$particles)[2], sep = "','")))
+    dbDisconnect(con)
+    invisible(NULL)
 }

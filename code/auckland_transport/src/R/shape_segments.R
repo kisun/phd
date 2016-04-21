@@ -333,7 +333,7 @@ plotSegments <- function(id, db = "db/gtfs-static2.db",
         shapes <- TRUE
         segments <-
             dbGetQuery(.con,
-                       sprintf("SELECT sh.shape_id, sh.segment_id, sh.segment_sequence,
+                       sql <- sprintf("SELECT sh.shape_id, sh.segment_id, sh.segment_sequence,
                                        sh.direction, sg.shape_pt_sequence,
                                        CAST(sg.shape_pt_lat AS REAL) AS lat,
                                        CAST(sg.shape_pt_lon AS REAL) AS lon,
