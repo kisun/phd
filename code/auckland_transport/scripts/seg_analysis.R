@@ -161,17 +161,86 @@ loadall()
 library(iNZightMaps)
 
 ## get a trip:
-con <- dbConnect(SQLite(), "db/gtfs-static-symonds.db")
+con <- dbConnect(SQLite(), db <- "db/gtfs-static-symonds.db")
 trips <- dbGetQuery(con, "SELECT trip_id, count(trip_id) AS count
                           FROM history GROUP BY trip_id ORDER BY count DESC")
 
 trip1 <- dbGetQuery(con, sprintf("SELECT * FROM history
                                   WHERE trip_id='%s' ORDER BY timestamp",
                                  trips$trip_id[4]))
-mp <- iNZightMap(~position_latitude, ~position_longitude, data = trip1)
-plot(mp, pch = 19, cex.pt = 0.4)
+trip1 <- trip1[- (which(diff(trip1$timestamp) == 0) + 1), ]
+
+plotSegments(unique(trip1$shape_id), db = db, zoom = 0.2)
+ClickOnZoom(0.2)
+with(trip1, addPoints(position_longitude, position_latitude, pch = 4,
+                      gpar = list(col = "#990000", alpha = 0.5, cex = 0.3)))
 
 trip1$timeSeconds <-
     with(trip1, timestamp - as.numeric(as.POSIXct(paste(trip_start_date, trip_start_time))))
 
-#X <- 
+## get stop distances:
+loadall()
+bus <- newBus(trip1[i <- 1, ], db, n = M <- 100)
+##plotBus(bus, db)
+with(bus$stops, addPoints(stop_lon, stop_lat, gpar = list(cex = 0.2, col = "#000099"), pch = 19))
+
+
+bus <- update(bus)
+plotBus(bus, db)
+
+plotDistance <- function(obj, t) {
+    n <- ncol(obj$mat)
+    M <- dim(obj$particles)[2]
+    start <- as.numeric(as.POSIXct(paste(obj$trip_start_date[1], obj$trip_start_time[1])))
+    at <- as.numeric(as.POSIXct(paste(obj$trip_start_date[1], obj$stops$arrival_time))) - start
+    xlim <- if (!missing(t)) c(0, max(at, ifelse(t >= start, t - start, t))) else c(0, max(at))
+    plot(NA, xlim = xlim,
+         ylim = c(0, max(obj$shapefull$distance_into_shape)),
+         xlab = "Time (seconds)", ylab = "Distance (m)")
+    st <- obj$stops$distance_into_trip
+    abline(h = st, lty = 2, col = "#cccccc")
+    points(at, st, pch = 17, cex = 0.6)
+    if (!missing(t)) {
+        if (all(t >= start)) t <- t - start
+        abline(v = t, lty = 3, col = "#444444")
+    }
+    points(rep(obj$mat["t", ], each = M) - start, c(obj$particles[1, , ]),
+           col = "#00009940", pch = 4, cex = 0.5)
+}
+plotDistance(bus, trip1$timeSeconds)
+
+## second observation:
+for (i in 3:nrow(trip1)) {
+    bus <- moveBus(bus, trip1[i, ])
+    bus <- update(bus)
+    ##plotBus(bus, db)
+    plotDistance(bus, trip1$timeSeconds)
+}
+
+
+## now using the 'best estimate' compute other stuff ...
+plotDistance(bus)
+dhat <- apply(bus$particles[1,,], 2, median)
+
+Y <- dhat
+t <- bus$mat["t", ] - as.numeric(as.POSIXct(paste(bus$trip_start_date[1], bus$trip_start_time[1])))
+
+ds <- bus$stops$distance_into_trip
+
+N <- nrow(bus$stops) - 1
+T0 <- 0
+T <- rep(NA, N)
+pi0 <- 1
+pi <- rep(0.5, N)
+gamma <- log(30)
+sig.gamma <- log(100)
+D <- numeric(N)
+s <- runif(N, 0, 20)
+
+plotDistance(bus)
+
+## Segment 1:
+Y1 <- Y[Y >= ds[1] & Y < ds[2]]
+t1 <- t[Y >= ds[1] & Y < ds[2]]
+seg1 <- lm(Y1 ~ t1)
+abline(seg1)

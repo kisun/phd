@@ -34,6 +34,11 @@ newBus <- function(row, db, n.particles = 10) {
     tmp$distance_into_shape <- c(0, cumsum(tmp$length[-nrow(tmp)]))
     tmp$bearing <- c(bearing(p1, p2), NA)
     obj$shapefull <- tmp
+
+    ## stops:
+    obj$stops <- getSchedule(obj$trip_id, db, verbose = FALSE)
+    obj$stops$distance_into_trip <- getShapeDist(obj$stops, obj$shapefull)
+    
     obj$particles <- array(NA, dim = c(3, n.particles, 1))
     obj
 }
@@ -60,11 +65,11 @@ resetBus <- function(obj, row, db) {
 plotBus <- function(obj, db) {
     n <- ncol(obj$mat)
     plotSegments(id = obj$shape_id, db = db)
-    with(obj$shapefull[1, ], addPoints(shape_pt_lon, shape_pt_lat, pch = 18, gp = list(cex = 0.6)))
+    with(obj$stops, addPoints(stop_lon, stop_lat, pch = 2, gpar = list(cex = 0.4, col = "#000099")))
     if (!all(is.na(obj$particles))) {
         pos <- sapply(obj$particles[1,,dim(obj$particles)[3]], h, shape = obj$shapefull)
         addPoints(pos[2,], pos[1,], gpar = list(col = "#00009930", cex = 0.3), pch = 4)
-    }
+    }    
     addPoints(obj$mat["lon", n], obj$mat["lat", n], pch = 3,
               gpar = list(col = "red", cex = 0.5, alpha = 1, lwd = 2))
     
@@ -109,7 +114,10 @@ update <- function(obj) {
         dt <- mat["delta", n]
         if (dt  == 0) return(obj)
         dmax <- max(obj$shapefull$distance_into_shape)
-        if (all(X[1,] == dmax)) return(obj)
+        if (all(X[1,] == dmax)) {
+            obj$particles <- abind::abind(obj$particles, X)
+            return(obj)
+        }
         ## use whatever to update the particles:
         if (all(is.na(X[2,]))) {
             ## no speed set - guess it?
@@ -117,7 +125,7 @@ update <- function(obj) {
             new[3,] <- rnorm(M, 0, 3)
             new[2,] <- runif(M, 0, 30)  ## m/s
             new[1,] <- ## X[1,] + msm::rtnorm(M, dt * new[2,], 3 * dt, lower = 0)
-                pmax(X[1,] + dt * new[2, ], dmax)
+                pmin(X[1,] + dt * new[2, ], dmax)
         } else {
             ## speed already there, adjust it:
             new <- array(NA, dim = dim(X))

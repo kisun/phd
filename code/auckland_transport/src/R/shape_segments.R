@@ -368,6 +368,9 @@ plotSegments <- function(id, db = "db/gtfs-static2.db",
 
         addLines(segments$lon, segments$lat, id = as.numeric(as.factor(segments$shape_id)),
                  gp = list(col = cols, lwd = lwd))
+        wi <- c(tapply(1:nrow(segments), segments$shape_id, function(i) i[1]))
+        with(segments[wi, ], addPoints(lon, lat, pch = 19,
+                                       gpar = list(col = cols, cex = 0.6)))
     } else {
         addLines(segments$lon, segments$lat, id = segments$segment_id,
                  gp = list(col = col, lwd = lwd, alpha = alpha))
