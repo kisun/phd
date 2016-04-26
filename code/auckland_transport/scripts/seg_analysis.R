@@ -8,7 +8,7 @@ loadall()
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
-### Analysis using segments instead of shapefiles
+### Analysis using segments instead of shapefilesw3-
 
 ## Get a bunch of routes that travel around the same area (along Symonds Street)
 con <- dbConnect(SQLite(), "db/gtfs-static.db")
@@ -214,7 +214,7 @@ for (i in 3:nrow(trip1)) {
     bus <- moveBus(bus, trip1[i, ])
     bus <- update(bus)
     ##plotBus(bus, db)
-    plotDistance(bus, trip1$timeSeconds)
+    ##plotDistance(bus, trip1$timeSeconds)
 }
 
 
@@ -244,3 +244,32 @@ Y1 <- Y[Y >= ds[1] & Y < ds[2]]
 t1 <- t[Y >= ds[1] & Y < ds[2]]
 seg1 <- lm(Y1 ~ t1)
 abline(seg1)
+
+
+
+## model ...
+library(rstan)
+
+bus.dat <- list(N = length(Y),
+                M = nrow(bus$stops),
+                t = t, d = round(Y),
+                s = round(bus$stops$distance_into_trip))
+bus.dat$smin <- sapply(bus.dat$s, function(si) {
+    r <- max(bus.dat$t[bus.dat$d <= si - 20])
+    if (is.infinite(r)) return(0) else return(r)
+})
+bus.dat$smax <- sapply(bus.dat$s, function(si) {
+    r <- min(bus.dat$t[bus.dat$d >= si + 20])
+    if (is.infinite(r)) return(max(bus.dat$t)) else return(r)
+})
+
+
+fit <- stan(file = "src/stan/model1.stan", data = bus.dat, iter = 1000, chains = 4)
+fit
+
+ests <- extract(fit, permuted = TRUE)
+plotDistance(bus)
+points(colMeans(ests$T), bus.dat$s, col = "red", pch = 19)
+arrows(colMeans(ests$T), bus.dat$s, colMeans(ests$T) + mean(ests$gamma), code = 0)
+
+hist(ests$tau)
