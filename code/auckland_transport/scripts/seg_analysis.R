@@ -170,10 +170,10 @@ trip1 <- dbGetQuery(con, sprintf("SELECT * FROM history
                                  trips$trip_id[4]))
 trip1 <- trip1[- (which(diff(trip1$timestamp) == 0) + 1), ]
 
-plotSegments(unique(trip1$shape_id), db = db, zoom = 0.2)
-ClickOnZoom(0.2)
-with(trip1, addPoints(position_longitude, position_latitude, pch = 4,
-                      gpar = list(col = "#990000", alpha = 0.5, cex = 0.3)))
+#plotSegments(unique(trip1$shape_id), db = db, zoom = 0.2)
+#ClickOnZoom(0.2)
+#with(trip1, addPoints(position_longitude, position_latitude, pch = 4,
+#                      gpar = list(col = "#990000", alpha = 0.5, cex = 0.3)))
 
 trip1$timeSeconds <-
     with(trip1, timestamp - as.numeric(as.POSIXct(paste(trip_start_date, trip_start_time))))
@@ -181,7 +181,7 @@ trip1$timeSeconds <-
 ## get stop distances:
 loadall()
 bus <- newBus(trip1[i <- 1, ], db, n = M <- 100)
-##plotBus(bus, db)
+plotBus(bus, db)
 with(bus$stops, addPoints(stop_lon, stop_lat, gpar = list(cex = 0.2, col = "#000099"), pch = 19))
 
 
@@ -205,7 +205,7 @@ plotDistance <- function(obj, t) {
         abline(v = t, lty = 3, col = "#444444")
     }
     points(rep(obj$mat["t", ], each = M) - start, c(obj$particles[1, , ]),
-           col = "#00009940", pch = 4, cex = 0.5)
+           col = "#00009920", pch = 4, cex = 0.3)
 }
 plotDistance(bus, trip1$timeSeconds)
 
@@ -227,49 +227,52 @@ t <- bus$mat["t", ] - as.numeric(as.POSIXct(paste(bus$trip_start_date[1], bus$tr
 
 ds <- bus$stops$distance_into_trip
 
-N <- nrow(bus$stops) - 1
-T0 <- 0
-T <- rep(NA, N)
-pi0 <- 1
-pi <- rep(0.5, N)
-gamma <- log(30)
-sig.gamma <- log(100)
-D <- numeric(N)
-s <- runif(N, 0, 20)
-
-plotDistance(bus)
-
-## Segment 1:
-Y1 <- Y[Y >= ds[1] & Y < ds[2]]
-t1 <- t[Y >= ds[1] & Y < ds[2]]
-seg1 <- lm(Y1 ~ t1)
-abline(seg1)
-
-
-
 ## model ...
 library(rstan)
+options(width = 100)
 
 bus.dat <- list(N = length(Y),
                 M = nrow(bus$stops),
                 t = t, d = round(Y),
                 s = round(bus$stops$distance_into_trip))
-bus.dat$smin <- sapply(bus.dat$s, function(si) {
-    r <- max(bus.dat$t[bus.dat$d <= si - 20])
-    if (is.infinite(r)) return(0) else return(r)
-})
-bus.dat$smax <- sapply(bus.dat$s, function(si) {
-    r <- min(bus.dat$t[bus.dat$d >= si + 20])
-    if (is.infinite(r)) return(max(bus.dat$t)) else return(r)
-})
+bus.dat$seg <-
+    sapply(bus.dat$d, function(x) sum(x >= bus.dat$s + 10) *
+                                  all(x <= bus.dat$s - 10 | x >= bus.dat$s + 10))
+bus.dat$stop <-
+    sapply(bus.dat$d, function(x) sum(x >= bus.dat$s + 10) *
+                                  any(x > bus.dat$s - 10 & x < bus.dat$s + 10))
 
+inits <- function() {
+    o <- list(v = with(bus.dat, (s[-1] - s[-M]) / (smin[-1] - smin[-M])))
+    o$v[is.infinite(o$v)] <- 30
+    o
+}
 
-fit <- stan(file = "src/stan/model1.stan", data = bus.dat, iter = 1000, chains = 4)
-fit
+fit <- stan("src/stan/model1.stan", data = bus.dat, iter = 2000,
+            warmup = 1000, thin = 1, cores = 4)
 
 ests <- extract(fit, permuted = TRUE)
-plotDistance(bus)
-points(colMeans(ests$T), bus.dat$s, col = "red", pch = 19)
-arrows(colMeans(ests$T), bus.dat$s, colMeans(ests$T) + mean(ests$gamma), code = 0)
+plotDistance(bus, max(bus.dat$t))
 
-hist(ests$tau)
+points(colMeans(ests$T), bus.dat$s, col = "#99000040", pch = 19, cex = 0.8)
+points(colMeans(ests$D), bus.dat$s, col = "#00990040", pch = 19, cex = 0.8)
+
+# apply(ests$T, 1, function(x) points(x, bus.dat$s, col = "#99000030", pch = 3, cex = 0.3))
+#arrows(colMeans(ests$T), bus.dat$s, colMeans(ests$T) + mean(ests$gamma), code = 0)
+
+drawLine <- function(T, D, s) {
+    ## plotDistance(bus, max(bus.dat$t))
+    xx <- c(rbind(D, T))
+    ## xx[length(xx)] <- max(bus.dat$t)
+    yy <- rep(s, each = 2)[-(c(1, 2 * length(s)))]
+    lines(xx, yy, lwd = 1, lty = 3, col = "#00990040")
+}
+
+plotDistance(bus, max(bus.dat$t))
+for (i in nrow(ests$T) - (50:0)) {
+    drawLine(ests$T[i, -1], ests$D[i,-bus.dat$M], bus.dat$s)
+    points(apply(ests$T, 2, min), bus.dat$s, cex = apply(ests$pi, 2, median)^2,
+           col = "#aa000080", pch = 19)
+}
+
+pairs(fit, pars = c("sigsq_obs", "gamma", "mu_tau", "lp__"))
