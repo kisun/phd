@@ -188,6 +188,20 @@ with(bus$stops, addPoints(stop_lon, stop_lat, gpar = list(cex = 0.2, col = "#000
 bus <- update(bus)
 plotBus(bus, db)
 
+## i <- i + 1
+## bus <- update(moveBus(bus, trip1[i, ]))
+## plotBus(bus, db)
+## bus$parameters[,,4]
+## bus$particles[,,i]
+
+
+## obj <- bus
+
+
+
+
+
+
 plotDistance <- function(obj, t) {
     n <- ncol(obj$mat)
     M <- dim(obj$particles)[2]
@@ -210,8 +224,8 @@ plotDistance <- function(obj, t) {
 plotDistance(bus, trip1$timeSeconds)
 
 ## second observation:
-## i <- i+1
-for (i in 3:nrow(trip1)) {
+I <- i+1
+for (i in I:nrow(trip1)) {
     bus <- moveBus(bus, trip1[i, ])
     bus <- update(bus)
     ## plotBus(bus, db)

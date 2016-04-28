@@ -39,7 +39,9 @@ newBus <- function(row, db, n.particles = 10) {
     obj$stops <- getSchedule(obj$trip_id, db, verbose = FALSE)
     obj$stops$distance_into_trip <- getShapeDist(obj$stops, obj$shapefull)
     
-    obj$particles <- array(NA, dim = c(3, n.particles, 1))
+    obj$particles <- array(NA, dim = c(4, n.particles, 1))
+    obj$parameters <- array(0, dim = c(3, n.particles, nrow(obj$stops)),
+                            dimnames = list(c("gamma", "tau", "stopi"), NULL, NULL))
     obj
 }
 moveBus <- function(obj, row) {
@@ -122,35 +124,43 @@ update <- function(obj) {
         if (all(is.na(X[2,]))) {
             ## no speed set - guess it?
             new <- array(NA, dim = dim(X))
+            delay <- ifelse(is.na(X[4,]), 0, X[4, ])
+            new[4,] <- ifelse(delay - dt <= 0, NA, delay - dt)
             new[3,] <- rnorm(M, 0, 3)
             new[2,] <- runif(M, 0, 30)  ## m/s
             new[1,] <- ## X[1,] + msm::rtnorm(M, dt * new[2,], 3 * dt, lower = 0)
-                pmin(X[1,] + dt * new[2, ], dmax)
+                pmin(X[1,] + max(0, dt - delay) * new[2, ], dmax)
         } else {
             ## speed already there, adjust it:
             new <- array(NA, dim = dim(X))
+            delay <- ifelse(is.na(X[4,]), 0, X[4, ])
+            new[4,] <- ifelse(delay - dt <= 0, NA, delay - dt)
             new[3,] <- rnorm(M, 0, 1)
             new[2,] <- pmax(0, X[2,] + dt * new[3,])
-            new[1,] <- pmin(X[1,] + dt * new[2, ], dmax)
+            new[1,] <- pmin(X[1,] + max(0, dt - delay) * new[2, ], dmax)
         }
         ## allow stopping at bus stops:
         s <- obj$stops$distance_into_trip
         pass <- sapply(X[1, ], function(x) which(s > x)[1]) <
             sapply(new[1, ], function(x) which(s > x)[1])
+        pmat <- matrix(0, nrow = 3, ncol = M)
         if (length(pass) > 0) {
             if (any(pass)) {
                 ## one or more particles go past a stop - does it stop? if so, for how long?
                 wp <- which(pass)
                 pi <- rbinom(length(wp), 1, 0.5)  ## no info yet ...
                 wp <- wp[pi == 1]
-                sx <- s[sapply(new[1, wp], function(x) which(s > x)[1]) - 1]
+                sx <- s[si <- sapply(new[1, wp], function(x) which(s > x)[1]) - 1]
                 dk1 <- X[1, wp]
                 dk <- new[1, wp]
                 vk <- new[2, wp]
                 nx <- length(wp)
-                gamma <- runif(nx, 0, 30)
-                tau <- rexp(nx, 1/20)  ## an average of 20 seconds
-                new[1, wp] <- sx + max(0, dt - (sx - dk1) / vk - gamma - tau) * vk
+                pmat[1, wp] <- gamma <- runif(nx, 0, 30)
+                pmat[2, wp] <- tau <- rexp(nx, 1/20)  ## an average of 20 seconds
+                pmat[3, wp] <- si                     ## which stop it belongs to ...
+                rem <- dt - (sx - dk1) / vk - gamma - tau
+                new[1, wp] <- sx + max(0, rem) * vk
+                new[4, wp] <- ifelse(rem < 0, -rem, 0)
             }
         }
         
@@ -177,6 +187,19 @@ update <- function(obj) {
             
             wi <- sample(M, replace = TRUE, prob = wt)
             new <- new[, wi]
+
+            if (length(pass) > 0) {
+                if (any(pass)) {
+                    pmat <- pmat[, wi]
+                    for (Si in unique(pmat[3, ])) {
+                        if (Si == 0) next
+                        ii <- which(pmat[3, ] == Si)
+                        obj$parameters['gamma', ii, Si] <- pmat[1, ii]
+                        obj$parameters['tau', ii, Si] <- pmat[2, ii]
+                    }
+                }
+            }
+            
         }
         obj$particles <- abind::abind(obj$particles, new)
     }
