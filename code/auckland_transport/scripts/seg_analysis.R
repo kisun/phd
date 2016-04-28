@@ -210,11 +210,12 @@ plotDistance <- function(obj, t) {
 plotDistance(bus, trip1$timeSeconds)
 
 ## second observation:
+## i <- i+1
 for (i in 3:nrow(trip1)) {
     bus <- moveBus(bus, trip1[i, ])
     bus <- update(bus)
-    ##plotBus(bus, db)
-    ##plotDistance(bus, trip1$timeSeconds)
+    ## plotBus(bus, db)
+    ## plotDistance(bus, trip1$timeSeconds)
 }
 
 

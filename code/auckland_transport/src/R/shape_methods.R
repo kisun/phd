@@ -133,6 +133,27 @@ update <- function(obj) {
             new[2,] <- pmax(0, X[2,] + dt * new[3,])
             new[1,] <- pmin(X[1,] + dt * new[2, ], dmax)
         }
+        ## allow stopping at bus stops:
+        s <- obj$stops$distance_into_trip
+        pass <- sapply(X[1, ], function(x) which(s > x)[1]) <
+            sapply(new[1, ], function(x) which(s > x)[1])
+        if (length(pass) > 0) {
+            if (any(pass)) {
+                ## one or more particles go past a stop - does it stop? if so, for how long?
+                wp <- which(pass)
+                pi <- rbinom(length(wp), 1, 0.5)  ## no info yet ...
+                wp <- wp[pi == 1]
+                sx <- s[sapply(new[1, wp], function(x) which(s > x)[1]) - 1]
+                dk1 <- X[1, wp]
+                dk <- new[1, wp]
+                vk <- new[2, wp]
+                nx <- length(wp)
+                gamma <- runif(nx, 0, 30)
+                tau <- rexp(nx, 1/20)  ## an average of 20 seconds
+                new[1, wp] <- sx + max(0, dt - (sx - dk1) / vk - gamma - tau) * vk
+            }
+        }
+        
         ## apply selection:
         if (any(new[1,] <=  dmax)) {
             d <- distanceFlat(mat[1:2, n, drop = FALSE], sapply(new[1, ], h, shape = obj$shapefull))
