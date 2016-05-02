@@ -291,3 +291,131 @@ for (i in nrow(ests$T) - (50:0)) {
 }
 
 pairs(fit, pars = c("sigsq_obs", "gamma", "mu_tau", "lp__"))
+
+
+
+
+
+
+
+
+
+
+
+############# A silly example:
+
+## constant speed:
+v <- 10
+s <- 0:5 * 500
+gamma <- 10
+tau <- gamma + c(0, 10, 30, 0, 20, 60)
+tau <- ifelse(tau <= gamma, 0, tau)
+T <- c(0, s[-1] / v + cumsum(tau[-length(tau)]))
+D <- T + tau
+plot(c(rbind(T, D)), rep(s, each = 2), type = "l")
+
+F <- function(x) {
+    i <- max(which(D <= x))
+    min(s[i] + (v * (x - D[i])), s[i+1])
+}
+f <- Vectorize(F)
+
+curve(f(x), 0, max(D), n = 1001, add=TRUE, lty = 3)
+
+t <- seq(0, max(D), by = 30)
+d <- f(t)
+
+t <- trip1$timeSeconds
+s <- round(bus$stops$distance_into_trip)
+
+
+## particle filter:
+N <- length(d)
+M <- length(s)
+Y <- rbind(lat=trip1$position_latitude, lon=trip1$position_longitude, time = t)
+R <- 10
+## Step 1: generate initial values
+## particles
+X <- array(NA, dim = c(4, R, N))
+X[1,,1] <- 0
+X[2,,1] <- runif(R, 0, 30)
+X[3,,1] <- 1
+gamma <- 10
+mu_tau <- c(60, rep(20, length(s) - 1))
+X[4,,1] <- 0
+i <- 1
+tau.list <- vector("list", length = length(mu_tau))
+
+i <- i+1
+for (i in 2:N) {
+    ## Step 3: sample x[1]: this is, i = 2
+    delta <- Y[3,i] - Y[3,i-1]
+    if (any(X[4,,i-1] > 0)) {
+        ## tau has been set - add to it ... 
+        rtau <- mu_tau[X[3,,i-1]] - X[4,,i-1]
+        rtau[rtau > 0] <- rexp(sum(rtau > 0), 1 / rtau[rtau > 0])
+        rtau[rtau <= 0] <- rexp(sum(rtau <= 0), 2 / gamma)
+        rtau <- pmin(rtau, delta)
+        X[4,,i] <- X[4,,i-1] + rtau
+    } else {
+        rtau <- apply(X[,,i-1], 2, function(x) if (x[1] == s[x[3]]) rexp(1, 2 / gamma) else 0)
+    }
+    X[2,,i] <- msm::rtnorm(R, X[2,,i-1], 0.1 * (delta - rtau), lower = -0.01, upper = 30)
+    X[1,,i] <- xhat <- X[1,,i-1] + X[2,,i] * (delta - rtau)
+    X[3,,i] <- X[3,,i-1]
+    X[4,,i] <- 0
+    names(rtau) <- X[3,,i]
+    ## draw...
+    # plot(t, d, pch = 4, xlab = "Time (S)", ylab = "Distance (m)")
+    w <- apply(X[,,i], 2, function(x) x[1] > s[x[3]+1])
+    if (any(is.na(w)))
+        X[1,,i] <- pmin(s[X[3,,i]], X[1,,i])
+    w[is.na(w)] <- FALSE
+    # points(rep(t[i], R), xhat, col = ifelse(w, "red", "black"))
+    ## sample tau[1]
+    while (any(w, na.rm=TRUE)) {
+        tau <- rexp(sum(w, na.rm=TRUE), 1/20)
+        tau <- ifelse(tau < gamma, 0, tau)
+        rt <- delta - tau - (s[X[3,w,i]+1] - X[1,w,i-1]) / X[2,w,i]  ## remaining time after dwell
+        xhat[w] <- s[X[3,w,i]+1] + (rt > 0) * X[2,w,i] * rt
+        X[1,w,i] <- xhat[w]
+        X[3,w,i] <- X[3,w,i] + 1
+        X[4,w,i] <- ifelse(rt < 0, delta-rt, 0)
+        w <- apply(X[,,i], 2, function(x) x[1] > s[x[3]+1])
+        if (any(is.na(w)))
+            X[1,,i] <- pmin(s[X[3,,i]], X[1,,i])
+        w[is.na(w)] <- FALSE
+    }
+    ## compute weights
+    dist <- distanceFlat(Y[1:2,i], sapply(X[1,,i], h, shape = bus$shapefull))
+    pr <- dnorm(dist, 0, 10)
+    wt <- pr / sum(pr)
+    plot(rep(t[i], R), X[1,,i], pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
+         xlim = c(0, max(t)), ylim = c(0, max(bus$shapefull$distance_into_shape)))
+    abline(h = s, lty = 3)
+    ## resample particles:
+    X[,,i] <- X[,ii <- sample(R, replace = TRUE, prob = wt),i]
+    points(rep(t[i], R), X[1,,i], pch = 4, xlab = "Time (S)", ylab = "Distance (m)", col="red",
+           xlim = c(0, max(t)), ylim = c(0, max(bus$shapefull$distance_into_shape)))
+    rtau <- rtau[ii]
+    if (any(rtau > 0)) {
+        rtau <- rtau[rtau > 0]
+        for (k in as.numeric(unique(names(rtau))))
+            tau.list[[k]] <- c(tau.list[[k]], rtau[names(rtau) == k])
+    }
+}
+
+plot(NA, pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
+     xlim = c(0, max(t)), ylim = c(0, max(bus$shapefull$distance_into_shape,
+                                          X[1,,])))
+for (i in 1:N) {
+    points(rep(t[i], R), X[1,,i], col = "#99000050", pch = 19)
+}
+lines(t, colMeans(X[1,,]))
+abline(h = s, lty = 3)
+
+plot(NA, xlim = range(t), ylim = range(X[2,,]), xlab = "Time (s)", ylab = "Speed (m/s)")
+for (i in 1:N) {
+    points(rep(t[i], R), X[2,,i], col = "#99000050", pch = 19)
+}
+lines(t, colMeans(X[2,,]))

@@ -82,7 +82,7 @@ h <- function(x, shape) {
     ## into a pattern/shape
 
     if (is.na(x[1])) print(x)
-    if (x[1] <= 0) return(c(0, 0))
+    if (x[1] <= 0) return(as.numeric(shape[1, c("shape_pt_lat", "shape_pt_lon")]))
     if (x[1] > max(shape$distance_into_shape))
         return(as.numeric(shape[nrow(shape), c("shape_pt_lat", "shape_pt_lon")]))
     
