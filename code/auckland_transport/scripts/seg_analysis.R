@@ -46,14 +46,18 @@ with(day1, addPoints(position_longitude, position_latitude, pch = 19,
                      gp = list(cex = 0.3, col = "#990000")))
 
 loadall()
-#createHistoricalDb(db)
+#createHistoricalDb(db, TRUE)
 
 vehicles <- list()
 i <- 1
 
+t <- unique(day1$trip_id)[5]
+tript <- day1[day1$trip_id == t, ]; nrow(tript)
+
+i <- 1
 pb <- txtProgressBar(1, nrow(day1), style = 3)
-for (i in i:length(day1[[1]])) {
-    row <- day1[i, ]
+for (i in i:length(tript[[1]])) {
+    row <- tript[i, ]
     ## grab vehicle:
     vid <- row$vehicle_id
     ## does it exists?
@@ -76,6 +80,7 @@ for (i in i:length(day1[[1]])) {
     vehicles[[vid]] <- V         ## "write to database"
     writeHistory(V, vid, db)
 }; close(pb)
+
 
 loadall()
 
@@ -167,7 +172,7 @@ trips <- dbGetQuery(con, "SELECT trip_id, count(trip_id) AS count
 
 trip1 <- dbGetQuery(con, sprintf("SELECT * FROM history
                                   WHERE trip_id='%s' ORDER BY timestamp",
-                                 trips$trip_id[4]))
+                                 trips$trip_id[1]))
 trip1 <- trip1[- (which(diff(trip1$timestamp) == 0) + 1), ]
 
 #plotSegments(unique(trip1$shape_id), db = db, zoom = 0.2)
@@ -320,20 +325,22 @@ F <- function(x) {
 }
 f <- Vectorize(F)
 
-curve(f(x), 0, max(D), n = 1001, add=TRUE, lty = 3)
+curve(f(x), 0, max(D), n = 1001, lty = 3)
 
 t <- seq(0, max(D), by = 30)
 d <- f(t)
 
-t <- trip1$timeSeconds
-s <- round(bus$stops$distance_into_trip)
-
+#bus <- vehicles[[2]]
+#t <- bus$mat["t", ]  #trip1$timeSeconds
+#s <- round(bus$stops$distance_into_trip)
+#d <- apply(bus$particles[1,,], 1, median)
 
 ## particle filter:
 N <- length(d)
 M <- length(s)
-Y <- rbind(lat=trip1$position_latitude, lon=trip1$position_longitude, time = t)
-R <- 10
+##Y <- rbind(lat=trip1$position_latitude, lon=trip1$position_longitude, time = t)
+Y <- rbind(d, NA, t)
+R <- 500
 ## Step 1: generate initial values
 ## particles
 X <- array(NA, dim = c(4, R, N))
@@ -350,21 +357,21 @@ i <- i+1
 for (i in 2:N) {
     ## Step 3: sample x[1]: this is, i = 2
     delta <- Y[3,i] - Y[3,i-1]
-    if (any(X[4,,i-1] > 0)) {
+    ##if (any(X[4,,i-1] > 0)) {
         ## tau has been set - add to it ... 
-        rtau <- mu_tau[X[3,,i-1]] - X[4,,i-1]
-        rtau[rtau > 0] <- rexp(sum(rtau > 0), 1 / rtau[rtau > 0])
-        rtau[rtau <= 0] <- rexp(sum(rtau <= 0), 2 / gamma)
-        rtau <- pmin(rtau, delta)
-        X[4,,i] <- X[4,,i-1] + rtau
-    } else {
-        rtau <- apply(X[,,i-1], 2, function(x) if (x[1] == s[x[3]]) rexp(1, 2 / gamma) else 0)
-    }
-    X[2,,i] <- msm::rtnorm(R, X[2,,i-1], 0.1 * (delta - rtau), lower = -0.01, upper = 30)
-    X[1,,i] <- xhat <- X[1,,i-1] + X[2,,i] * (delta - rtau)
+        ##rtau <- mu_tau[X[3,,i-1]] - X[4,,i-1]
+        ##rtau[rtau > 0] <- rexp(sum(rtau > 0), 1 / rtau[rtau > 0])
+        ##rtau[rtau <= 0] <- rexp(sum(rtau <= 0), 2 / gamma)
+        ##rtau <- pmin(rtau, delta)
+        ##X[4,,i] <- X[4,,i-1] + rtau
+    ##} else {
+        ## rtau <- apply(X[,,i-1], 2, function(x) if (x[1] == s[x[3]]) rexp(1, 2 / gamma) else 0)
+    ##}
+    X[2,,i] <- msm::rtnorm(R, X[2,,i-1], 0.05 * (delta), lower = -0.01, upper = 30)
+    X[1,,i] <- xhat <- X[1,,i-1] + X[2,,i] * (delta)
     X[3,,i] <- X[3,,i-1]
     X[4,,i] <- 0
-    names(rtau) <- X[3,,i]
+    ## names(rtau) <- X[3,,i]
     ## draw...
     # plot(t, d, pch = 4, xlab = "Time (S)", ylab = "Distance (m)")
     w <- apply(X[,,i], 2, function(x) x[1] > s[x[3]+1])
@@ -380,39 +387,49 @@ for (i in 2:N) {
         xhat[w] <- s[X[3,w,i]+1] + (rt > 0) * X[2,w,i] * rt
         X[1,w,i] <- xhat[w]
         X[3,w,i] <- X[3,w,i] + 1
-        X[4,w,i] <- ifelse(rt < 0, delta-rt, 0)
+        X[4,w,i] <- Y[3,i-1] + (s[X[3,w,i]] - X[1,w,i-1]) / X[2,w,i] ## ifelse(rt < 0, delta-rt, 0)
         w <- apply(X[,,i], 2, function(x) x[1] > s[x[3]+1])
         if (any(is.na(w)))
             X[1,,i] <- pmin(s[X[3,,i]], X[1,,i])
         w[is.na(w)] <- FALSE
     }
     ## compute weights
-    dist <- distanceFlat(Y[1:2,i], sapply(X[1,,i], h, shape = bus$shapefull))
-    pr <- dnorm(dist, 0, 10)
+    ##dist <- distanceFlat(Y[1:2,i], sapply(X[1,,i], h, shape = bus$shapefull))
+    dist <- Y[1,i] - X[1,,i]
+    pr <- dnorm(dist, 0, 5)
     wt <- pr / sum(pr)
     plot(rep(t[i], R), X[1,,i], pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
-         xlim = c(0, max(t)), ylim = c(0, max(bus$shapefull$distance_into_shape)))
+         xlim = c(0, max(t)), ylim = c(0, max(d)))
+         #ylim = c(0, max(bus$shapefull$distance_into_shape)))
     abline(h = s, lty = 3)
     ## resample particles:
     X[,,i] <- X[,ii <- sample(R, replace = TRUE, prob = wt),i]
     points(rep(t[i], R), X[1,,i], pch = 4, xlab = "Time (S)", ylab = "Distance (m)", col="red",
-           xlim = c(0, max(t)), ylim = c(0, max(bus$shapefull$distance_into_shape)))
-    rtau <- rtau[ii]
-    if (any(rtau > 0)) {
-        rtau <- rtau[rtau > 0]
-        for (k in as.numeric(unique(names(rtau))))
-            tau.list[[k]] <- c(tau.list[[k]], rtau[names(rtau) == k])
-    }
+           xlim = c(0, max(t)), ylim = c(0, max(d)))
+           #ylim = c(0, max(bus$shapefull$distance_into_shape)))
+    ## rtau <- rtau[ii]
+    ## if (any(rtau > 0)) {
+    ##     rtau <- rtau[rtau > 0]
+    ##     for (k in as.numeric(unique(names(rtau))))
+    ##         tau.list[[k]] <- c(tau.list[[k]], rtau[names(rtau) == k])
+    ## }
 }
 
-plot(NA, pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
-     xlim = c(0, max(t)), ylim = c(0, max(bus$shapefull$distance_into_shape,
-                                          X[1,,])))
+plot(t, d, pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
+     xlim = c(0, max(t)), ylim = c(0, max(d)))
+     # ylim = c(0, max(bus$shapefull$distance_into_shape, X[1,,])))
 for (i in 1:N) {
     points(rep(t[i], R), X[1,,i], col = "#99000050", pch = 19)
 }
-lines(t, colMeans(X[1,,]))
+Ta <- X[4,,]
+for (k in 1:M) {
+    Tk <- Ta[X[3,,] == k]
+    Tk <- Tk[Tk > 0 & !is.na(Tk)]
+    points(Tk[Tk > 0], rep(s[k], length(Tk)), col = "#00009940", pch = 4)
+}
+#lines(t, colMeans(X[1,,]))
 abline(h = s, lty = 3)
+curve(f(x), 0, max(D), n = 1001, lty = 3, add = TRUE)
 
 plot(NA, xlim = range(t), ylim = range(X[2,,]), xlab = "Time (s)", ylab = "Speed (m/s)")
 for (i in 1:N) {

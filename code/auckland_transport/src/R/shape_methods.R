@@ -141,28 +141,28 @@ update <- function(obj) {
         }
         ## allow stopping at bus stops:
         s <- obj$stops$distance_into_trip
-        pass <- sapply(X[1, ], function(x) which(s > x)[1]) <
-            sapply(new[1, ], function(x) which(s > x)[1])
-        pmat <- matrix(0, nrow = 3, ncol = M)
-        if (length(pass) > 0) {
-            if (any(pass)) {
-                ## one or more particles go past a stop - does it stop? if so, for how long?
-                wp <- which(pass)
-                pi <- rbinom(length(wp), 1, 0.5)  ## no info yet ...
-                wp <- wp[pi == 1]
-                sx <- s[si <- sapply(new[1, wp], function(x) which(s > x)[1]) - 1]
-                dk1 <- X[1, wp]
-                dk <- new[1, wp]
-                vk <- new[2, wp]
-                nx <- length(wp)
-                pmat[1, wp] <- gamma <- runif(nx, 0, 30)
-                pmat[2, wp] <- tau <- rexp(nx, 1/20)  ## an average of 20 seconds
-                pmat[3, wp] <- si                     ## which stop it belongs to ...
-                rem <- dt - (sx - dk1) / vk - gamma - tau
-                new[1, wp] <- sx + max(0, rem) * vk
-                new[4, wp] <- ifelse(rem < 0, -rem, 0)
-            }
-        }
+        ## pass <- sapply(X[1, ], function(x) which(s > x)[1]) <
+        ##     sapply(new[1, ], function(x) which(s > x)[1])
+        ## pmat <- matrix(0, nrow = 3, ncol = M)
+        ## if (length(pass) > 0) {
+        ##     if (any(pass)) {
+        ##         ## one or more particles go past a stop - does it stop? if so, for how long?
+        ##         wp <- which(pass)
+        ##         pi <- rbinom(length(wp), 1, 0.5)  ## no info yet ...
+        ##         wp <- wp[pi == 1]
+        ##         sx <- s[si <- sapply(new[1, wp], function(x) which(s > x)[1]) - 1]
+        ##         dk1 <- X[1, wp]
+        ##         dk <- new[1, wp]
+        ##         vk <- new[2, wp]
+        ##         nx <- length(wp)
+        ##         pmat[1, wp] <- gamma <- runif(nx, 0, 30)
+        ##         pmat[2, wp] <- tau <- rexp(nx, 1/20)  ## an average of 20 seconds
+        ##         pmat[3, wp] <- si                     ## which stop it belongs to ...
+        ##         rem <- dt - (sx - dk1) / vk - gamma - tau
+        ##         new[1, wp] <- sx + max(0, rem) * vk
+        ##         new[4, wp] <- ifelse(rem < 0, -rem, 0)
+        ##     }
+        ## }
         
         ## apply selection:
         if (any(new[1,] <=  dmax)) {
@@ -188,17 +188,17 @@ update <- function(obj) {
             wi <- sample(M, replace = TRUE, prob = wt)
             new <- new[, wi]
 
-            if (length(pass) > 0) {
-                if (any(pass)) {
-                    pmat <- pmat[, wi]
-                    for (Si in unique(pmat[3, ])) {
-                        if (Si == 0) next
-                        ii <- which(pmat[3, ] == Si)
-                        obj$parameters['gamma', ii, Si] <- pmat[1, ii]
-                        obj$parameters['tau', ii, Si] <- pmat[2, ii]
-                    }
-                }
-            }
+            ## if (length(pass) > 0) {
+            ##     if (any(pass)) {
+            ##         pmat <- pmat[, wi]
+            ##         for (Si in unique(pmat[3, ])) {
+            ##             if (Si == 0) next
+            ##             ii <- which(pmat[3, ] == Si)
+            ##             obj$parameters['gamma', ii, Si] <- pmat[1, ii]
+            ##             obj$parameters['tau', ii, Si] <- pmat[2, ii]
+            ##         }
+            ##     }
+            ## }
             
         }
         obj$particles <- abind::abind(obj$particles, new)
