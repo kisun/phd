@@ -340,45 +340,38 @@ N <- length(d)
 M <- length(s)
 ##Y <- rbind(lat=trip1$position_latitude, lon=trip1$position_longitude, time = t)
 Y <- rbind(d, NA, t)
-R <- 500
+R <- 100
 ## Step 1: generate initial values
 ## particles
-X <- array(NA, dim = c(4, R, N))
+X <- array(NA, dim = c(5, R, N))
 X[1,,1] <- 0
 X[2,,1] <- runif(R, 0, 30)
 X[3,,1] <- 1
 gamma <- 10
 mu_tau <- c(60, rep(20, length(s) - 1))
-X[4,,1] <- 0
+X[4:5,,1] <- NA
 i <- 1
 tau.list <- vector("list", length = length(mu_tau))
-
 i <- i+1
+plot(NA, pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
+     xlim = c(0, max(t)), ylim = c(0, max(d)))
+abline(h = s, lty = 3)
 for (i in 2:N) {
     ## Step 3: sample x[1]: this is, i = 2
     delta <- Y[3,i] - Y[3,i-1]
-    ##if (any(X[4,,i-1] > 0)) {
-        ## tau has been set - add to it ... 
-        ##rtau <- mu_tau[X[3,,i-1]] - X[4,,i-1]
-        ##rtau[rtau > 0] <- rexp(sum(rtau > 0), 1 / rtau[rtau > 0])
-        ##rtau[rtau <= 0] <- rexp(sum(rtau <= 0), 2 / gamma)
-        ##rtau <- pmin(rtau, delta)
-        ##X[4,,i] <- X[4,,i-1] + rtau
-    ##} else {
-        ## rtau <- apply(X[,,i-1], 2, function(x) if (x[1] == s[x[3]]) rexp(1, 2 / gamma) else 0)
-    ##}
-    X[2,,i] <- msm::rtnorm(R, X[2,,i-1], 0.05 * (delta), lower = -0.01, upper = 30)
-    X[1,,i] <- xhat <- X[1,,i-1] + X[2,,i] * (delta)
+    ## probability of staying where we are:
+    stay <- rbinom(R, 1, ifelse(X[1,,i-1] - s[X[3,,i-1]] < 10, 0.5, 0.05))
+    tau <- ifelse(stay, rexp(R, 1/20), 0)
+    X[2,,i] <- msm::rtnorm(R, X[2,,i-1], 0.05 * pmax(0, (delta - tau)), lower = 0, upper = 30)
+    X[1,,i] <- xhat <- X[1,,i-1] + X[2,,i] * pmax(0, (delta - tau))
     X[3,,i] <- X[3,,i-1]
-    X[4,,i] <- 0
-    ## names(rtau) <- X[3,,i]
+    X[4,,i] <- ifelse(is.na(X[5,,i-1]), X[4,,i-1], NA)
+    X[5,,i] <- ifelse(delta - tau > 0 & !is.na(X[4,,i]), X[4,,i] + tau, NA)
     ## draw...
-    # plot(t, d, pch = 4, xlab = "Time (S)", ylab = "Distance (m)")
     w <- apply(X[,,i], 2, function(x) x[1] > s[x[3]+1])
     if (any(is.na(w)))
         X[1,,i] <- pmin(s[X[3,,i]], X[1,,i])
     w[is.na(w)] <- FALSE
-    # points(rep(t[i], R), xhat, col = ifelse(w, "red", "black"))
     ## sample tau[1]
     while (any(w, na.rm=TRUE)) {
         tau <- rexp(sum(w, na.rm=TRUE), 1/20)
@@ -387,7 +380,8 @@ for (i in 2:N) {
         xhat[w] <- s[X[3,w,i]+1] + (rt > 0) * X[2,w,i] * rt
         X[1,w,i] <- xhat[w]
         X[3,w,i] <- X[3,w,i] + 1
-        X[4,w,i] <- Y[3,i-1] + (s[X[3,w,i]] - X[1,w,i-1]) / X[2,w,i] ## ifelse(rt < 0, delta-rt, 0)
+        X[4,w,i] <- Y[3,i-1] + (s[X[3,w,i]] - X[1,w,i-1]) / X[2,w,i]
+        X[5,w,i] <- ifelse(rt > 0, Y[3,i] - rt, NA)
         w <- apply(X[,,i], 2, function(x) x[1] > s[x[3]+1])
         if (any(is.na(w)))
             X[1,,i] <- pmin(s[X[3,,i]], X[1,,i])
@@ -398,15 +392,39 @@ for (i in 2:N) {
     dist <- Y[1,i] - X[1,,i]
     pr <- dnorm(dist, 0, 5)
     wt <- pr / sum(pr)
-    plot(rep(t[i], R), X[1,,i], pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
-         xlim = c(0, max(t)), ylim = c(0, max(d)))
-         #ylim = c(0, max(bus$shapefull$distance_into_shape)))
-    abline(h = s, lty = 3)
+    points(rep(t[i], R), X[1,,i], pch = 19, col = "#cccccc80", cex = 0.5)
+    t0 <- t[i-1]
+    t1 <- t[i]
     ## resample particles:
-    X[,,i] <- X[,ii <- sample(R, replace = TRUE, prob = wt),i]
-    points(rep(t[i], R), X[1,,i], pch = 4, xlab = "Time (S)", ylab = "Distance (m)", col="red",
-           xlim = c(0, max(t)), ylim = c(0, max(d)))
-           #ylim = c(0, max(bus$shapefull$distance_into_shape)))
+    ii <- sample(R, replace = TRUE, prob = wt)
+    points(rep(t[i], length(unique(ii))), X[1,unique(ii),i], col = "#cc000060", pch = 19, cex = 1)
+    ji <- 1:R
+    for (j in ji[order(ji %in% ii)]) {
+        if (diff(X[1,j,(i-1):i]) < 0) next
+        colj <- ifelse(j %in% ii, "#cc000060", "#cccccc60")
+        lwdj <- ifelse(j %in% ii, 2, 1)
+        ltyj <- ifelse(j %in% ii, 1, 3)
+        ## draw path of each particle:
+        if (is.na(X[4,j,i])) {
+            lines(c(t0, t1), X[1,j,(i-1):i], lty = ltyj, col = colj, lwd = lwdj)
+        } else {
+            if (X[4,j,i] > t0) {  ## case that particle arrives at stop
+                lines(c(t0, X[4,j,i]), c(X[1,j,i-1], s[X[3,j,i]]), lty = ltyj, col = colj, lwd = lwdj)
+                if (is.na(X[5,j,i])) {  ## still at stop
+                    lines(c(X[4,j,i], t1), rep(s[X[3,j,i]],2), lty=ltyj, col=colj, lwd=lwdj)
+                } else { ## gets past stop
+                    lines(c(X[4:5,j,i],t1),c(rep(s[X[3,j,i]],2),X[1,j,i]),lty=ltyj,col=colj,lwd=lwdj)
+                }
+            } else {  ## particle was already at stop:
+                if (is.na(X[5,j,i])) { ## particle STILL at stop ...
+                    lines(c(t0, t1), rep(s[X[3,j,i]], 2), lty = ltyj, col = colj, lwd = lwdj)
+                } else {
+                    #lines(c(t0,X[5,j,i],t1),c(rep(s[X[3,j,i]],2),X[1,j,i]),lty=ltyj,col=colj,lwd=lwdj)
+                }
+            }
+        }
+    }
+    X[,,i] <- X[,ii,i]
     ## rtau <- rtau[ii]
     ## if (any(rtau > 0)) {
     ##     rtau <- rtau[rtau > 0]
@@ -429,7 +447,8 @@ for (k in 1:M) {
 }
 #lines(t, colMeans(X[1,,]))
 abline(h = s, lty = 3)
-curve(f(x), 0, max(D), n = 1001, lty = 3, add = TRUE)
+curve(f(x), 0, max(D), n = 1001, lty = 3, add = TRUE, lwd = 2)
+points(t, d, pch = 19, cex = 0.8)
 
 plot(NA, xlim = range(t), ylim = range(X[2,,]), xlab = "Time (s)", ylab = "Speed (m/s)")
 for (i in 1:N) {
