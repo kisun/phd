@@ -33,7 +33,7 @@ dates <- dbGetQuery(histcon, sprintf("SELECT timestamp FROM vehicle_positions
 dates <- unique(tsDate(dates$timestamp))
 
 ## one day at a time
-ts1 <- as.numeric(as.POSIXct(dates[1])) + c(0, 24 * 60 * 60)
+ts1 <- as.numeric(as.POSIXct(dates[5])) + c(0, 24 * 60 * 60)
 day1 <- dbGetQuery(histcon,
                    sprintf("SELECT trip_id, route_id, vehicle_id, trip_start_time,
                                    position_latitude, position_longitude, timestamp
@@ -306,7 +306,15 @@ pairs(fit, pars = c("sigsq_obs", "gamma", "mu_tau", "lp__"))
 
 
 
-
+############# complete new approach ... again :(
+setwd("~/Documents/uni/phd/code/auckland_transport")
+options(width = 100)
+loadall <- function()
+    invisible(sapply(list.files("src/R", pattern = "R$",
+                                all.files = TRUE, full.names = TRUE),
+                     source))
+loadall()
+library(iNZightMaps)
 ############# A silly example:
 
 ## constant speed:
@@ -330,29 +338,38 @@ curve(f(x), 0, max(D), n = 1001, lty = 3)
 t <- seq(0, max(D), by = 30)
 d <- f(t)
 
-#bus <- vehicles[[2]]
-#t <- bus$mat["t", ]  #trip1$timeSeconds
-#s <- round(bus$stops$distance_into_trip)
-#d <- apply(bus$particles[1,,], 1, median)
+## get a trip:
+tripid <- unique(day1$trip_id)[202]
+trip1 <- day1[day1$trip_id == tripid, ]; nrow(trip1)
+trip1 <- trip1[- (which(diff(trip1$timestamp) == 0) + 1), ]; nrow(trip1)
+
+trip1$timeSeconds <- with(trip1, timestamp - min(timestamp))
+## get stop distances:
+bus <- newBus(trip1[i <- 1, ], db, n = M <- 100)
+t <- trip1$timeSeconds  #trip1$timeSeconds
+s <- round(bus$stops$distance_into_trip)
+d <- s
+
+mp <- iNZightMap(~position_latitude, ~position_longitude, data = trip1)
+plot(mp)
+for(i in 1:nrow(trip1)) {
+    with(trip1[i,], addPoints(position_longitude, position_latitude, pch = 3, gp=list(col = "red",lwd=2)))
+    grid::grid.locator()
+}
 
 ## particle filter:
-N <- length(d)
+N <- length(t)
 M <- length(s)
-##Y <- rbind(lat=trip1$position_latitude, lon=trip1$position_longitude, time = t)
-Y <- rbind(d, NA, t)
-R <- 100
+Y <- rbind(lat=trip1$position_latitude, lon=trip1$position_longitude, time = t)
+##Y <- rbind(d, NA, t)
+R <- 500
 ## Step 1: generate initial values
 ## particles
 X <- array(NA, dim = c(5, R, N))
 X[1,,1] <- 0
 X[2,,1] <- runif(R, 0, 30)
 X[3,,1] <- 1
-gamma <- 10
-mu_tau <- c(60, rep(20, length(s) - 1))
 X[4:5,,1] <- NA
-i <- 1
-tau.list <- vector("list", length = length(mu_tau))
-i <- i+1
 plot(NA, pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
      xlim = c(0, max(t)), ylim = c(0, max(d)))
 abline(h = s, lty = 3)
@@ -360,13 +377,14 @@ for (i in 2:N) {
     ## Step 3: sample x[1]: this is, i = 2
     delta <- Y[3,i] - Y[3,i-1]
     ## probability of staying where we are:
-    stay <- rbinom(R, 1, ifelse(X[1,,i-1] - s[X[3,,i-1]] < 10, 0.5, 0.05))
-    tau <- ifelse(stay, rexp(R, 1/20), 0)
+    at.stop <- X[1,,i-1] - s[X[3,,i-1]] < 10
+    stay <- rbinom(R, 1, ifelse(at.stop, 0.5, 0.05))
+    tau <- ifelse(stay, rexp(R, ifelse(at.stop, if (delta > 60) 1/delta else 1/20, 1/10)), 0)
     X[2,,i] <- msm::rtnorm(R, X[2,,i-1], 0.05 * pmax(0, (delta - tau)), lower = 0, upper = 30)
     X[1,,i] <- xhat <- X[1,,i-1] + X[2,,i] * pmax(0, (delta - tau))
     X[3,,i] <- X[3,,i-1]
     X[4,,i] <- ifelse(is.na(X[5,,i-1]), X[4,,i-1], NA)
-    X[5,,i] <- ifelse(delta - tau > 0 & !is.na(X[4,,i]), X[4,,i] + tau, NA)
+    X[5,,i] <- ifelse(delta - tau > 0 & !is.na(X[4,,i]), t[i-1] + tau, NA)
     ## draw...
     w <- apply(X[,,i], 2, function(x) x[1] > s[x[3]+1])
     if (any(is.na(w)))
@@ -374,9 +392,9 @@ for (i in 2:N) {
     w[is.na(w)] <- FALSE
     ## sample tau[1]
     while (any(w, na.rm=TRUE)) {
-        tau <- rexp(sum(w, na.rm=TRUE), 1/20)
-        tau <- ifelse(tau < gamma, 0, tau)
-        rt <- delta - tau - (s[X[3,w,i]+1] - X[1,w,i-1]) / X[2,w,i]  ## remaining time after dwell
+        rtau <- rexp(sum(w, na.rm=TRUE), 1/20)
+        rtau <- ifelse(rtau < gamma, 0, rtau)
+        rt <- delta - rtau - (s[X[3,w,i]+1] - X[1,w,i-1]) / X[2,w,i]  ## remaining time after dwell
         xhat[w] <- s[X[3,w,i]+1] + (rt > 0) * X[2,w,i] * rt
         X[1,w,i] <- xhat[w]
         X[3,w,i] <- X[3,w,i] + 1
@@ -388,9 +406,9 @@ for (i in 2:N) {
         w[is.na(w)] <- FALSE
     }
     ## compute weights
-    ##dist <- distanceFlat(Y[1:2,i], sapply(X[1,,i], h, shape = bus$shapefull))
-    dist <- Y[1,i] - X[1,,i]
-    pr <- dnorm(dist, 0, 5)
+    dist <- distanceFlat(Y[1:2,i], sapply(X[1,,i], h, shape = bus$shapefull))
+    ##dist <- Y[1,i] - X[1,,i]
+    pr <- dnorm(dist, 0, 10)
     wt <- pr / sum(pr)
     points(rep(t[i], R), X[1,,i], pch = 19, col = "#cccccc80", cex = 0.5)
     t0 <- t[i-1]
@@ -406,7 +424,10 @@ for (i in 2:N) {
         ltyj <- ifelse(j %in% ii, 1, 3)
         ## draw path of each particle:
         if (is.na(X[4,j,i])) {
-            lines(c(t0, t1), X[1,j,(i-1):i], lty = ltyj, col = colj, lwd = lwdj)
+            if (tau[j] > 0)
+                lines(c(t0, t0 + min(tau, delta), t1),X[1,j,c(i-1,i-1,i)],lty=ltyj,col=colj,lwd=lwdj)
+            else
+                lines(c(t0, t1), X[1,j,(i-1):i], lty = ltyj, col = colj, lwd = lwdj)
         } else {
             if (X[4,j,i] > t0) {  ## case that particle arrives at stop
                 lines(c(t0, X[4,j,i]), c(X[1,j,i-1], s[X[3,j,i]]), lty = ltyj, col = colj, lwd = lwdj)
@@ -419,21 +440,15 @@ for (i in 2:N) {
                 if (is.na(X[5,j,i])) { ## particle STILL at stop ...
                     lines(c(t0, t1), rep(s[X[3,j,i]], 2), lty = ltyj, col = colj, lwd = lwdj)
                 } else {
-                    #lines(c(t0,X[5,j,i],t1),c(rep(s[X[3,j,i]],2),X[1,j,i]),lty=ltyj,col=colj,lwd=lwdj)
+                    lines(c(t0,X[5,j,i],t1),c(rep(s[X[3,j,i]],2),X[1,j,i]),lty=ltyj,col=colj,lwd=lwdj)
                 }
             }
         }
     }
     X[,,i] <- X[,ii,i]
-    ## rtau <- rtau[ii]
-    ## if (any(rtau > 0)) {
-    ##     rtau <- rtau[rtau > 0]
-    ##     for (k in as.numeric(unique(names(rtau))))
-    ##         tau.list[[k]] <- c(tau.list[[k]], rtau[names(rtau) == k])
-    ## }
 }
 
-plot(t, d, pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
+plot(NA, pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
      xlim = c(0, max(t)), ylim = c(0, max(d)))
      # ylim = c(0, max(bus$shapefull$distance_into_shape, X[1,,])))
 for (i in 1:N) {
@@ -445,13 +460,14 @@ for (k in 1:M) {
     Tk <- Tk[Tk > 0 & !is.na(Tk)]
     points(Tk[Tk > 0], rep(s[k], length(Tk)), col = "#00009940", pch = 4)
 }
-#lines(t, colMeans(X[1,,]))
+lines(t, colMeans(X[1,,]))
 abline(h = s, lty = 3)
-curve(f(x), 0, max(D), n = 1001, lty = 3, add = TRUE, lwd = 2)
-points(t, d, pch = 19, cex = 0.8)
+## curve(f(x), 0, max(D), n = 1001, lty = 3, add = TRUE, lwd = 2)
+## points(t, d, pch = 19, cex = 0.8)
 
-plot(NA, xlim = range(t), ylim = range(X[2,,]), xlab = "Time (s)", ylab = "Speed (m/s)")
+dev.new()
+plot(NA, ylim = range(t), xlim = range(X[2,,]), ylab = "Time (s)", xlab = "Speed (m/s)")
 for (i in 1:N) {
-    points(rep(t[i], R), X[2,,i], col = "#99000050", pch = 19)
+    points(X[2,,i], rep(t[i], R), col = "#99000050", pch = 19)
 }
-lines(t, colMeans(X[2,,]))
+lines(colMeans(X[2,,]), t)
