@@ -569,3 +569,30 @@ lapply(SAVE, function(T) {
 })
 par(o)
 
+tau.mat <- matrix(NA, length(SAVE), M)
+for (i in 1:length(SAVE))
+    tau.mat[i, as.numeric(names(SAVE[[i]]$mu.tau))] <- SAVE[[i]]$mu.tau
+
+
+
+tau.mat2 <- apply(tau.mat, 2, function(x) diff(x) / x[-1]) * 100
+layout(matrix(1:2, nrow = 2), heights = c(3, 1))
+o <- par(mar = c(0, 4.1, 4.1, 2.1))
+plot(NA, xlim = c(0, M) + 0.5,
+     ylim = range(tau.mat2, na.rm = TRUE),
+     ylab = "Dwell Time (s)", xaxt = "n", xaxs = "i")
+rect(-1e6, -1e6, 1e6, 1e6, col = "#333333")
+for (i in 2:nrow(tau.mat2)) {
+    x <- tau.mat2[i, ]
+    ii <- which(!is.na(x))
+    lines(ii, x[ii], col = SAVE[[i]]$colour, lwd = 2)    
+}
+par(mar = c(5.1, 4.1, 0, 2.1))
+plot(NA, xlim = c(0, M) + 0.5, ylim = c(0,1), xaxs = "i", yaxs = "i",
+     xlab = "Stop No.", ylab = expression(pi[j]))
+rect(0, 0, 30, 1, col = "#333333")
+lapply(SAVE, function(T) {
+    xx <- as.numeric(names(T$pi))
+    arrows(xx - 0.4, T$pi, xx + 0.4, code = 0, col = T$colour)
+})
+par(o)
