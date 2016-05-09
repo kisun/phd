@@ -339,7 +339,7 @@ t <- seq(0, max(D), by = 30)
 d <- f(t)
 
 ## get a trip:
-tripid <- unique(day1$trip_id)[202]
+tripid <- unique(day1$trip_id)[207]
 trip1 <- day1[day1$trip_id == tripid, ]; nrow(trip1)
 trip1 <- trip1[- (which(diff(trip1$timestamp) == 0) + 1), ]; nrow(trip1)
 
@@ -354,7 +354,7 @@ mp <- iNZightMap(~position_latitude, ~position_longitude, data = trip1)
 plot(mp)
 for(i in 1:nrow(trip1)) {
     with(trip1[i,], addPoints(position_longitude, position_latitude, pch = 3, gp=list(col = "red",lwd=2)))
-    grid::grid.locator()
+    #grid::grid.locator()
 }
 
 ## particle filter:
@@ -370,10 +370,15 @@ X[1,,1] <- 0
 X[2,,1] <- runif(R, 0, 30)
 X[3,,1] <- 1
 X[4:5,,1] <- NA
-plot(NA, pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
-     xlim = c(0, max(t)), ylim = c(0, max(d)))
-abline(h = s, lty = 3)
+pb <- txtProgressBar(1, N, style = 3)
+draw <- TRUE
+if (draw) {
+    plot(NA, pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
+         xlim = c(0, max(t)), ylim = c(0, max(d)))
+    abline(h = s, lty = 3)
+}
 for (i in 2:N) {
+    setTxtProgressBar(pb, i)
     ## Step 3: sample x[1]: this is, i = 2
     delta <- Y[3,i] - Y[3,i-1]
     ## probability of staying where we are:
@@ -408,45 +413,59 @@ for (i in 2:N) {
     ## compute weights
     dist <- distanceFlat(Y[1:2,i], sapply(X[1,,i], h, shape = bus$shapefull))
     ##dist <- Y[1,i] - X[1,,i]
-    pr <- dnorm(dist, 0, 10)
+    z <- 1
+    pr <- dnorm(dist, 0, 10^z)
+    while (all(pr == 0)) {
+        z <- z + 1
+        pr <- dnorm(dist, 0, 10^z)
+    }
+    if (z > 1) warning("Bad fit ... z = ", z)
     wt <- pr / sum(pr)
-    points(rep(t[i], R), X[1,,i], pch = 19, col = "#cccccc80", cex = 0.5)
+    ## points(rep(t[i], R), X[1,,i], pch = 19, col = "#cccccc80", cex = 0.5)
     t0 <- t[i-1]
     t1 <- t[i]
     ## resample particles:
     ii <- sample(R, replace = TRUE, prob = wt)
-    points(rep(t[i], length(unique(ii))), X[1,unique(ii),i], col = "#cc000060", pch = 19, cex = 1)
+    ## points(rep(t[i], length(unique(ii))), X[1,unique(ii),i], col = "#cc000060", pch = 19, cex = 1)
     ji <- 1:R
-    for (j in ji[order(ji %in% ii)]) {
-        if (diff(X[1,j,(i-1):i]) < 0) next
-        colj <- ifelse(j %in% ii, "#cc000060", "#cccccc60")
-        lwdj <- ifelse(j %in% ii, 2, 1)
-        ltyj <- ifelse(j %in% ii, 1, 3)
-        ## draw path of each particle:
-        if (is.na(X[4,j,i])) {
-            if (tau[j] > 0)
-                lines(c(t0, t0 + min(tau, delta), t1),X[1,j,c(i-1,i-1,i)],lty=ltyj,col=colj,lwd=lwdj)
-            else
-                lines(c(t0, t1), X[1,j,(i-1):i], lty = ltyj, col = colj, lwd = lwdj)
-        } else {
-            if (X[4,j,i] > t0) {  ## case that particle arrives at stop
-                lines(c(t0, X[4,j,i]), c(X[1,j,i-1], s[X[3,j,i]]), lty = ltyj, col = colj, lwd = lwdj)
-                if (is.na(X[5,j,i])) {  ## still at stop
-                    lines(c(X[4,j,i], t1), rep(s[X[3,j,i]],2), lty=ltyj, col=colj, lwd=lwdj)
-                } else { ## gets past stop
-                    lines(c(X[4:5,j,i],t1),c(rep(s[X[3,j,i]],2),X[1,j,i]),lty=ltyj,col=colj,lwd=lwdj)
-                }
-            } else {  ## particle was already at stop:
-                if (is.na(X[5,j,i])) { ## particle STILL at stop ...
-                    lines(c(t0, t1), rep(s[X[3,j,i]], 2), lty = ltyj, col = colj, lwd = lwdj)
+    if (draw) {
+        for (j in ji[order(ji %in% ii)]) {
+            if (diff(X[1,j,(i-1):i]) < 0) next
+            colj <- ifelse(j %in% ii, "#cc000060", "#cccccc60")
+            lwdj <- ifelse(j %in% ii, 2, 1)
+            ltyj <- ifelse(j %in% ii, 1, 3)
+            ## draw path of each particle:
+            if (is.na(X[4,j,i])) {
+                if (tau[j] > 0) {
+                    lines(c(t0, t0 + min(tau, delta), t1),X[1,j,c(i-1,i-1,i)],lty=ltyj,col=colj,lwd=lwdj)
                 } else {
-                    lines(c(t0,X[5,j,i],t1),c(rep(s[X[3,j,i]],2),X[1,j,i]),lty=ltyj,col=colj,lwd=lwdj)
+                    lines(c(t0, t1), X[1,j,(i-1):i], lty = ltyj, col = colj, lwd = lwdj)
+                }
+            } else {
+                if (X[4,j,i] > t0) {  ## case that particle arrives at stop
+                    lines(c(t0, X[4,j,i]), c(X[1,j,i-1], s[X[3,j,i]]), lty = ltyj, col = colj, lwd = lwdj)
+                    if (is.na(X[5,j,i])) {  ## still at stop
+                        lines(c(X[4,j,i], t1), rep(s[X[3,j,i]],2), lty=ltyj, col=colj, lwd=lwdj)
+                    } else { ## gets past stop
+                        lines(c(X[4:5,j,i],t1),c(rep(s[X[3,j,i]],2),X[1,j,i]),lty=ltyj,col=colj,lwd=lwdj)
+                    }
+                } else {  ## particle was already at stop:
+                    if (is.na(X[5,j,i])) { ## particle STILL at stop ...
+                        lines(c(t0, t1), rep(s[X[3,j,i]], 2), lty = ltyj, col = colj, lwd = lwdj)
+                    } else {
+                        lines(c(t0,X[5,j,i],t1),c(rep(s[X[3,j,i]],2),X[1,j,i]),lty=ltyj,col=colj,lwd=lwdj)
+                    }
                 }
             }
         }
     }
     X[,,i] <- X[,ii,i]
-}
+}; close(pb)
+
+## plot(NA, pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
+##      xlim = c(0, max(t)), ylim = c(0, max(d)))
+## abline(h = s, lty = 3)
+## lines(xx, yy, col="#cccccc40", lty = 3)
 
 plot(NA, pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
      xlim = c(0, max(t)), ylim = c(0, max(d)))
@@ -462,8 +481,6 @@ for (k in 1:M) {
 }
 lines(t, colMeans(X[1,,]))
 abline(h = s, lty = 3)
-## curve(f(x), 0, max(D), n = 1001, lty = 3, add = TRUE, lwd = 2)
-## points(t, d, pch = 19, cex = 0.8)
 
 dev.new()
 plot(NA, ylim = range(t), xlim = range(X[2,,]), ylab = "Time (s)", xlab = "Speed (m/s)")
@@ -471,3 +488,13 @@ for (i in 1:N) {
     points(X[2,,i], rep(t[i], R), col = "#99000050", pch = 19)
 }
 lines(colMeans(X[2,,]), t)
+
+
+
+
+tau <- tapply(c(X[5,,] - X[4,,]), c(X[3,,]), function(x) x[!is.na(x)])
+lapply(tau, function(t) {
+           if (any(t > 0))
+               c(mean(t[t > 0]), mean(t > 0))
+           else c(NA, 0)
+       })
