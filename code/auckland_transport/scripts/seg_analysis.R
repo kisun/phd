@@ -12,34 +12,36 @@ loadall()
 
 ## Get a bunch of routes that travel around the same area (along Symonds Street)
 con <- dbConnect(SQLite(), "db/gtfs-static.db")
-trips <- dbGetQuery(con, "SELECT route_id, shape_id, trip_id FROM trips WHERE trip_id IN
-                          (SELECT trip_id FROM stop_times WHERE stop_id IN
-                           (SELECT stop_id FROM stops WHERE stop_name LIKE 'Symonds%'))")
+##trips <- dbGetQuery(con, "SELECT route_id, shape_id, trip_id FROM trips WHERE trip_id IN
+##                          (SELECT trip_id FROM stop_times WHERE stop_id IN
+##                           (SELECT stop_id FROM stops WHERE stop_name LIKE 'Symonds%'))")
+trips <- dbGetQuery(con, "SELECT route_id, shape_id, trip_id FROM trips WHERE route_id LIKE '27701%'")
 shapes <- unique(trips$shape_id)
+routes <- unique(trips$route_id)
 
 ## create their shape_segment files
-db <- "db/gtfs-static-symonds.db"
-#createSegmentTable(db = db)
+db <- "db/gtfs-static-277.db"
+createSegmentTable(db = db)
 
-#for (i in seq_along(shapes))
-#    shape2seg(id = shapes[i], db = db, plot = TRUE)
+for (i in seq_along(shapes))
+    shape2seg(id = shapes[i], db = db, plot = TRUE)
 
 
 ## get historical data for them:
 histcon <- dbConnect(SQLite(), "db/gtfs-history.db")
 dates <- dbGetQuery(histcon, sprintf("SELECT timestamp FROM vehicle_positions
                                       WHERE trip_id IN ('%s')",
-                                     paste(trips$trip_id, collapse = "','")))
+                                     paste(unique(trips$trip_id), collapse = "','")))
 dates <- unique(tsDate(dates$timestamp))
 
 ## one day at a time
-ts1 <- as.numeric(as.POSIXct(dates[1])) + c(0, 24 * 60 * 60)
+ts1 <- as.numeric(as.POSIXct(dates[8])) + c(0, 24 * 60 * 60)
 day1 <- dbGetQuery(histcon,
                    sprintf("SELECT trip_id, route_id, vehicle_id, trip_start_time,
                                    position_latitude, position_longitude, timestamp
                               FROM vehicle_positions WHERE timestamp BETWEEN %s AND %s
                                AND trip_id IN ('%s') ORDER BY timestamp",
-                           ts1[1], ts1[2], paste(trips$trip_id, collapse = "','")))
+                           ts1[1], ts1[2], paste(unique(trips$trip_id), collapse = "','")))
 
 plotSegments(db = db)
 with(day1, addPoints(position_longitude, position_latitude, pch = 19,
@@ -342,18 +344,18 @@ d <- f(t)
 routes <- tapply(day1$trip_id, day1$route_id, unique)
 sapply(routes, length)
 
-route1 <- names(routes)[6]
-trips <- routes[[route1]][-1]
+route1 <- names(routes)[1]
+trips <- routes[[route1]]
 
 
 KEEP <- numeric()
 
 for (T in seq_along(trips)) {
-    trip1 <- day1[day1$trip_id == trips[T], ]; nrow(trip1)
-    trip1 <- trip1[- (which(diff(trip1$timestamp) == 0) + 1), ]; nrow(trip1)
+    trip1 <- day1[day1$trip_id == trips[T], ]
+    trip1 <- trip1[- (which(diff(trip1$timestamp) == 0) + 1), ]
     trip1$timeSeconds <- with(trip1, timestamp - min(timestamp))
     ## get stop distances:
-    bus <- newBus(trip1[i <- 1, ], db, n = M <- 100)
+    bus <- newBus(trip1[1, ], db, n = 10)
     t <- trip1$timeSeconds  #trip1$timeSeconds
     s <- round(bus$stops$distance_into_trip)
     d <- s
@@ -516,7 +518,7 @@ for (i in 1:length(SAVE)) SAVE[[i]]$colour <- cols[i]
 
 plot(NA, pch = 4, xlab = "Time (S)", ylab = "Distance (m)",
      xlim = range(sapply(SAVE, function(T) c(T$start, max(T$t + T$start)))),
-     ylim = c(0, max(T$s)))
+     ylim = c(0, max(SAVE[[1]]$s)))
 abline(h = SAVE[[1]]$s, lty = 3)
 lapply(SAVE, function(T) {
     try({
@@ -552,7 +554,7 @@ o <- par(mar = c(0, 4.1, 4.1, 2.1))
 plot(NA, xlim = c(0, M) + 0.5,
      ylim = c(0, max(sapply(SAVE, function(T) max(T$mu.tau))) * 1.04),
      ylab = "Dwell Time (s)", xaxt = "n", xaxs = "i", yaxs = "i")
-rect(0, 0, 30, 150, col = "#333333")
+rect(0, 0, 1e4, 1e4, col = "#333333")
 lapply(SAVE, function(T) {
     lines(as.numeric(names(T$mu.tau)), T$mu.tau, pch = 19,
           col = T$colour, lwd = 2)
@@ -562,7 +564,7 @@ lapply(SAVE, function(T) {
 par(mar = c(5.1, 4.1, 0, 2.1))
 plot(NA, xlim = c(0, M) + 0.5, ylim = c(0,1), xaxs = "i", yaxs = "i",
      xlab = "Stop No.", ylab = expression(pi[j]))
-rect(0, 0, 30, 1, col = "#333333")
+rect(0, 0, 1e4, 1, col = "#333333")
 lapply(SAVE, function(T) {
     xx <- as.numeric(names(T$pi))
     arrows(xx - 0.4, T$pi, xx + 0.4, code = 0, col = T$colour)
@@ -572,10 +574,7 @@ par(o)
 tau.mat <- matrix(NA, length(SAVE), M)
 for (i in 1:length(SAVE))
     tau.mat[i, as.numeric(names(SAVE[[i]]$mu.tau))] <- SAVE[[i]]$mu.tau
-
-
-
-tau.mat2 <- apply(tau.mat, 2, function(x) diff(x) / x[-1]) * 100
+tau.mat2 <- apply(tau.mat, 2, function(x) pmax(-2, diff(x) / x[-1])) * 100
 layout(matrix(1:2, nrow = 2), heights = c(3, 1))
 o <- par(mar = c(0, 4.1, 4.1, 2.1))
 plot(NA, xlim = c(0, M) + 0.5,
@@ -590,9 +589,63 @@ for (i in 2:nrow(tau.mat2)) {
 par(mar = c(5.1, 4.1, 0, 2.1))
 plot(NA, xlim = c(0, M) + 0.5, ylim = c(0,1), xaxs = "i", yaxs = "i",
      xlab = "Stop No.", ylab = expression(pi[j]))
-rect(0, 0, 30, 1, col = "#333333")
+rect(0, 0, 1e4, 1, col = "#333333")
 lapply(SAVE, function(T) {
     xx <- as.numeric(names(T$pi))
     arrows(xx - 0.4, T$pi, xx + 0.4, code = 0, col = T$colour)
 })
 par(o)
+
+
+
+
+## correlation between stop K and K-1:
+cbind(as.numeric(tau.mat[-1, -1]),
+      as.numeric(tau.mat[-nrow(tau.mat), -1]),
+      rep(2:ncol(tau.mat), each = nrow(tau.mat) - 1)) -> tau.comp
+
+tapply(1:nrow(tau.comp), tau.comp[,3],
+       function(i) cor(tau.comp[i,1], tau.comp[i,2], use='complete.obs'))
+
+
+par(mfrow = c(5, 8), mar = c(0,0,0,0))
+for (i in 1:ncol(tau.mat)) {
+    plot(tau.mat[-nrow(tau.mat), i], tau.mat[-1, i], xaxt = "n", yaxt = "n",
+         xlim = c(0, max(tau.mat, na.rm = TRUE)), ylim = c(0, max(tau.mat, na.rm = TRUE)))
+}
+par(o)
+
+
+pi.mat <- matrix(NA, length(SAVE), M)
+for (i in 1:length(SAVE))
+    pi.mat[i, as.numeric(names(SAVE[[i]]$pi))] <- SAVE[[i]]$pi
+
+
+par(mfrow = c(5, 8), mar = c(0,0,0,0))
+for (i in 1:ncol(pi.mat)) {
+    plot(pi.mat[-nrow(pi.mat), i], pi.mat[-1, i], xaxt = "n", yaxt = "n",
+         xlim = 0:1, ylim = 0:1)
+}
+par(o)
+
+
+
+MM <- 10
+LIM <- c(0, max(tau.mat, na.rm = TRUE))
+par(mfrow = rep(MM - 1, 2), mar = rep(0, 4))
+for (i in 2:MM) {
+    for (j in 2:MM) {
+        if (i == j) hist(tau.mat[, i], xlim = LIM, xaxt = "n", yaxt = "n")
+        else if (i < j)
+            plot(tau.mat[-nrow(tau.mat), i], tau.mat[-1, j],
+                 xlim = LIM, ylim = LIM, xaxt = "n", yaxt = "n")
+        else
+            plot(NA, xlim = LIM, ylim = LIM, xaxt = "n", yaxt = "n")
+    }
+}
+par(o)
+
+
+
+
+dput(SAVE, "tmp/route277.rdat")
