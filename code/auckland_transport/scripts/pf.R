@@ -30,7 +30,7 @@ vid <- "3787"
 ## get the vehicles row numbers:
 rowids <- dbGetQuery(con, sprintf("SELECT oid FROM vehicle_positions
                                    WHERE vehicle_id='%s' AND timestamp>=%s AND timestamp<%s",
-                                  vid, ts, ts + 60 * 60 * 24))$oid
+                                  vid, ts + 7.5 * 60 * 60 + 4*60, ts + 60 * 60 * 24))$oid
 
 ## For each row, run something
 i <- 0
@@ -41,9 +41,10 @@ info <- list(cur.trip = "", trip_id = character(), shapes = list(), schedules = 
 state = matrix(NA, 5, M)
 refresh <- TRUE
 
-for (i in seq_along(rowids)) {    
-    i <- i + 1
+for (i in seq_along(rowids)) {
+    ##i <- i + 1
     row <- dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE oid='%s'", rowids[i]))
+    print(ts2dt(row$timestamp))
     t <- timeDiff(row$trip_start_time, ts2dt(row$timestamp, "time"))
     ## get shape and schedule
     if (!row$trip_id %in% info$trip_id) {
@@ -60,7 +61,7 @@ for (i in seq_along(rowids)) {
         schedule <- info$schedule[[row$trip_id]]
         info$cur.trip <- row$trip_id
         mobj <- iNZightMaps::iNZightMap(~lat, ~lon, data = shape)
-        ## grid::grid.locator()
+        grid::grid.locator()
         plot(mobj, pch = NA)
         addLines(shape$lon, shape$lat, gp = list(lwd = 2, col = "#550000"))
         addPoints(schedule$stop_lon, schedule$stop_lat, pch = 21,
@@ -104,6 +105,11 @@ for (i in seq_along(rowids)) {
         ## run particle filter
         ## state <-
         state <- pfilter(state, row, shape, schedule)
+        ## while (!is.null(attr(state, "code"))) {
+        ##     state <- switch(attr(state, "code"),
+        ##                     pfilter(state, row, shape, schedule, delayed = FALSE)
+        ##                     )
+        ## }
         attr(state, "ts") <- row$timestamp
         if (refresh) {
             xhat <- sapply(attr(state, "xhat")[1,], h, shape = shape)
@@ -111,7 +117,7 @@ for (i in seq_along(rowids)) {
                       gp = list(col = "#00009930", cex = 0.5))
             xhat <- sapply(state[1,], h, shape = shape)
             addPoints(xhat[2, ], xhat[1, ], pch = 19,
-                      gp = list(col = "#00990030", cex = 0.3))
+                      gp = list(col = "#99000030", cex = 0.4))
         }
     } else {
         attr(state, "ts") <- row$timestamp
@@ -121,7 +127,7 @@ for (i in seq_along(rowids)) {
                   list(col =
                            switch(info$status, "waiting" = "orange", "delayed" = "red",
                                   "inprogress" = "green3", "finished" = "blue"),
-                       lwd = 2, cex = 0.6), pch = 4)   
+                       lwd = 2, cex = 0.6), pch = 4)
 }
 
 

@@ -151,7 +151,7 @@ timeDiff <- function(t1, t2) {
     diff(as.numeric(as.POSIXct(paste("2016-01-01", c(t1, t2)))))
 }
 pfilter <- function(X, row, shape, sched, gamma = 10) {
-    s <- shape$distance_into_shap
+    s <- schedule$distance_into_shape
     if (all(X[1,] == max(s))) return(X)
     R <- ncol(X)
     NEW <- matrix(NA, nrow(X), ncol(X))
@@ -160,13 +160,13 @@ pfilter <- function(X, row, shape, sched, gamma = 10) {
     dt <- tn - tx
     ## probabiltiy of staying where we are:
     at.stop <- abs(X[1,] - s[X[3,]]) < 20  ## within 20m of a stop
-    stay <- rbinom(R, 1, ifelse(at.stop, 0.5, 0.05))
+    stay <- rbinom(R, 1, ifelse(at.stop, 0.5,  0.05))
     tau <- ifelse(stay, rexp(R, ifelse(at.stop,
                                        if (dt > 60) 1/dt
                                        else 1/30,
                                        1/10)), 0)
     ## sample new speed, and progress particles forward:
-    NEW[2,] <- msm::rtnorm(R, X[2,], 5, lower = 0, upper = 30)
+    NEW[2,] <- msm::rtnorm(R, X[2,], 2, lower = 0, upper = 30)
     NEW[1,] <- X[1,] + NEW[2,] * pmax(0, (dt - tau))
     NEW[3,] <- X[3,]
     NEW[4,] <- ifelse(is.na(X[5,]), X[4,], NA)
@@ -176,7 +176,7 @@ pfilter <- function(X, row, shape, sched, gamma = 10) {
     if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])
     w[is.na(w)] <- FALSE
     while (any(w, na.rm=TRUE)) {
-        rtau <- rexp(sum(w, na.rm=TRUE), 1/30)
+        rtau <- rexp(sum(w, na.rm=TRUE), 1/20)
         rtau <- ifelse(rtau < gamma, 0, rtau)
         rt <- dt - rtau - (s[NEW[3,w]+1] - X[1,w]) / NEW[2,w]
         NEW[1,w] <- s[NEW[3,w]+1] + (rt > 0) * NEW[2,w] * rt
@@ -191,9 +191,12 @@ pfilter <- function(X, row, shape, sched, gamma = 10) {
     dist <- distance(t(row[, c("position_latitude", "position_longitude")]),
                      sapply(NEW[1,], h, shape = shape))
     if (all(dist > 20)) {
+        xhat <- sapply(NEW[1,], h, shape = shape)
+        addPoints(xhat[2, ], xhat[1, ], pch = 19,
+                  gp = list(col = "#00009930", cex = 0.5))
         ## essentially an error if none of the particles are close to the bus
-        attr(NEW, "code") <- 1
-        return(NEW)
+        attr(X, "code") <- 1
+        return(X)
     }
     pr <- dnorm(dist, 0, 10)
     wt <- pr / sum(pr)
