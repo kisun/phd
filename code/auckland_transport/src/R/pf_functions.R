@@ -64,6 +64,20 @@ bearing <- function(a, b) {
                     cos(phi.a) * sin(phi.b) - sin(phi.a) * cos(phi.b) * cos(lam.b - lam.a))
     (th.rad * 180 / pi) %% 360
 }
+partialSegment <- function(x, theta, d, R = 6371000) {
+    ## Compute the Lat/Lon after traveling distance D
+    ## from point X at a bearing of THETA
+    
+    delta <- d / R ## for single calculation
+    theta <- theta * pi / 180  ## convert to radians
+    phi.s <- x[1] * pi / 180
+    lam.s <- x[2] * pi / 180
+    
+    phi.z <- asin(sin(phi.s) * cos(delta) + cos(phi.s) * sin(delta) * cos(theta))
+    lam.z <- lam.s + atan2(sin(theta) * sin(delta) * cos(phi.s),
+                           cos(delta) - sin(phi.s) * sin(phi.z))
+    c(phi.z, lam.z) * 180 / pi
+}
 getShapeDist <- function(sched, shape) {
     sched <- sched[, c("stop_lon", "stop_lat")]
     shape <- shape[shape$length > 0 | is.na(shape$length), ]
@@ -135,4 +149,73 @@ ts2dt <- function(ts, to = c("datetime", "date", "time")) {
 }
 timeDiff <- function(t1, t2) {
     diff(as.numeric(as.POSIXct(paste("2016-01-01", c(t1, t2)))))
+}
+pfilter <- function(X, row, shape, sched, gamma = 10) {
+    s <- shape$distance_into_shap
+    if (all(X[1,] == max(s))) return(X)
+    R <- ncol(X)
+    NEW <- matrix(NA, nrow(X), ncol(X))
+    tx <- attr(state, "ts")
+    tn <- row$timestamp
+    dt <- tn - tx
+    ## probabiltiy of staying where we are:
+    at.stop <- abs(X[1,] - s[X[3,]]) < 20  ## within 20m of a stop
+    stay <- rbinom(R, 1, ifelse(at.stop, 0.5, 0.05))
+    tau <- ifelse(stay, rexp(R, ifelse(at.stop,
+                                       if (dt > 60) 1/dt
+                                       else 1/30,
+                                       1/10)), 0)
+    ## sample new speed, and progress particles forward:
+    NEW[2,] <- msm::rtnorm(R, X[2,], 5, lower = 0, upper = 30)
+    NEW[1,] <- X[1,] + NEW[2,] * pmax(0, (dt - tau))
+    NEW[3,] <- X[3,]
+    NEW[4,] <- ifelse(is.na(X[5,]), X[4,], NA)
+    NEW[5,] <- ifelse(dt - tau > 0 & !is.na(NEW[4,]), tx + tau, NA)
+    ## work out stop-passing stuff ...
+    w <- apply(NEW, 2, function(x) x[1] > s[x[3]+1])
+    if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])
+    w[is.na(w)] <- FALSE
+    while (any(w, na.rm=TRUE)) {
+        rtau <- rexp(sum(w, na.rm=TRUE), 1/30)
+        rtau <- ifelse(rtau < gamma, 0, rtau)
+        rt <- dt - rtau - (s[NEW[3,w]+1] - X[1,w]) / NEW[2,w]
+        NEW[1,w] <- s[NEW[3,w]+1] + (rt > 0) * NEW[2,w] * rt
+        NEW[3,w] <- NEW[3,w] + 1
+        NEW[4,w] <- tx + (s[NEW[3,w]] - X[1,w]) / NEW[2,w]
+        NEW[5,w] <- ifelse(rt > 0, tn - rt, NA)
+        w <- apply(NEW, 2, function(x) x[1] > s[x[3]+1])
+        if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])
+        w[is.na(w)] <- FALSE
+    }
+    ## compute weights:
+    dist <- distance(t(row[, c("position_latitude", "position_longitude")]),
+                     sapply(NEW[1,], h, shape = shape))
+    if (all(dist > 20)) {
+        ## essentially an error if none of the particles are close to the bus
+        attr(NEW, "code") <- 1
+        return(NEW)
+    }
+    pr <- dnorm(dist, 0, 10)
+    wt <- pr / sum(pr)
+    X <- NEW[,sample(R, replace = TRUE, prob = wt)]
+    attr(X, "xhat") <- NEW
+    X
+}
+h <- function(x, shape) {
+    ## Calculate Lat/Lon position of point(s) a given distance (x)
+    ## into a pattern/shape
+
+    if (is.na(x[1])) print(x)
+    if (x[1] <= 0) return(as.numeric(shape[1, c("lat", "lon")]))
+    if (x[1] > max(shape$distance_into_shape))
+        return(as.numeric(shape[nrow(shape), c("lat", "lon")]))
+    
+    j <- which.min(x[1] > shape$distance_into_shape) - 1
+    sj <- shape[j, c("lat", "lon", "bearing", "distance_into_shape")]
+    Psi <- sj$bearing
+    d <- x[1] - sj$distance_into_shape
+    
+    ## only do the calculations if we need to!
+    if (d == 0) return(as.numeric(sj[1:2]))
+    partialSegment(as.numeric(sj[1:2]), Psi, d)
 }

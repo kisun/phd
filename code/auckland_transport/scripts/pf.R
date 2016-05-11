@@ -4,8 +4,9 @@
 ## Features: standalone! stop using all those functions written ages ago,
 ## and write them again (in C if I'm clever enough ...)
 
-library(RSQLite)
 setwd("../")
+.libPaths("../../.Rlibrary")
+library(RSQLite)
 source("src/R/pf_functions.R")
 source("src/R/graphics.R")
 
@@ -32,14 +33,16 @@ rowids <- dbGetQuery(con, sprintf("SELECT oid FROM vehicle_positions
                                   vid, ts, ts + 60 * 60 * 24))$oid
 
 ## For each row, run something
-i <- 1
+i <- 0
 M <- 500
 info <- list(cur.trip = "", trip_id = character(), shapes = list(), schedules = list(),
              status = "")
 ## status: ['waiting', 'delayed', 'inprogress', 'finished']
 state = matrix(NA, 5, M)
+refresh <- TRUE
 
-for (i in seq_along(rowids)) {
+for (i in seq_along(rowids)) {    
+    i <- i + 1
     row <- dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE oid='%s'", rowids[i]))
     t <- timeDiff(row$trip_start_time, ts2dt(row$timestamp, "time"))
     ## get shape and schedule
@@ -49,15 +52,16 @@ for (i in seq_along(rowids)) {
         info$trip_id <- c(info$trip_id, row$trip_id)
         info$shapes[[row$trip_id]] <- shape
         info$schedule[[row$trip_id]] <- schedule
+        info$status <- "init"
     }
     ## draw it!
-    if (row$trip_id != info$cur.trip) {
+    if (row$trip_id != info$cur.trip | refresh) {
         shape <- info$shapes[[row$trip_id]]
         schedule <- info$schedule[[row$trip_id]]
         info$cur.trip <- row$trip_id
         mobj <- iNZightMaps::iNZightMap(~lat, ~lon, data = shape)
-        grid::grid.locator()
-        plot(mobj, pch = NULL)
+        ## grid::grid.locator()
+        plot(mobj, pch = NA)
         addLines(shape$lon, shape$lat, gp = list(lwd = 2, col = "#550000"))
         addPoints(schedule$stop_lon, schedule$stop_lat, pch = 21,
                   gp = list(cex = 0.4, col = "#550000", fill = "white", lwd = 2))
@@ -75,12 +79,12 @@ for (i in seq_along(rowids)) {
         info$status <- "waiting"
     } else {
         ## bus should have left ...
-        if (info$status %in% c("waiting", "delayed")) {
+        if (info$status %in% c("init", "waiting", "delayed")) {
             ## if it's within ~20m of first stop, consider it at the beginning of the trip
             if (distance(t(row[, c("position_latitude", "position_longitude")]),
                          t(schedule[1, c("stop_lat", "stop_lon")])) < 20) {
                 info$status <- "inprogress"
-                state[1, ] <- runif(M, 0, 50)
+                state[1, ] <- 0
                 state[2, ] <- runif(M, 0, 30)
                 state[3, ] <- 1
                 state[4, ] <- ifelse(state[4, ] == 0, 0, t)  ## should probably interpolate this ...???
@@ -88,7 +92,7 @@ for (i in seq_along(rowids)) {
             } else {
                 ## bus might be in progress, OR late:
                 if (min(distance(t(row[, c("position_latitude", "position_longitude")]),
-                                 t(schedule[, c("stop_lat", "stop_lon")]))) > 50) {
+                                 t(shape[, c("lat", "lon")]))) > 50) {
                     info$status <- "delayed"
                 } else {
                     info$status <- "inprogress"
@@ -98,13 +102,26 @@ for (i in seq_along(rowids)) {
     }
     if (info$status == "inprogress") {
         ## run particle filter
+        ## state <-
+        state <- pfilter(state, row, shape, schedule)
+        attr(state, "ts") <- row$timestamp
+        if (refresh) {
+            xhat <- sapply(attr(state, "xhat")[1,], h, shape = shape)
+            addPoints(xhat[2, ], xhat[1, ], pch = 19,
+                      gp = list(col = "#00009930", cex = 0.5))
+            xhat <- sapply(state[1,], h, shape = shape)
+            addPoints(xhat[2, ], xhat[1, ], pch = 19,
+                      gp = list(col = "#00990030", cex = 0.3))
+        }
+    } else {
+        attr(state, "ts") <- row$timestamp
     }
     addPoints(row$position_longitude, row$position_latitude,
               gp =
                   list(col =
                            switch(info$status, "waiting" = "orange", "delayed" = "red",
-                                  "inprogress" = "green", "finished" = "blue"),
-                       lwd = 2, cex = 0.6), pch = 4)    
+                                  "inprogress" = "green3", "finished" = "blue"),
+                       lwd = 2, cex = 0.6), pch = 4)   
 }
 
 
