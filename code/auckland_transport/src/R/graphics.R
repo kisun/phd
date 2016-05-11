@@ -5,8 +5,8 @@ addPoints <- function(x, y, gpar, ...) {
     setVP()
 
     ## Transform the points:
-    xy <- latlon.xy(data.frame(lat = y, lon = x),
-                    map = global.objects$maps$map)
+    xy <- iNZightMaps::latlon.xy(data.frame(lat = y, lon = x),
+                                 map = global.objects$maps$map)
 
     ## Draw the points:
     if (missing(gpar)) {
@@ -29,8 +29,8 @@ addLines <- function(x, y, gpar, ...) {
     setVP()
 
     ## Transform the points:
-    xy <- latlon.xy(data.frame(lat = y, lon = x),
-                    map = global.objects$maps$map)
+    xy <- iNZightMaps::latlon.xy(data.frame(lat = y, lon = x),
+                                 map = global.objects$maps$map)
 
     ## Draw the lines:
     if (missing(gpar)) {
