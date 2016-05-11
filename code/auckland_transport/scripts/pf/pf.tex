@@ -1,0 +1,72 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+
+\title{Particle Filter applied to GTFS Realtime}
+\author{Tom Elliott}
+\date{2016}
+
+\begin{document}
+
+\maketitle
+
+
+The Particle Filter (PF) model will allow buses to stop at bus stops
+for some exponentially distributed time.
+The speed component of the model will be fairly simple
+(normally distributed, truncated between 0 and 30~ms$^{-1}$).
+The arrival time of each particle will be recorded, 
+as will the corresponding departure time. 
+This should give a posterior sample of dwell times at each stop.
+
+
+The condition for ``at a stop'' will be ``within 20~m of the bus stop'',
+which allows for GPS error, as well as queues or other obstructions at stops.
+Additionally, there will be a small probability that a bus doesn't move from its
+previous location, even if its between stops (e.g., when stopped at traffic lights).
+
+
+
+The overall state vector associated with observation $k$ is
+\begin{equation}
+  \label{eq:state_vector}
+  X_k =
+  \begin{bmatrix}
+    d_k & v_k & s_k & T_{s_k} & D_{s_k}
+  \end{bmatrix}^T
+\end{equation}
+where $d_k$ is the distance into trip (m),
+$v_k$ is the speed (ms$^{-1}$),
+$s_k$ is the most recently visisted stop number,
+$T_j$ is the arrival time at stop $j$,
+and $D_j$ the associated departure time.
+The dwell time between arrival and departure at stop $j$ is $\tau_j$,
+the the probability of stopping is $\pi_j$.
+Each particle has its own associated state vector, denoted by a superscript $(i)$,
+for example $X_k^{(i)}$.
+
+The data are GPS coordinates and timestamps.
+The elapsed time between observations is denoted $\delta_k = t_k - t_{k-1}$.
+To compute likelihoods for the particles, and therefore perform weighted resampling,
+the distances $d_k$ are transformed into GPS coordinates, using the shape associated
+with the trip and interpolating.
+The distance is thence just a great circle distance\footnote{In fact, 
+the flat Earth approximation is within $1\times 10^{-15}$~m in our case, 
+so it will suffice if computation times need reducing.}
+between two points,
+\begin{equation}
+  \label{eq:greatcircle}
+  \Delta d = R \arcsin(\sin(\phi_1) \cdot \sin(\phi_2) +
+  \cos(\phi_1) \cdot \cos(\phi_2) \cdot \cos(|\lambda_1 - \lambda_2|))
+\end{equation}
+where $R$ is the Earth's radius is the desired units (we use $R = 6.371\times 10^6$~m).
+The particle weights are based on the distances being normally distributed
+with mean 0 and varince a model parameter to tune (although it is effectively GPS error).
+Too small and too few particles will be resamples; too large and the accuracy will be low.
+
+
+
+
+\end{document}
