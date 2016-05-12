@@ -3,6 +3,7 @@
 \usepackage{fullpage}
 \usepackage{amsmath}
 \usepackage{amsfonts}
+\usepackage{enumerate}
 
 \title{Particle Filter applied to GTFS Realtime}
 \author{Tom Elliott}
@@ -66,6 +67,104 @@ The particle weights are based on the distances being normally distributed
 with mean 0 and varince a model parameter to tune (although it is effectively GPS error).
 Too small and too few particles will be resamples; too large and the accuracy will be low.
 
+
+\section{Model}
+
+There are several parts to the model:
+
+\begin{enumerate}
+\item checking step
+\item movement step
+\item arrival/dwell step
+\item weight and update
+\end{enumerate}
+
+
+\subsection{Checking Step}
+
+This requires checking of the bus' status, for example the trip ID, whether or not it has started the trip
+(this can be based on time or location of the bus), or if it has finished.
+Knowing about blocks would make this much easier \ldots
+
+
+\subsection{Movement Step}
+
+Particles all drive off for $\delta_k$~s and see where they end up.
+The speed is randomly sampled for each particle before doing so, otherwise resampled points will have the same speed,
+and variation will be lost.
+So, it's a two-stage step:
+\begin{align*}
+  v_k^{(i)} &= v_{i-1}^{(i)} + \epsilon_{k}^{(i)},\qquad \epsilon_k \sim \mathcal{N}(0, \sigma_v^2) \\
+  d_k^{(i)} &=
+              \begin{cases}
+                d_{k-1}^{(i)} + v_k^{(i)} \delta_k, & \text{ if bus is not at a stop } \\
+                d_{k-1}^{(i)} + v_k^{(i)} \left(\delta_k - \xi_k^{(i)}\right),
+                &\text{ if bus is at a stop, } \quad \xi_k \sim \mathcal{E}(\tau_{s_k})
+              \end{cases}
+\end{align*}
+An extra condition is that $v_k^{(i)} \geq 0$ (i.e., the buses don't go backwards along the route, in theory).
+Also put upper bound of 30~ms$^{-1}$ which is a little over 100~kmh$^{-1}$.
+
+
+\subsection{Arrival/Dwell Step}
+
+
+At some point, the bus will drive past and possibly (probably?) stop at (or near) a bus stop.
+The probability of this happening is $\pi_j$, so $p_j^{(i)} \sim \mathrm{Bern}(\pi_j)$ 
+indicates whether or not each particle stops.
+Regardless of whether the bus stops or not, the arrival time is
+\begin{equation}
+  \label{eq:arrival_time}
+  T_j^{(i)} = d_{k-1}^{(i)} + \frac{s_j - d_{k-1}^{(i)}}{v_k^{(i)}}
+\end{equation}
+
+If the bus doesn't stop (i.e., $p_j^{(i)} = 0$), then the departure time is the arrival time,
+i.e., $D_j^{(i)} = T_j^{(i)}$.
+If the bus does stop, then it stays there $\gamma + \tau_j^{(i)}$~s,
+where $\gamma$ is another model parameter which specifies the time taken to decelerate, open and close doors,
+and accelerate again, and $\tau_j$ is the time taken for passengers to alight and embark.
+From here, either
+\begin{enumerate}[i.]
+\item 
+  $T_j^{(i)} + \gamma + \tau_j^{(i)} >= t_k$, in which case the bus remains at the bus stop, 
+  and $d_k^{(i)} = d_{s_k}$ (the distance into trip of stop $j$), or
+\item 
+  $T_j^{(i)} + \gamma + \tau_j^{(i)} < t_k$, in which case the bus departs the stop and carries on.
+  In this case, the departure time is set to
+  \begin{equation}
+    \label{eq:departure_time}
+    D_j^{(i)} = T_j^{(i)} + \gamma + \tau_j^{(i)},
+  \end{equation}
+  and the remaining travel time is $t_k - D_j^{(i)}$, so the new distance is computed to be
+  \begin{equation}
+    \label{eq:distance_after_stopping}
+    d_k^{(i)} = d_{s_k} + v_k^{(i)} \left( t_k - D_j^{(i)} \right).
+  \end{equation}
+  In this case, it is necessary to repeat the arrival/dwell step in case the bus makes it to other stops
+  (for example, if a bus fails to report for an extra long time period, or if there are several stops
+  close together).
+\end{enumerate}
+
+
+\subsection{Weight and Update Step}
+
+Once the particles have been moved forward and their locations finalised, the data point is used to 
+obtain the likelihood weights of them.
+First, the particle distances $d_k$ are transformed into GPS coordinates using the trips associated 
+shape file. 
+That is, $r_k^{(i)} = h(d_k^{(i)})$, where $r_k = [\phi_k, \lambda_k]^T$, the longitude and latitude
+respectively.
+The distance between points is computed using (\ref{eq:greatcircle}), 
+and the weights of each particles are
+\begin{equation}
+  \label{eq:particle_weights}
+  w^{(i)} = \frac{p(X_k^{(i)})}{\sum_{j=1}^M p(X_k^{(j)})},\quad \text{where}\quad
+  p(X_k^{(i)}) = \frac{1}{\sqrt{2\pi}\sigma_y} \exp\left(\frac{(d_k^{(i)})^2}{2\sigma_y^2}\right)
+\end{equation}
+where $\sigma_y^2$ is the GPS error.
+
+The particles are then resampled based on their weights, and the resulting set is considered
+a sample from the posterior distribution.
 
 
 
