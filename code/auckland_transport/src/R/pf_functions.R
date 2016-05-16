@@ -151,7 +151,7 @@ timeDiff <- function(t1, t2) {
     diff(as.numeric(as.POSIXct(paste("2016-01-01", c(t1, t2)))))
 }
 pfilter <- function(X, row, shape, sched, gamma = 10) {
-    s <- schedule$distance_into_shape
+    s <- sched$distance_into_shape
     if (all(X[1,] == max(s))) return(X)
     R <- ncol(X)
     NEW <- matrix(NA, nrow(X), ncol(X))
@@ -160,13 +160,14 @@ pfilter <- function(X, row, shape, sched, gamma = 10) {
     dt <- tn - tx
     ## probabiltiy of staying where we are:
     at.stop <- abs(X[1,] - s[X[3,]]) < 20  ## within 20m of a stop
+    at.stop[!is.finite(at.stop)] <- FALSE
     stay <- rbinom(R, 1, ifelse(at.stop, 0.5,  0.05))
     tau <- ifelse(stay, rexp(R, ifelse(at.stop,
                                        if (dt > 60) 1/dt
                                        else 1/30,
                                        1/10)), 0)
     ## sample new speed, and progress particles forward:
-    NEW[2,] <- msm::rtnorm(R, X[2,], 2, lower = 0, upper = 30)
+    NEW[2,] <- msm::rtnorm(R, X[2,], 4, lower = 0, upper = 30)
     NEW[1,] <- X[1,] + NEW[2,] * pmax(0, (dt - tau))
     NEW[3,] <- X[3,]
     NEW[4,] <- ifelse(is.na(X[5,]), X[4,], NA)

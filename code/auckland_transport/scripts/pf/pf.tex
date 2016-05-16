@@ -54,8 +54,8 @@ To compute likelihoods for the particles, and therefore perform weighted resampl
 the distances $d_k$ are transformed into GPS coordinates, using the shape associated
 with the trip and interpolating.
 The distance is thence just a great circle distance\footnote{In fact, 
-the flat Earth approximation is within $1\times 10^{-15}$~m in our case, 
-so it will suffice if computation times need reducing.}
+the flat Earth approximation was within $1\times 10^{-15}$~m in the shape files used, 
+so it will suffice if computation times need reducing. Currently, it's not an issue.}
 between two points,
 \begin{equation}
   \label{eq:greatcircle}
@@ -89,7 +89,7 @@ Knowing about blocks would make this much easier \ldots
 
 \subsection{Movement Step}
 
-Particles all drive off for $\delta_k$~s and see where they end up.
+Particles all drive off for $\delta_k$~seconds and see where they end up.
 The speed is randomly sampled for each particle before doing so, otherwise resampled points will have the same speed,
 and variation will be lost.
 So, it's a two-stage step:
@@ -108,7 +108,11 @@ Also put upper bound of 30~ms$^{-1}$ which is a little over 100~kmh$^{-1}$.
 
 \subsection{Arrival/Dwell Step}
 
+\emph{To simplify notation, for any stop-related variable $Z$, 
+let the value for the $i^\mathrm{th}$ particle at time $k$ at stop $s_j = s_k^{(i)}$ 
+be simply denoted $Z_j^{(i)}$, and $\omega_j$ be the underlying parameter for a given stop $j$.}
 
+\bigskip\noindent
 At some point, the bus will drive past and possibly (probably?) stop at (or near) a bus stop.
 The probability of this happening is $\pi_j$, so $p_j^{(i)} \sim \mathrm{Bern}(\pi_j)$ 
 indicates whether or not each particle stops.
@@ -120,14 +124,14 @@ Regardless of whether the bus stops or not, the arrival time is
 
 If the bus doesn't stop (i.e., $p_j^{(i)} = 0$), then the departure time is the arrival time,
 i.e., $D_j^{(i)} = T_j^{(i)}$.
-If the bus does stop, then it stays there $\gamma + \tau_j^{(i)}$~s,
+If the bus does stop, then it stays there for $\gamma + \tau_j^{(i)}$~seconds,
 where $\gamma$ is another model parameter which specifies the time taken to decelerate, open and close doors,
-and accelerate again, and $\tau_j$ is the time taken for passengers to alight and embark.
+and accelerate again, and $\tau_j$ is the time taken for passengers to board and disembark.
 From here, either
 \begin{enumerate}[i.]
 \item 
-  $T_j^{(i)} + \gamma + \tau_j^{(i)} >= t_k$, in which case the bus remains at the bus stop, 
-  and $d_k^{(i)} = d_{s_k}$ (the distance into trip of stop $j$), or
+  $T_j^{(i)} + \gamma + \tau_j^{(i)} \geq t_k$, in which case the bus remains at the bus stop, 
+  and $d_k^{(i)} = d_j^{(i)}$ (the distance into trip of the stop), or
 \item 
   $T_j^{(i)} + \gamma + \tau_j^{(i)} < t_k$, in which case the bus departs the stop and carries on.
   In this case, the departure time is set to
@@ -138,7 +142,7 @@ From here, either
   and the remaining travel time is $t_k - D_j^{(i)}$, so the new distance is computed to be
   \begin{equation}
     \label{eq:distance_after_stopping}
-    d_k^{(i)} = d_{s_k} + v_k^{(i)} \left( t_k - D_j^{(i)} \right).
+    d_k^{(i)} = d_{s_k}^{(i)} + v_k^{(i)} \left( t_k - D_j^{(i)} \right).
   \end{equation}
   In this case, it is necessary to repeat the arrival/dwell step in case the bus makes it to other stops
   (for example, if a bus fails to report for an extra long time period, or if there are several stops
@@ -150,7 +154,7 @@ From here, either
 
 Once the particles have been moved forward and their locations finalised, the data point is used to 
 obtain the likelihood weights of them.
-First, the particle distances $d_k$ are transformed into GPS coordinates using the trips associated 
+First, the particle distances $d_k$ are transformed into GPS coordinates using the trip's associated 
 shape file. 
 That is, $r_k^{(i)} = h(d_k^{(i)})$, where $r_k = [\phi_k, \lambda_k]^T$, the longitude and latitude
 respectively.
@@ -158,13 +162,20 @@ The distance between points is computed using (\ref{eq:greatcircle}),
 and the weights of each particles are
 \begin{equation}
   \label{eq:particle_weights}
-  w^{(i)} = \frac{p(X_k^{(i)})}{\sum_{j=1}^M p(X_k^{(j)})},\quad \text{where}\quad
-  p(X_k^{(i)}) = \frac{1}{\sqrt{2\pi}\sigma_y} \exp\left(\frac{(d_k^{(i)})^2}{2\sigma_y^2}\right)
+  w^{(i)} = \frac{p(Y_k | X_k^{(i)})}{\sum_{j=1}^M p(Y_k | X_k^{(j)})}
 \end{equation}
-where $\sigma_y^2$ is the GPS error.
+where
+\begin{equation}
+  \label{eq:particle_lhood}
+  Y_k | X_k^{(i)} \sim \mathcal{N}\left(X_k^{(i)}, \sigma_y^2\right) \equiv
+  X_k^{(i)} \sim \mathcal{N}\left(0, \sigma_y^2\right)
+\end{equation}
+since the data have been transformed so $Y_k = 0$.
+$\sigma_y^2$ is the GPS error
 
 The particles are then resampled based on their weights, and the resulting set is considered
-a sample from the posterior distribution.
+a sample from the posterior distribution, from which new predictions are made once the next 
+observation comes in.
 
 
 

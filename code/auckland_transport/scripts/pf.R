@@ -41,10 +41,12 @@ info <- list(cur.trip = "", trip_id = character(), shapes = list(), schedules = 
 state = matrix(NA, 5, M)
 refresh <- TRUE
 
+pb <- txtProgressBar(1, length(rowids), style = 3)
+jpeg("figs/pf_singlebus/particle_map%03d.jpg", width = 1920, height = 1080)
 for (i in seq_along(rowids)) {
-    ##i <- i + 1
+    setTxtProgressBar(pb, i)
+    ## i <- i + 1
     row <- dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE oid='%s'", rowids[i]))
-    print(ts2dt(row$timestamp))
     t <- timeDiff(row$trip_start_time, ts2dt(row$timestamp, "time"))
     ## get shape and schedule
     if (!row$trip_id %in% info$trip_id) {
@@ -56,12 +58,16 @@ for (i in seq_along(rowids)) {
         info$status <- "init"
     }
     ## draw it!
-    if (row$trip_id != info$cur.trip | refresh) {
+    if (row$trip_id != info$cur.trip) {
         shape <- info$shapes[[row$trip_id]]
         schedule <- info$schedule[[row$trip_id]]
         info$cur.trip <- row$trip_id
+        state[1, ] <- 0
+        state[3:5, ] <- NA
+        info$status <- "init"
+    }  
+    if (refresh) {
         mobj <- iNZightMaps::iNZightMap(~lat, ~lon, data = shape)
-        grid::grid.locator()
         plot(mobj, pch = NA)
         addLines(shape$lon, shape$lat, gp = list(lwd = 2, col = "#550000"))
         addPoints(schedule$stop_lon, schedule$stop_lat, pch = 21,
@@ -97,6 +103,8 @@ for (i in seq_along(rowids)) {
                     info$status <- "delayed"
                 } else {
                     info$status <- "inprogress"
+                    state[2, ] <- ifelse(is.na(state[2, ]), runif(M, 0, 30), state[2, ])
+                    state[3, ] <- 1
                 }
             }
         }
@@ -127,7 +135,7 @@ for (i in seq_along(rowids)) {
                   list(col =
                            switch(info$status, "waiting" = "orange", "delayed" = "red",
                                   "inprogress" = "green3", "finished" = "blue"),
-                       lwd = 2, cex = 0.6), pch = 4)
-}
+                       lwd = 2, cex = 0.6), pch = 4)    
+}; dev.off(); close(pb)
 
 
