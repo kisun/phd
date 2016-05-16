@@ -88,6 +88,7 @@ Knowing about blocks would make this much easier \ldots
 
 
 \subsection{Movement Step}
+\label{sec:move}
 
 Particles all drive off for $\delta_k$~seconds and see where they end up.
 The speed is randomly sampled for each particle before doing so, otherwise resampled points will have the same speed,
@@ -99,7 +100,7 @@ So, it's a two-stage step:
               \begin{cases}
                 d_{k-1}^{(i)} + v_k^{(i)} \delta_k, & \text{ if bus is not at a stop } \\
                 d_{k-1}^{(i)} + v_k^{(i)} \left(\delta_k - \xi_k^{(i)}\right),
-                &\text{ if bus is at a stop, } \quad \xi_k \sim \mathcal{E}(\tau_{s_k})
+                &\text{ if bus is at a stop, } \quad \xi_k \sim \mathcal{E}(\tau_{s_k}^{-1})
               \end{cases}
 \end{align*}
 An extra condition is that $v_k^{(i)} \geq 0$ (i.e., the buses don't go backwards along the route, in theory).
@@ -107,6 +108,7 @@ Also put upper bound of 30~ms$^{-1}$ which is a little over 100~kmh$^{-1}$.
 
 
 \subsection{Arrival/Dwell Step}
+\label{sec:arr-dwell}
 
 \emph{To simplify notation, for any stop-related variable $Z$, 
 let the value for the $i^\mathrm{th}$ particle at time $k$ at stop $s_j = s_k^{(i)}$ 
@@ -176,6 +178,37 @@ $\sigma_y^2$ is the GPS error
 The particles are then resampled based on their weights, and the resulting set is considered
 a sample from the posterior distribution, from which new predictions are made once the next 
 observation comes in.
+
+
+
+\section{Issues}
+
+Several issues with the model, 'caused by the way the data is collected \ldots
+
+
+\subsection{Dwell time at non-stops}
+
+Main example: traffic lights! 
+Need some extra probability $\kappa_k$ that is small but probable, 
+which allows particles to remain where they were at the previous observation
+for some time $\eta_k \sim \mathcal{E}(\tau_b^{-1})$.
+This is implemented, and the logic is exactly the same as in \S~\ref{sec:move},
+but using $\eta_k$ instead of $\xi_k$.
+
+
+\subsection{$\delta_k$ depends on bus speed?}
+
+No in depth study performed yet, but it looks like buses report their position less 
+frequently when they are stuck in traffic (or not moving very quickly for some other
+reason).
+This will influence how we model $\omega_k$ and $\kappa_k$\ldots
+
+Need to investigate what happens if $\kappa_k = f(\delta_k)$,
+and also penalise $v_k$ using $\delta_k$ too: if $\delta_k$ is small, 
+then the bus may have sped up; if it is large, the bus may have slowed down.
+
+And of course, this is completely observational right now \ldots
+
 
 
 

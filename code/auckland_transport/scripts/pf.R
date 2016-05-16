@@ -32,6 +32,11 @@ rowids <- dbGetQuery(con, sprintf("SELECT oid FROM vehicle_positions
                                    WHERE vehicle_id='%s' AND timestamp>=%s AND timestamp<%s",
                                   vid, ts + 7.5 * 60 * 60 + 4*60, ts + 60 * 60 * 24))$oid
 
+## get the vehicles row numbers:
+tss <- dbGetQuery(con, sprintf("SELECT trip_id, timestamp FROM vehicle_positions
+                                WHERE vehicle_id='%s' AND timestamp>=%s AND timestamp<%s",
+                               vid, ts + 7.5 * 60 * 60 + 4*60, ts + 60 * 60 * 24))
+
 ## For each row, run something
 i <- 0
 M <- 500
@@ -43,10 +48,9 @@ refresh <- TRUE
 
 pb <- txtProgressBar(1, length(rowids), style = 3)
 jpeg("figs/pf_singlebus/particle_map%03d.jpg", width = 1920, height = 1080)
-
 for (i in seq_along(rowids)) {
-    ## setTxtProgressBar(pb, i)
-    ## i <- i + 1
+     setTxtProgressBar(pb, i)
+    i <- i + 1
     row <- dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE oid='%s'", rowids[i]))
     t <- timeDiff(row$trip_start_time, ts2dt(row$timestamp, "time"))
     ## get shape and schedule
@@ -117,18 +121,18 @@ for (i in seq_along(rowids)) {
         new.state <- pfilter(STATE, row, shape, schedule)
         if (attr(new.state, "code") != 0) {
             cat("\nParticle Filter returned error", attr(new.state, "code"), "\n")
-            break
+            cat("Observation #:", i, "\n")
         }
         STATE <- state
         state <- new.state
         attr(state, "ts") <- row$timestamp
-        if (refresh) {
+        if (refresh & attr(new.state, "code") == 0) {
             xhat <- sapply(attr(state, "xhat")[1,], h, shape = shape)
-            addPoints(xhat[2, ], xhat[1, ], pch = 19,
+            addPoints(xhat[2, ], xhat[1, ], pch = 4,
                       gp = list(col = "#00009930", cex = 0.5))
             xhat <- sapply(state[1,], h, shape = shape)
-            addPoints(xhat[2, ], xhat[1, ], pch = 19,
-                      gp = list(col = "#99000030", cex = 0.4))
+            addPoints(xhat[2, ], xhat[1, ], pch = 4,
+                      gp = list(col = "#99000030", cex = 0.8))
         }
     } else {
         attr(state, "ts") <- row$timestamp
@@ -137,10 +141,7 @@ for (i in seq_along(rowids)) {
               gp =
                   list(col =
                            switch(info$status, "waiting" = "orange", "delayed" = "red",
-                                  "inprogress" = "green3", "finished" = "blue"),
-                       lwd = 2, cex = 0.6), pch = 4)
-};
+                                  "inprogress" = "green2", "finished" = "blue"),
+                       lwd = 3, cex = 0.4), pch = 3)
+};dev.off(); close(pb)
 
-dev.off(); close(pb)
-
-debug(pfilter)

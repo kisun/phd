@@ -158,21 +158,21 @@ pfilter <- function(X, row, shape, sched, gamma = 10) {
     tx <- attr(state, "ts")
     tn <- row$timestamp
     dt <- tn - tx
+    ## print(dt)
     ## probabiltiy of staying where we are:
     at.stop <- abs(X[1,] - s[X[3,]]) < 20  ## within 20m of a stop
     at.stop[!is.finite(at.stop)] <- FALSE
-    stay <- rbinom(R, 1, ifelse(at.stop, 0.5,  0.05))
-    tau <- ifelse(stay, rexp(R, ifelse(at.stop,
-                                       if (dt > 60) 1/dt
-                                       else 1/30,
-                                       1/10)), 0)
+    stay <- rbinom(R, 1, ifelse(at.stop, 0.5,  0.1))
+    tau <- ifelse(stay, rexp(R, 1/dt), 0) ##ifelse(at.stop,
+                                       ##if (dt > 60) 1/dt
+                                       ## else 1/30,
+                                       ## 1/10)), 0)
     ## sample new speed, and progress particles forward:
     NEW[2,] <- msm::rtnorm(R, X[2,], 3, lower = 0, upper = 30)
     NEW[1,] <- X[1,] + NEW[2,] * pmax(0, (dt - tau))
     NEW[3,] <- X[3,]
     NEW[4,] <- ifelse(is.na(X[5,]), X[4,], NA)
     NEW[5,] <- ifelse(dt - tau > 0 & !is.na(NEW[4,]), tx + tau, NA)
-    print(NEW)
     ## work out stop-passing stuff ...
     w <- apply(NEW, 2, function(x) x[1] > s[x[3]+1])
     if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])
@@ -194,11 +194,11 @@ pfilter <- function(X, row, shape, sched, gamma = 10) {
                      sapply(NEW[1,], h, shape = shape))
     if (all(dist > 20)) {
         xhat <- sapply(NEW[1,], h, shape = shape)
-        addPoints(xhat[2, ], xhat[1, ], pch = 19,
-                  gp = list(col = "#00009930", cex = 0.5))
+        addPoints(xhat[2, ], xhat[1, ], pch = 4,
+                  gp = list(col = "#99990030", cex = 0.5))
         ## essentially an error if none of the particles are close to the bus
-        attr(X, "code") <- 1
-        return(X)
+        attr(NEW, "code") <- 1
+        return(NEW)
     }
     pr <- dnorm(dist, 0, 10)
     wt <- pr / sum(pr)
