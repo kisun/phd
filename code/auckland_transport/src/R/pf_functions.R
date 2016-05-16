@@ -167,11 +167,12 @@ pfilter <- function(X, row, shape, sched, gamma = 10) {
                                        else 1/30,
                                        1/10)), 0)
     ## sample new speed, and progress particles forward:
-    NEW[2,] <- msm::rtnorm(R, X[2,], 4, lower = 0, upper = 30)
+    NEW[2,] <- msm::rtnorm(R, X[2,], 3, lower = 0, upper = 30)
     NEW[1,] <- X[1,] + NEW[2,] * pmax(0, (dt - tau))
     NEW[3,] <- X[3,]
     NEW[4,] <- ifelse(is.na(X[5,]), X[4,], NA)
     NEW[5,] <- ifelse(dt - tau > 0 & !is.na(NEW[4,]), tx + tau, NA)
+    print(NEW)
     ## work out stop-passing stuff ...
     w <- apply(NEW, 2, function(x) x[1] > s[x[3]+1])
     if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])
@@ -201,8 +202,9 @@ pfilter <- function(X, row, shape, sched, gamma = 10) {
     }
     pr <- dnorm(dist, 0, 10)
     wt <- pr / sum(pr)
-    X <- NEW[,sample(R, replace = TRUE, prob = wt)]
+    X <- NEW[, sample(R, replace = TRUE, prob = wt)]
     attr(X, "xhat") <- NEW
+    attr(X, "code") <- 0
     X
 }
 h <- function(x, shape) {

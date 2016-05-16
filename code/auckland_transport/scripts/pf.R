@@ -43,8 +43,9 @@ refresh <- TRUE
 
 pb <- txtProgressBar(1, length(rowids), style = 3)
 jpeg("figs/pf_singlebus/particle_map%03d.jpg", width = 1920, height = 1080)
+
 for (i in seq_along(rowids)) {
-    setTxtProgressBar(pb, i)
+    ## setTxtProgressBar(pb, i)
     ## i <- i + 1
     row <- dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE oid='%s'", rowids[i]))
     t <- timeDiff(row$trip_start_time, ts2dt(row$timestamp, "time"))
@@ -112,12 +113,14 @@ for (i in seq_along(rowids)) {
     if (info$status == "inprogress") {
         ## run particle filter
         ## state <-
-        state <- pfilter(state, row, shape, schedule)
-        ## while (!is.null(attr(state, "code"))) {
-        ##     state <- switch(attr(state, "code"),
-        ##                     pfilter(state, row, shape, schedule, delayed = FALSE)
-        ##                     )
-        ## }
+        STATE <- state
+        new.state <- pfilter(STATE, row, shape, schedule)
+        if (attr(new.state, "code") != 0) {
+            cat("\nParticle Filter returned error", attr(new.state, "code"), "\n")
+            break
+        }
+        STATE <- state
+        state <- new.state
         attr(state, "ts") <- row$timestamp
         if (refresh) {
             xhat <- sapply(attr(state, "xhat")[1,], h, shape = shape)
@@ -135,7 +138,9 @@ for (i in seq_along(rowids)) {
                   list(col =
                            switch(info$status, "waiting" = "orange", "delayed" = "red",
                                   "inprogress" = "green3", "finished" = "blue"),
-                       lwd = 2, cex = 0.6), pch = 4)    
-}; dev.off(); close(pb)
+                       lwd = 2, cex = 0.6), pch = 4)
+};
 
+dev.off(); close(pb)
 
+debug(pfilter)
