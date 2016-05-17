@@ -4,6 +4,7 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{enumerate}
+\usepackage{graphicx}
 
 \title{Particle Filter applied to GTFS Realtime}
 \author{Tom Elliott}
@@ -87,7 +88,7 @@ This requires checking of the bus' status, for example the trip ID, whether or n
 Knowing about blocks would make this much easier \ldots
 
 
-\subsection{Movement Step}
+\subsection{Movement Step 1.0}
 \label{sec:move}
 
 Particles all drive off for $\delta_k$~seconds and see where they end up.
@@ -107,7 +108,7 @@ An extra condition is that $v_k^{(i)} \geq 0$ (i.e., the buses don't go backward
 Also put upper bound of 30~ms$^{-1}$ which is a little over 100~kmh$^{-1}$.
 
 
-\subsection{Arrival/Dwell Step}
+\subsection{Arrival/Dwell Step 1.0}
 \label{sec:arr-dwell}
 
 \emph{To simplify notation, for any stop-related variable $Z$, 
@@ -152,7 +153,7 @@ From here, either
 \end{enumerate}
 
 
-\subsection{Weight and Update Step}
+\subsection{Weight and Update Step 1.0}
 
 Once the particles have been moved forward and their locations finalised, the data point is used to 
 obtain the likelihood weights of them.
@@ -183,7 +184,7 @@ observation comes in.
 
 \section{Issues}
 
-Several issues with the model, 'caused by the way the data is collected \ldots
+Several issues with the model, caused by the way the data is collected \ldots
 
 
 \subsection{Dwell time at non-stops}
@@ -203,13 +204,29 @@ frequently when they are stuck in traffic (or not moving very quickly for some o
 reason).
 This will influence how we model $\omega_k$ and $\kappa_k$\ldots
 
+
+
+
+\begin{figure}[hb!]
+  \centering
+  \includegraphics[width=0.8\textwidth]{../../figs/pf_singlebus/distance_time.jpg}
+  \caption{Distance into trip (km) of vehicle over course of the day.}
+  \label{fig:distance-time}
+\end{figure}
+
+\begin{figure}[tbp]
+  \centering
+  \includegraphics[width=0.8\textwidth]{../../figs/pf_singlebus/delta_distance_time.jpg}
+  \caption{Change in distance versus change in time after removing all observations where $\Delta_d \leq 0$.}
+  \label{fig:delta-distance-time}
+\end{figure}
+
+
 Need to investigate what happens if $\kappa_k = f(\delta_k)$,
 and also penalise $v_k$ using $\delta_k$ too: if $\delta_k$ is small, 
 then the bus may have sped up; if it is large, the bus may have slowed down.
 
-And of course, this is completely observational right now \ldots
-
-
-
+And of course, this is completely observational right now \ldots see Figure~\ref{fig:distance-time}
+at about 8~a.m.; the gap corresponds to the right-most point in Figure~\ref{fig:delta-distance-time}.
 
 \end{document}

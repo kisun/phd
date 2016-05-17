@@ -25,7 +25,8 @@ ts <- as.numeric(as.POSIXct(date))
 ##                                      WHERE timestamp >= %s AND timestamp < %s",
 ##                                     ts, ts + 60 * 60 * 24))
 ## sort(table(vehicles$vehicle_id))
-vid <- "3787"
+## vid <- "3787"
+vid <- "2933"
 
 ## get the vehicles row numbers:
 rowids <- dbGetQuery(con, sprintf("SELECT oid FROM vehicle_positions
@@ -45,12 +46,14 @@ info <- list(cur.trip = "", trip_id = character(), shapes = list(), schedules = 
 ## status: ['waiting', 'delayed', 'inprogress', 'finished']
 state = matrix(NA, 5, M)
 refresh <- TRUE
+mean.dist <- numeric(length(rowids))
+times <- numeric(length(rowids))
 
 pb <- txtProgressBar(1, length(rowids), style = 3)
 jpeg("figs/pf_singlebus/particle_map%03d.jpg", width = 1920, height = 1080)
 for (i in seq_along(rowids)) {
-     setTxtProgressBar(pb, i)
-    i <- i + 1
+    setTxtProgressBar(pb, i)
+#    i <- i + 1
     row <- dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE oid='%s'", rowids[i]))
     t <- timeDiff(row$trip_start_time, ts2dt(row$timestamp, "time"))
     ## get shape and schedule
@@ -122,6 +125,8 @@ for (i in seq_along(rowids)) {
         if (attr(new.state, "code") != 0) {
             cat("\nParticle Filter returned error", attr(new.state, "code"), "\n")
             cat("Observation #:", i, "\n")
+        } else {
+            mean.dist[i] <- mean(new.state[1, ], na.rm = TRUE)
         }
         STATE <- state
         state <- new.state
@@ -137,11 +142,31 @@ for (i in seq_along(rowids)) {
     } else {
         attr(state, "ts") <- row$timestamp
     }
+    times[i] <- row$timestamp
     addPoints(row$position_longitude, row$position_latitude,
               gp =
                   list(col =
                            switch(info$status, "waiting" = "orange", "delayed" = "red",
                                   "inprogress" = "green2", "finished" = "blue"),
                        lwd = 3, cex = 0.4), pch = 3)
-};dev.off(); close(pb)
+}; dev.off(); close(pb)
 
+
+is.zero <- mean.dist == 0
+hour <- (times[!is.zero] - ts) / 60 / 60
+jpeg("figs/pf_singlebus/distance_time.jpg", width = 1920/2, height = 1080/2)
+plot(hour, mean.dist[!is.zero] / 1e3, xlab = "Time", ylab = "Distance Into Trip (km)", pch = 19, cex = 0.4)
+dev.off()
+
+
+dists <- mean.dist[!is.zero]
+secs <- times[!is.zero] - ts
+
+jpeg("figs/pf_singlebus/delta_distance_time.jpg", width = 1920/2, height = 1080/2)
+pos <- diff(dists) > 0
+plot(diff(secs)[pos] / 60, diff(dists)[pos],
+     xlab = expression(paste(Delta[t], " (min)")),
+     ylab = expression(paste(Delta[d], " (m)")))
+dev.off()
+
+cor(diff(secs)[pos] / 60, diff(dists)[pos])
