@@ -23,6 +23,8 @@ _*
 *.tar
 *.zip
 
+*.jpg
+
 # R + LaTeX #
 #############
 .Rlibrary/*/*

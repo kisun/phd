@@ -150,9 +150,11 @@ ts2dt <- function(ts, to = c("datetime", "date", "time")) {
 timeDiff <- function(t1, t2) {
     diff(as.numeric(as.POSIXct(paste("2016-01-01", c(t1, t2)))))
 }
-pfilter <- function(X, row, shape, sched, gamma = 10) {
+pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE) {
     s <- sched$distance_into_shape
     if (all(X[1,] == max(s))) return(X)
+    Xold <- X
+    if (rerun) X <- cbind(X, X)
     R <- ncol(X)
     NEW <- matrix(NA, nrow(X), ncol(X))
     tx <- attr(state, "ts")
@@ -162,13 +164,10 @@ pfilter <- function(X, row, shape, sched, gamma = 10) {
     ## probabiltiy of staying where we are:
     at.stop <- abs(X[1,] - s[X[3,]]) < 20  ## within 20m of a stop
     at.stop[!is.finite(at.stop)] <- FALSE
-    stay <- rbinom(R, 1, ifelse(at.stop, 0.5,  0.1))
-    tau <- ifelse(stay, rexp(R, 1/dt), 0) ##ifelse(at.stop,
-                                       ##if (dt > 60) 1/dt
-                                       ## else 1/30,
-                                       ## 1/10)), 0)
+    stay <- rbinom(R, 1, ifelse(at.stop, 0.5,  ifelse(rerun, 0.5, 0.1)))
+    tau <- ifelse(stay, rexp(R, 1 / dt), 0)
     ## sample new speed, and progress particles forward:
-    NEW[2,] <- msm::rtnorm(R, X[2,], 3, lower = 0, upper = 30)
+    NEW[2,] <- msm::rtnorm(R, X[2,], ifelse(rerun, 4, 2), lower = 0, upper = 30)
     NEW[1,] <- X[1,] + NEW[2,] * pmax(0, (dt - tau))
     NEW[3,] <- X[3,]
     NEW[4,] <- ifelse(is.na(X[5,]), X[4,], NA)
@@ -195,14 +194,16 @@ pfilter <- function(X, row, shape, sched, gamma = 10) {
     if (all(dist > 20)) {
         xhat <- sapply(NEW[1,], h, shape = shape)
         addPoints(xhat[2, ], xhat[1, ], pch = 4,
-                  gp = list(col = "#99990030", cex = 0.5))
+                  gp = list(col = "#99990030", cex = 1))
         ## essentially an error if none of the particles are close to the bus
+        ## which error code?
         attr(NEW, "code") <- 1
-        return(NEW)
+        if (rerun) return(structure(NEW[,1:ncol(Xold)], code = 2))
+        else return(NEW)
     }
     pr <- dnorm(dist, 0, 10)
     wt <- pr / sum(pr)
-    X <- NEW[, sample(R, replace = TRUE, prob = wt)]
+    X <- NEW[, sample(R, size = ncol(Xold), replace = TRUE, prob = wt)]
     attr(X, "xhat") <- NEW
     attr(X, "code") <- 0
     X

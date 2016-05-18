@@ -154,6 +154,7 @@ From here, either
 
 
 \subsection{Weight and Update Step 1.0}
+\label{sec:weight-update}
 
 Once the particles have been moved forward and their locations finalised, the data point is used to 
 obtain the likelihood weights of them.
@@ -209,14 +210,14 @@ This will influence how we model $\omega_k$ and $\kappa_k$\ldots
 
 \begin{figure}[hb!]
   \centering
-  \includegraphics[width=0.8\textwidth]{../../figs/pf_singlebus/distance_time.jpg}
+  \includegraphics[width=0.8\textwidth]{../../figs/pf_singlebus/v3787/distance_time.jpg}
   \caption{Distance into trip (km) of vehicle over course of the day.}
   \label{fig:distance-time}
 \end{figure}
 
 \begin{figure}[tbp]
   \centering
-  \includegraphics[width=0.8\textwidth]{../../figs/pf_singlebus/delta_distance_time.jpg}
+  \includegraphics[width=0.8\textwidth]{../../figs/pf_singlebus/v3787/delta_distance_time.jpg}
   \caption{Change in distance versus change in time after removing all observations where $\Delta_d \leq 0$.}
   \label{fig:delta-distance-time}
 \end{figure}
@@ -228,5 +229,62 @@ then the bus may have sped up; if it is large, the bus may have slowed down.
 
 And of course, this is completely observational right now \ldots see Figure~\ref{fig:distance-time}
 at about 8~a.m.; the gap corresponds to the right-most point in Figure~\ref{fig:delta-distance-time}.
+
+
+
+
+
+\subsection{Particles all too far from observed location}
+
+When computing distances in the Weight and Update Step (\S~\ref{sec:weight-update}),
+it's possible that all of the particles are too far away (e.g., $>20$~m) from the 
+reported position of the bus. In this situation, the likelihood of all particles
+can be 0, so the weights are undefined. 
+Increasing $\sigma_y^2$ would fix this, but it would mean that the particles are not 
+good representations of the true position of the bus.
+
+
+There are three situations when this occurs:
+\begin{enumerate}[(i)]
+\item 
+  The true position of the bus is \emph{behind} all of the particles, due to longer dwell times
+  or higher congestion than expected.
+
+  \textbf{Detect:} if the particles nearest the reported bus position have the \emph{smallest}
+  value of $d_k^{(i)}$.
+
+  \textbf{Solution:} repeat the prediction step, increasing stopping probabilities and dwell times
+  (especially if bus was previous at a stop),
+  and allowing slower speeds to be sampled (in the case of heavy congestion).
+
+\item 
+  The true position of the bus is \emph{ahead of} all of the particles, due to lower than expected dwell
+  times, or stopping at stops, or a break in the traffic resulting in increased speed (for example the
+  appearance of a bus lane, or passing the site of an accident).
+
+  \textbf{Detect:} if the particles nearest the reported bus position have the \emph{largest}
+  value of $d_k^{(i)}$.
+
+  \textbf{Solution:} Repeat step, reducing stopping probabilities and dwell times (for example nobody gets on or off 
+  the bus for whatever reason), 
+  and allowing higher speeds to be sampled (such as when passing an accident).
+
+\item 
+  The sparsity of the particles isn't even enough, so the actual observation is between particles, but they 
+  are all too far away.
+
+  \textbf{Detect:} neither (i) nor (ii) occur.
+
+  \textbf{Solution:} rerun the simulation the same as before. If this doesn't solve the issue, it might be necessary
+  to increase the number of particles for the step.
+\end{enumerate}
+
+A related issue is variance of particles weights: if only a few particles have high weights, it means that 
+the model hasn't predicted too well---this can result in (iii) above. 
+In this case, it is necessary to increase the number of particles.
+Alternatively, if all of the particles have similar weights, there is not enough variation between them,
+so the error needs to be increased.
+
+
 
 \end{document}
