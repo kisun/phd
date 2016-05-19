@@ -231,7 +231,18 @@ And of course, this is completely observational right now \ldots see Figure~\ref
 at about 8~a.m.; the gap corresponds to the right-most point in Figure~\ref{fig:delta-distance-time}.
 
 
+\textbf{Update:}
+This might be less common than first assumed.
+Perhaps the 12~minute observation was because the driver turned the bus off? 
+Or the location caused interference so the bus couldn't connect to the central server \ldots
 
+\begin{figure}[hbt!]
+  \centering
+  \includegraphics[width=0.49\textwidth]{../../figs/pf_singlebus/v2933/delta_distance_time.jpg}
+  \includegraphics[width=0.49\textwidth]{../../figs/pf_singlebus/v3704/delta_distance_time.jpg}
+  \caption{Change in distance versus change in time for two other vehicles.}
+  \label{fig:delta-distance-time2}
+\end{figure}
 
 
 \subsection{Particles all too far from observed location}
@@ -242,6 +253,7 @@ reported position of the bus. In this situation, the likelihood of all particles
 can be 0, so the weights are undefined. 
 Increasing $\sigma_y^2$ would fix this, but it would mean that the particles are not 
 good representations of the true position of the bus.
+
 
 
 There are three situations when this occurs:
@@ -274,7 +286,7 @@ There are three situations when this occurs:
   are all too far away.
 
   \textbf{Detect:} neither (i) nor (ii) occur.
-
+\label{fig:delta-distance-time-2}
   \textbf{Solution:} rerun the simulation the same as before. If this doesn't solve the issue, it might be necessary
   to increase the number of particles for the step.
 \end{enumerate}
@@ -284,6 +296,28 @@ the model hasn't predicted too well---this can result in (iii) above.
 In this case, it is necessary to increase the number of particles.
 Alternatively, if all of the particles have similar weights, there is not enough variation between them,
 so the error needs to be increased.
+
+
+\subsection{Backtracking Buses}
+
+The model explicitely requires buses to move forward along the route. 
+i.e., $d_k \geq d_{k-1}$.
+However, it appears that GPS error can make it appear that buses travel \emph{backwards} slightly.
+
+\textbf{Temporary fix:} increase $\sigma_y^2$ if it appears that the bus has travelled backwards, 
+for just a single iteration.
+
+\textbf{Future fix:} do an analysis of GPS error to get a better esimate of $\sigma_y^2$.
+This will probably involve looking for buses stopped at a particular bus stop, 
+and finding the variance of their GPS positions.
+For this to work, we need to find a stop with low-frequency so the buses are stopped in $\approx$ the same position.
+
+
+
+\subsection{End-route behaviour}
+
+At end of route, all particles seem to end up at stops, never between them where the bus is.
+Need to look at what's happening to speed/arrival/departure times.
 
 
 
