@@ -26,8 +26,8 @@ ts <- as.numeric(as.POSIXct(date))
 ##                                     ts, ts + 60 * 60 * 24))
 ## sort(table(vehicles$vehicle_id))
 ## vid <- "3787"
-## vid <- "2933"
-vid <- "3704"
+vid <- "2933"
+## vid <- "3704"
 
 ## get the vehicles row numbers:
 rowids <- dbGetQuery(con, sprintf("SELECT oid FROM vehicle_positions
@@ -35,7 +35,7 @@ rowids <- dbGetQuery(con, sprintf("SELECT oid FROM vehicle_positions
                                    ORDER BY timestamp",
                                   vid, ts, ts + 60 * 60 * 24))$oid
 
-## get the vehicles row numbers:
+## get all of the timestamps
 tss <- dbGetQuery(con, sprintf("SELECT trip_id, timestamp FROM vehicle_positions
                                 WHERE vehicle_id='%s' AND timestamp>=%s AND timestamp<%s
                                 ORDER BY timestamp",
@@ -131,7 +131,11 @@ for (i in seq_along(rowids)) {
             cat("Observation #:", i, "\n")
             new.state <- pfilter(STATE, row, shape, schedule, rerun = TRUE)
             if (attr(new.state, "code") != 0) {
-                cat("Re-run didn't help\n")
+                cat("Re-run didn't help ... increasing GPS error ...\n")
+                new.state <- pfilter(STATE, row, shape, schedule, rerun = TRUE, gps = 20)
+                if (attr(new.state, "code") != 0) {
+                    cat("That didn't help either ... giving up.\n")
+                }
             }
         } else {
             mean.dist[i] <- mean(new.state[1, ], na.rm = TRUE)
@@ -162,7 +166,7 @@ for (i in seq_along(rowids)) {
 
 is.zero <- mean.dist == 0
 hour <- (times[!is.zero] - ts) / 60 / 60
-jpeg((paste0("figs/pf_singlebus/v", vid, "/distance_time.jpg"), width = 1920/2, height = 1080/2)
+jpeg(paste0("figs/pf_singlebus/v", vid, "/distance_time.jpg"), width = 1920/2, height = 1080/2)
 plot(hour, mean.dist[!is.zero] / 1e3, xlab = "Time", ylab = "Distance Into Trip (km)", pch = 19, cex = 0.4)
 dev.off()
 
@@ -170,7 +174,7 @@ dev.off()
 dists <- mean.dist[!is.zero]
 secs <- times[!is.zero] - ts
 
-jpeg((paste0("figs/pf_singlebus/v", vid, "/delta_distance_time.jpg"), width = 1920/2, height = 1080/2)
+jpeg(paste0("figs/pf_singlebus/v", vid, "/delta_distance_time.jpg"), width = 1920/2, height = 1080/2)
 pos <- diff(dists) > 0
 plot(diff(secs)[pos] / 60, diff(dists)[pos],
      xlab = expression(paste(Delta[t], " (min)")),

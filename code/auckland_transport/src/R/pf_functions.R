@@ -150,7 +150,7 @@ ts2dt <- function(ts, to = c("datetime", "date", "time")) {
 timeDiff <- function(t1, t2) {
     diff(as.numeric(as.POSIXct(paste("2016-01-01", c(t1, t2)))))
 }
-pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE) {
+pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
     s <- sched$distance_into_shape
     if (all(X[1,] == max(s))) return(X)
     Xold <- X
@@ -191,17 +191,19 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE) {
     ## compute weights:
     dist <- distance(t(row[, c("position_latitude", "position_longitude")]),
                      sapply(NEW[1,], h, shape = shape))
-    if (all(dist > 20)) {
+    if (all(dist > 3 * gps)) {
         xhat <- sapply(NEW[1,], h, shape = shape)
         addPoints(xhat[2, ], xhat[1, ], pch = 4,
                   gp = list(col = "#99990030", cex = 1))
         ## essentially an error if none of the particles are close to the bus
         ## which error code?
         attr(NEW, "code") <- 1
-        if (rerun) return(structure(NEW[,1:ncol(Xold)], code = 2))
-        else return(NEW)
+        if (!rerun) ## return(structure(NEW[,1:ncol(Xold)], code = 2))
+            return(NEW)
     }
-    pr <- dnorm(dist, 0, 10)
+    pr <- dnorm(dist, 0, gps)
+    if (sum(pr > 0) < 5)  ## less than 5 valid particles
+        return(structure(NEW[,1:ncol(Xold)], code = 3))
     wt <- pr / sum(pr)
     X <- NEW[, sample(R, size = ncol(Xold), replace = TRUE, prob = wt)]
     attr(X, "xhat") <- NEW
