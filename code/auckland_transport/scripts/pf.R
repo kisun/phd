@@ -16,8 +16,10 @@ con <- dbConnect(SQLite(), rtdb)
 
 ## pick a day:
 ## ts <- dbGetQuery(con, sprintf("SELECT DISTINCT timestamp FROM vehicle_positions"))$timestamp
-## table(format(as.POSIXct(ts, origin = "1970-1-1"), "%Y-%m-%d"))
-date <- "2016-02-15"
+## dates <- format(as.POSIXct(ts, origin = "1970-1-1"), "%Y-%m-%d")
+## data.frame(table(dates),
+##            dow = lubridate::wday(unique(dates), TRUE, FALSE))
+date <- "2016-01-25"
 ts <- as.numeric(as.POSIXct(date))
 
 ## pick a vehicle to stalk:
@@ -26,20 +28,42 @@ ts <- as.numeric(as.POSIXct(date))
 ##                                     ts, ts + 60 * 60 * 24))
 ## sort(table(vehicles$vehicle_id))
 ## vid <- "3787"
-vid <- "2933"
+## vid <- "2933"
 ## vid <- "3704"
 
 ## get the vehicles row numbers:
-rowids <- dbGetQuery(con, sprintf("SELECT oid FROM vehicle_positions
-                                   WHERE vehicle_id='%s' AND timestamp>=%s AND timestamp<%s
-                                   ORDER BY timestamp",
-                                  vid, ts, ts + 60 * 60 * 24))$oid
+## rowids <- dbGetQuery(con, sprintf("SELECT oid FROM vehicle_positions
+##                                    WHERE vehicle_id='%s' AND timestamp>=%s AND timestamp<%s
+##                                    ORDER BY timestamp",
+##                                   vid, ts, ts + 60 * 60 * 24))$oid
 
 ## get all of the timestamps
-tss <- dbGetQuery(con, sprintf("SELECT trip_id, timestamp FROM vehicle_positions
-                                WHERE vehicle_id='%s' AND timestamp>=%s AND timestamp<%s
-                                ORDER BY timestamp",
-                               vid, ts, ts + 60 * 60 * 24))
+## tss <- dbGetQuery(con, sprintf("SELECT trip_id, timestamp FROM vehicle_positions
+##                                 WHERE vehicle_id='%s' AND timestamp>=%s AND timestamp<%s
+##                                 ORDER BY timestamp",
+##                                vid, ts, ts + 60 * 60 * 24))
+
+## get route ID:
+## route <- dbGetQuery(dbConnect(SQLite(), db),
+##                     sprintf("SELECT route_id FROM trips WHERE trip_id LIKE '%s'",
+##                             paste0(gsub("-.+", "", unique(tss$trip_id)[2]), "%")))
+## routeN <- gsub("-.+", "", route[[1]][1])
+routeN <- "04901"
+
+## tripids
+tids <- dbGetQuery(dbConnect(SQLite(), db),
+                   sprintf("SELECT trip_id FROM trips WHERE route_id LIKE '%s'",
+                           paste0(routeN, "%")))
+tripN <- unique(gsub("-.+", "", tids[[1]]))
+
+
+## and the row IDs for them .......
+rowids <- dbGetQuery(con,
+                     sprintf("SELECT oid FROM vehicle_positions
+                              WHERE (%s) AND timestamp>=%s AND timestamp<%s
+                              ORDER BY vehicle_id, timestamp",
+                             paste0("trip_id LIKE '", tripN, "%'", collapse = " OR "),
+                             ts, ts + 60 * 60 * 24 * 5))$oid; length(rowids)
 
 ## For each row, run something
 i <- 0
@@ -53,8 +77,8 @@ mean.dist <- numeric(length(rowids))
 times <- numeric(length(rowids))
 
 pb <- txtProgressBar(1, length(rowids), style = 3)
-jpeg(paste0("figs/pf_singlebus/v", vid, "/particle_map%03d.jpg"), width = 1920, height = 1080)
-dir.create(paste0("figs/pf_singlebus/v", vid))
+jpeg(paste0("figs/pf_singlebus/route_", routeN, "/particle_map%03d.jpg"), width = 1920, height = 1080)
+dir.create(paste0("figs/pf_singlebus/route_", routeN))
 for (i in seq_along(rowids)) {
     setTxtProgressBar(pb, i)
 #    i <- i + 1
@@ -62,20 +86,30 @@ for (i in seq_along(rowids)) {
     t <- timeDiff(row$trip_start_time, ts2dt(row$timestamp, "time"))
     ## get shape and schedule
     if (!row$trip_id %in% info$trip_id) {
-        shape <- getShape(row$trip_id, db = db)
-        schedule <- getSchedule(row$trip_id, db = db)
+        db.tripid <- dbGetQuery(dbConnect(SQLite(), db),
+                                sprintf("SELECT trip_id FROM trips WHERE trip_id LIKE '%s'",
+                                        paste0(gsub("-.+", "", row$trip_id), "%")))
+        tid <- db.tripid[[1]][1]
+        shape <- getShape(tid, db = db)
+        schedule <- getSchedule(tid, db = db)
         info$trip_id <- c(info$trip_id, row$trip_id)
         info$shapes[[row$trip_id]] <- shape
         info$schedule[[row$trip_id]] <- schedule
         info$status <- "init"
     }
     ## draw it!
-    if (row$trip_id != info$cur.trip) {
+    reset <- FALSE
+    if (!is.null(attr(state, "ts")))
+        if (attr(state, "ts") > row$timestamp) {
+            reset <- TRUE
+        }
+    if (row$trip_id != info$cur.trip | reset) {
         shape <- info$shapes[[row$trip_id]]
         schedule <- info$schedule[[row$trip_id]]
         info$cur.trip <- row$trip_id
         state[1, ] <- 0
         state[3:5, ] <- NA
+        attr(state, "ts") <- NULL
         info$status <- "init"
     }  
     if (refresh) {
@@ -121,7 +155,7 @@ for (i in seq_along(rowids)) {
             }
         }
     }
-    if (info$status == "inprogress") {
+    if (info$status == "inprogress" & !is.null(attr(state, "ts"))) {
         ## run particle filter
         ## state <-
         STATE <- state
@@ -163,18 +197,25 @@ for (i in seq_along(rowids)) {
                        lwd = 3, cex = 0.4), pch = 3)
 }; dev.off(); close(pb)
 
-
 is.zero <- mean.dist == 0
-hour <- (times[!is.zero] - ts) / 60 / 60
-jpeg(paste0("figs/pf_singlebus/v", vid, "/distance_time.jpg"), width = 1920/2, height = 1080/2)
-plot(hour, mean.dist[!is.zero] / 1e3, xlab = "Time", ylab = "Distance Into Trip (km)", pch = 19, cex = 0.4)
+timeTS <- as.POSIXct(times[!is.zero], origin = "1970-01-01")
+hour <- as.numeric(format(timeTS, "%H")) + as.numeric(format(timeTS, "%M")) / 60 +
+    as.numeric(format(timeTS, "%S")) / 60 / 60
+dow <- lubridate::wday(lubridate::ymd(format(timeTS, "%Y-%m-%d")), TRUE, FALSE)
+jpeg(paste0("figs/pf_singlebus/route_", routeN, "/distance_time.jpg"),
+     width = 1920/2, height = 1080/2)
+iNZightPlots::iNZightPlot(hour, mean.dist[!is.zero] / 1e3, colby = dow,
+                          main = "", xlab = "Time", ylab = "Distance Into Trip (km)",
+                          pch = 19, cex.pt = 0.1, plottype = "scatter", join = TRUE)
 dev.off()
+
 
 
 dists <- mean.dist[!is.zero]
 secs <- times[!is.zero] - ts
 
-jpeg(paste0("figs/pf_singlebus/v", vid, "/delta_distance_time.jpg"), width = 1920/2, height = 1080/2)
+jpeg(paste0("figs/pf_singlebus/route_", routeN, "/delta_distance_time.jpg"),
+     width = 1920/2, height = 1080/2)
 pos <- diff(dists) > 0
 plot(diff(secs)[pos] / 60, diff(dists)[pos],
      xlab = expression(paste(Delta[t], " (min)")),
@@ -182,3 +223,5 @@ plot(diff(secs)[pos] / 60, diff(dists)[pos],
 dev.off()
 
 cor(diff(secs)[pos] / 60, diff(dists)[pos])
+
+

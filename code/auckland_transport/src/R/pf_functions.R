@@ -180,10 +180,10 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
         rtau <- rexp(sum(w, na.rm=TRUE), 1/20)
         rtau <- ifelse(rtau < gamma, 0, rtau)
         rt <- dt - rtau - (s[NEW[3,w]+1] - X[1,w]) / NEW[2,w]
-        NEW[1,w] <- s[NEW[3,w]+1] + (rt > 0) * NEW[2,w] * rt
-        NEW[3,w] <- NEW[3,w] + 1
+        NEW[1,w] <- pmin(s[NEW[3,w]+1] + (rt > 0) * NEW[2,w] * rt, max(shape$distance_into_shape))
+        NEW[3,w] <- pmin(NEW[3,w] + 1, max(s))
         NEW[4,w] <- tx + (s[NEW[3,w]] - X[1,w]) / NEW[2,w]
-        NEW[5,w] <- ifelse(rt > 0, tn - rt, NA)
+        NEW[5,w] <- ifelse(NEW[3,w] == max(s), tn, ifelse(rt > 0, tn - rt, NA))
         w <- apply(NEW, 2, function(x) x[1] > s[x[3]+1])
         if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])
         w[is.na(w)] <- FALSE
