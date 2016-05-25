@@ -49,6 +49,7 @@ ts <- as.numeric(as.POSIXct(date))
 ##                             paste0(gsub("-.+", "", unique(tss$trip_id)[2]), "%")))
 ## routeN <- gsub("-.+", "", route[[1]][1])
 routeN <- "04901"
+date <- "2016-01-23"
 
 ## tripids
 tids <- dbGetQuery(dbConnect(SQLite(), db),
@@ -63,7 +64,7 @@ rowids <- dbGetQuery(con,
                               WHERE (%s) AND timestamp>=%s AND timestamp<%s
                               ORDER BY vehicle_id, timestamp",
                              paste0("trip_id LIKE '", tripN, "%'", collapse = " OR "),
-                             ts, ts + 60 * 60 * 24 * 5))$oid; length(rowids)
+                             ts, ts + 60 * 60 * 24 * 1))$oid; length(rowids)
 
 ## For each row, run something
 i <- 0
@@ -203,10 +204,10 @@ hour <- as.numeric(format(timeTS, "%H")) + as.numeric(format(timeTS, "%M")) / 60
     as.numeric(format(timeTS, "%S")) / 60 / 60
 dow <- lubridate::wday(lubridate::ymd(format(timeTS, "%Y-%m-%d")), TRUE, FALSE)
 jpeg(paste0("figs/pf_singlebus/route_", routeN, "/distance_time.jpg"),
-     width = 1920/2, height = 1080/2)
+     width = 1920, height = 1080)
 iNZightPlots::iNZightPlot(hour, mean.dist[!is.zero] / 1e3, colby = dow,
                           main = "", xlab = "Time", ylab = "Distance Into Trip (km)",
-                          pch = 19, cex.pt = 0.1, plottype = "scatter", join = TRUE)
+                          pch = 19, cex.pt = 0.2, plottype = "scatter")
 dev.off()
 
 
@@ -215,7 +216,7 @@ dists <- mean.dist[!is.zero]
 secs <- times[!is.zero] - ts
 
 jpeg(paste0("figs/pf_singlebus/route_", routeN, "/delta_distance_time.jpg"),
-     width = 1920/2, height = 1080/2)
+     width = 1920, height = 1080)
 pos <- diff(dists) > 0
 plot(diff(secs)[pos] / 60, diff(dists)[pos],
      xlab = expression(paste(Delta[t], " (min)")),
@@ -225,3 +226,19 @@ dev.off()
 cor(diff(secs)[pos] / 60, diff(dists)[pos])
 
 
+## save
+hist <- data.frame(
+    dbGetQuery(con,
+               sprintf("SELECT trip_id, vehicle_id FROM vehicle_positions WHERE oid IN ('%s')",
+                       paste0(rowids, collapse = "','"))),
+    timestamp = times,
+    distance_into_trip = mean.dist
+)
+hist$trip_id <- gsub("-.+", "", hist$trip_id)
+
+iNZightPlots::iNZightPlot(timestamp, distance_into_trip, data = hist, plottype = "scatter",
+                          cex.pt = 0.5)
+
+# dput(hist, "_data/route_history.rda")
+
+## predicting arrival times:
