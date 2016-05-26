@@ -64,7 +64,7 @@ rowids <- dbGetQuery(con,
                               WHERE (%s) AND timestamp>=%s AND timestamp<%s
                               ORDER BY vehicle_id, timestamp",
                              paste0("trip_id LIKE '", tripN, "%'", collapse = " OR "),
-                             ts, ts + 60 * 60 * 24 * 1))$oid; length(rowids)
+                             ts, ts + 60 * 60 * 24 * 5))$oid; length(rowids)
 
 ## For each row, run something
 i <- 0
