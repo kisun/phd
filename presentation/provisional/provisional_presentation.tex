@@ -179,28 +179,120 @@
 
 \section{Particle Filter}
 
-\begin{frame}{Modeling Real Time Data: Particle Filter}
+\begin{frame}{Modeling Real Time Data: Particle Filter I}
   \onslide<+->
   \begin{itemize}[<+- | alert@+>]
     \item Generalises almost everything from KF
 
     \item Simulates ``imaginary'' buses with state $\bX_k^{(i)}$
 
-    \item Predict each particle:
+    \item Predict each particle to generate \emph{prior distribution}:
       \begin{equation*}
-        \bX_k^{(i)} = f(\bX_{k-1}^{(i)}, \sigma_v^2)
+        \tilde\bX_k^{(i)} = f(\bX_{k-1}^{(i)}, \sigma_v^2)
       \end{equation*}
       No restrictions on $f$ (except computational)
 
-    \item Resample particles based on observed coordinates:
+    \item Resample particles based on observed GPS coordinates:
       \begin{equation*}
-        w_1^{(i)} = \frac{p(\bY_k | \bX_k^{(i)})}{\sum_{j=1}^M p(\bY_k | \bX_k^{(j)})}
+        w_1^{(i)} = \frac{p(\bY_k | \tilde\bX_k^{(i)})}{\sum_{j=1}^M p(\bY_k | \tilde\bX_k^{(j)})}
       \end{equation*}
-      $p(y,x)$ is the \emph{likelihood} (Euclidean (great circle) distance between coordinates = $D_k^{(i)} \sim \mathcal{N}(0, \sigma_y^2)$).
+      $p(y,x)$ is the \emph{likelihood}
+
+    \item New sample is the \emph{posterior distribution} of $\bX_k$
   \end{itemize}
   \onslide<+->
 \end{frame}
 
+
+\begin{frame}{Modeling Real Time Data: Particle Filter II}
+  A simple example using only one dimension (distance).
+
+  \onslide<+->
+
+  \begin{itemize}[<+- | alert@+>]
+    \item Start with previous state $\bX_{k-1}$
+    \item Use model to predict state $\tilde\bX_{k}$
+    \item Add process noise
+    \item Get observation $\bY_k$
+    \item Compute weights based on distance from observation
+    \item Weighted resample to get $\bX_k$
+  \end{itemize}
+  %\vspace{5cm}
+  \begin{overprint}
+    \onslide<2>
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/pf1-frame1.png}
+    \onslide<3>
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/pf1-frame2.png}
+    \onslide<4>
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/pf1-frame3.png}
+    \onslide<5>
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/pf1-frame4.png}
+    \onslide<6>
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/pf1-frame5.png}
+    \onslide<7->
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/pf1-frame6.png}
+  \end{overprint}
+  \onslide<+->
+\end{frame}
+
+
+\begin{frame}{Modeling Real Time Data: Model I}
+  \onslide<+->
+  \begin{itemize}[<+- | alert@+>]
+    \item Newton's Laws of Motion
+      \begin{itemize}[<1->]
+        \item Model dynamic motion of vehicles with time\\
+          $d_k = d_{k-1} + \delta_k v_{k}$, $v_k = v_{k-1} + \text{noise}$
+        \item Not good for buses stopping frequently for passengers
+      \end{itemize}
+
+    \item Bus behaviour
+      \begin{itemize}
+        \item Follow motion laws between stops
+        \item Stop at bus stop $j$ with probability $\pi_j$
+        \item If bus stops:
+          \begin{itemize}[<1->]
+            \item decelerate and open doors
+            \item allow passengers to alight and embark
+            \item close doors and accelerate
+          \end{itemize}
+        \item If bus doesn't stop, do none of the above
+        \item Traffic lights: just use a very small ``$\pi$''
+          that works in almost the same way
+      \end{itemize}
+  \end{itemize}
+  \onslide<+->
+\end{frame}
+
+\begin{frame}{Modeling Real Time Data: Model II}
+  \onslide<+->
+  \begin{itemize}[<+- | alert@+>]
+    \item Dwell time at stop $j$
+      \begin{itemize}
+        \item Given a bus stops \ldots
+        \item it will always decelerate,
+          open/close doors, and accelerate: $\gamma$
+        \item it will then wait at the bus stop until passengers
+          have alighted/boarded: $\tau_j \sim \mathcal{E}(\mu_\tau)$
+        \item Total travel time lost at bus stop = dwell time
+      \end{itemize}
+
+    \item Particle filter model
+      \begin{itemize}
+        \item Just include logic in $f$
+        \item $p_j^{(i)} \sim \text{Bernoulli}(\pi_j)$
+        \item if $p_j^{(i)} = 1$, then \ldots\\
+          \ldots wait at stop for $\gamma + \tau_j^{(i)}$~seconds before continuing
+      \end{itemize}
+  \end{itemize}
+  \onslide<+->
+\end{frame}
 
 
 \begin{frame}[standout]
