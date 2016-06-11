@@ -1,0 +1,211 @@
+\documentclass[10pt,t]{beamer}
+
+\usetheme[progressbar=frametitle,sectionpage=none]{metropolis}
+
+\usepackage{booktabs}
+\usepackage[scale=2]{ccicons}
+
+\usepackage{pgfplots}
+\usepgfplotslibrary{dateplot}
+
+\usepackage{xspace}
+\newcommand{\themename}{\textbf{\textsc{metropolis}}\xspace}
+
+%% symbols
+\newcommand{\bX}{\mathbf{X}}
+\newcommand{\bY}{\mathbf{Y}}
+\newcommand{\mat}[1]{\mathbf{#1}}
+\renewcommand{\vec}[1]{\boldsymbol{#1}}
+
+\title{Real time prediction of bus arrival}
+%\subtitle{}
+\date{July 31, 2016}
+\author{Tom Elliott}
+\institute{Supervised by Professor Thomas Lumley\\[2em]
+\includegraphics[height=1.5cm]{stat-logo.png}}
+%Department of Statistics\\University of Auckland}
+%\titlegraphic{\hfill\includegraphics[height=1.5cm]{stat-logo.png}}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{Table of contents}
+  \setbeamertemplate{section in toc}[sections numbered]
+  \tableofcontents[hideallsubsections]
+\end{frame}
+
+\section{Introduction}
+
+\begin{frame}[fragile]{Overview}
+  \onslide<+->
+  \begin{enumerate}[<+- | alert@+>]
+    \item General Transit Feed Specification (GTFS)
+
+    \item Sequential state space models
+      \begin{itemize}[<1->]
+        \item Kalman Filter
+        \item Particle filter
+      \end{itemize}
+
+    \item Predictive models: future arrival times
+      \begin{itemize}[<1->]
+        \item Schedule
+        \item Historical data
+        \item Current state
+        \item ``Real time'' travel/congestion from other buses
+        \item Combinations of the above
+      \end{itemize}
+
+    \item Communicating predictive error to commuters
+
+    \item Solving other common problems
+  \end{enumerate}
+  \onslide<+->
+\end{frame}
+
+
+\section{GTFS}
+
+\begin{frame}{GTFS}
+  \onslide<+->
+  \begin{itemize}[<+- | alert@+>]
+    \item General Transit Feed Specification
+    \item GPS location of buses
+    \item Static schedule information: trips, routes, shapes, schedules
+    \item Standardised by Google and used globally
+    \item API provided by Auckland Transport (AT)\\
+      \url{https://dev-portal.at.govt.nz}
+  \end{itemize}
+
+  \begin{overprint}
+    \onslide<5>
+    \begin{figure}
+      \vspace{-3em}
+      \centering
+      \includegraphics[height=4cm]{gtfs-feeds.png}
+      \caption{Global GTFS feeds, \url{http://transitfeeds.com/}}
+    \end{figure}
+  \end{overprint}
+  \onslide<+->
+\end{frame}
+
+
+\section{Modeling Real Time Data}
+
+\begin{frame}{Modeling Real Time Data}
+  \onslide<+->
+  \begin{itemize}[<+- | alert@+>]
+    \item new observations every 30 seconds:
+      \begin{equation*}
+        \bY_k =
+        \begin{bmatrix}
+          \phi_k & \lambda_k & t_k
+        \end{bmatrix}^T
+      \end{equation*}
+      $\phi$ = latitude (north/south), $\lambda$ = longitude (east/west)
+
+    \item each observation corresponds to an unknown \emph{state}:
+      \begin{equation*}
+        \bX_k =
+        \begin{bmatrix}
+          d_k & v_k & \cdots
+        \end{bmatrix}^T
+      \end{equation*}
+      $d$ = distance into trip (m), $v$ = velocity (speed, m/s)
+
+    \item want to \emph{update} the state of the model from the previous state using the latest observation
+      \begin{equation*}
+        \bX_k = f(\bX_{k-1}, \bY_k)
+      \end{equation*}
+  \end{itemize}
+  \onslide<+->
+\end{frame}
+
+\begin{frame}{Modeling Real Time Data: Kalman Filter I}
+  \onslide<+->
+  \begin{itemize}[<+- | alert@+>]
+    \item Used in robotics, GPS tracking, etc.
+
+    \item Several bus tracking/prediction applications\\
+      (Cathey \& Dailey, 2004; more people \ldots)
+
+    \item Very fast (matrix multiplication), two steps:
+      \begin{enumerate}
+        \item Predict:
+          \begin{equation*}
+            \bX_k = \mat{A}_k \bX_{k-1} + \vec{w}_k
+          \end{equation*}
+          $\mat{A}_k$ depends on $\delta_k$ = time since last observation\\
+          $\vec{w}_k$ = Gaussian process noise
+        \item Update:
+          \begin{equation*}
+            \vec{z}_k = \mat{H} \bX_k + \vec{v}_k
+          \end{equation*}
+          $\mat{H} $ = observation model\\
+          $\vec{v}_k$ = Gaussian measurement error\\
+          $\vec{z}_k$ = observed data$^\dagger$
+      \end{enumerate}
+  \end{itemize}
+  \onslide<+->
+\end{frame}
+
+\begin{frame}{Modeling Real Time Data: Kalman Filter II}
+  \onslide<+->
+  \begin{itemize}[<+- | alert@+>]
+      \item Assumes all errors are normal
+
+      \item Cannot map $\bX_k$ directly to $\bY_k$,
+        complicated algorithms to first \emph{estimate} $\vec{z}_k$
+
+      \item All dynamics need to be specified in $\mat{A}_k$\\
+        e.g., $d_k = d_{k-1} + v_{k-1}\delta_k + \text{process noise}$
+        (Newton's laws of motion)
+
+      \item not easy to include complex features:
+        e.g., dwell times
+
+      \item can't cope with multi-modal posterior:
+        \begin{itemize}[<1->]
+          \item loops
+          \item delays/detours
+        \end{itemize}
+
+      \item posterior is (multivariate) normal
+  \end{itemize}
+  \onslide<+->
+\end{frame}
+
+
+\section{Particle Filter}
+
+\begin{frame}{Modeling Real Time Data: Particle Filter}
+  \onslide<+->
+  \begin{itemize}[<+- | alert@+>]
+    \item Generalises almost everything from KF
+
+    \item Simulates ``imaginary'' buses with state $\bX_k^{(i)}$
+
+    \item Predict each particle:
+      \begin{equation*}
+        \bX_k^{(i)} = f(\bX_{k-1}^{(i)}, \sigma_v^2)
+      \end{equation*}
+      No restrictions on $f$ (except computational)
+
+    \item Resample particles based on observed coordinates:
+      \begin{equation*}
+        w_1^{(i)} = \frac{p(\bY_k | \bX_k^{(i)})}{\sum_{j=1}^M p(\bY_k | \bX_k^{(j)})}
+      \end{equation*}
+      $p(y,x)$ is the \emph{likelihood} (Euclidean (great circle) distance between coordinates = $D_k^{(i)} \sim \mathcal{N}(0, \sigma_y^2)$).
+  \end{itemize}
+  \onslide<+->
+\end{frame}
+
+
+
+\begin{frame}[standout]
+  Thank you!
+\end{frame}
+
+
+\end{document}
