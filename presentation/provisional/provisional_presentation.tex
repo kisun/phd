@@ -11,6 +11,16 @@
 \usepackage{xspace}
 \newcommand{\themename}{\textbf{\textsc{metropolis}}\xspace}
 
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows}
+\tikzset{font=\scriptsize}
+\tikzstyle{startstop} = [rectangle, rounded corners, minimum width=2cm,%
+minimum height=0.5cm, text centered, draw=black, fill=mLightBrown]
+\tikzstyle{compute} = [rectangle, minimum width = 2cm, minimum height = 0.5cm,%
+text centered, draw=black, fill=mLightGreen]
+\tikzstyle{logic} = [diamond, minimum width = 1.2cm,%
+text centered, draw=black, fill=mDarkTeal, text=white]
+
 %% symbols
 \newcommand{\bX}{\mathbf{X}}
 \newcommand{\bY}{\mathbf{Y}}
@@ -292,6 +302,23 @@
       \end{itemize}
   \end{itemize}
   \onslide<+->
+\end{frame}
+
+\begin{frame}{Modeling Real Time Data: Model III}
+  Particle Filter model, $X_k = f(X_{k-1}, Y_k, \sigma_v, \sigma_y)$
+
+  \begin{tikzpicture}[node distance=1.5cm]
+    \node (start) [startstop] {Previous State};
+    \node (atStop) [logic, right of=start, xshift=1cm] {\tiny At stop?};
+    \node (move1) [compute, right of=atStop, xshift=1.5cm] {Move Forward};
+    \node (passStop) [logic, below of=move1] {\tiny Pass stop?};
+    \node (arrival) [compute, below of=passStop,align=center] {Compute arrival time\\ and sample $p$};
+    \node (dwell) [compute, left of=arrival,xshift=-1.5cm] {Sample dwell time};
+    \node (continue) [logic, below of=dwell] {\tiny Time left?};
+    \node (stateEst) [startstop, right of=continue, xshift=5cm] {Estimated State};
+    \node (resample) [compute, below of=stateEst,yshift=0.7cm] {Weighted Resample};
+    \node (stop) [startstop, below of=resample,yshift=0.7cm] {Final State};
+  \end{tikzpicture}
 \end{frame}
 
 
