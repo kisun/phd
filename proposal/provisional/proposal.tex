@@ -10,6 +10,7 @@
  \usepackage{natbib}    % For BibTeX
  \usepackage{graphicx}  % To import .pdf files
  \usepackage{booktabs}
+ \usepackage{comment}
 %\usepackage{times}
  \usepackage{setspace}
  \onehalfspacing
@@ -162,13 +163,12 @@ Public transport is central to city planning and traffic management in large cit
 There are various forms, including trains, trams, ferries, and of particular interest to us, buses.
 Over the years, the technologies involved in these systems has become ever more complex,
 one evident example being the introduction of cashless payment systems such as 
-Auckland Transport's (AT's) HOP cards \citep{cn}.
+Auckland Transport's HOP cards \citep{cn}.
 
-Another piece of technology that is widely used in public transport vehicles is positioning devices,
+Another technology that is widely used in public transport vehicles is positioning devices,
 referred to in the literature as automatic vehicle location (AVL) systems.
-The AVL system we are most interested in (i.e., the one AT and many other companies use) 
-uses a global positioning system (GPS) to relay the location of vehicles to a central server
-every 30~seconds or so.
+Once such system is the global positioning system (GPS),
+which is used by many transit providers, including Auckland Transport.
 
 \textbf{The main purpose:}
 As a result of this real-time location information, many studies have investigated methods of
@@ -239,6 +239,55 @@ and use this in conjunction with historical data and the travel times of other b
 
 
 % Don't put anything new in this section.
+
+\begin{comment}
+
+The main goal:
+- to predict a bus' time of arrival at future stops
+- communicate this information to commuters in a useful manner
+
+Why this is useful:
+- reducing percieved wait times
+- provide better information for journey planning
+
+How it will be done:
+- GTFS-realtime feed with vehicle locations, schedule information, etc
+- Sequential state models to estimate vehicles' state: (Kalman Filter and) Particle Filter
+- Modeling buses
+- Predictive models for n-stops ahead arrival time
+
+
+# SECTION 2.1: GTFS
+
+- what GTFS is
+- what GTFS(-realtime) gives us
+- how we use it
+
+
+# SECTION 2.2: Sequential State Models
+
+- the idea behind them (one point at a time)
+- Kalman Filter: where it's been used, why, very brief how
+- Issues with KF ... 
+- Particle Filter: few places it's been used, flexibility, how it works
+
+
+# SECTION 2.3: Bus location modeling and prediction
+
+- what's been done
+- the general idea ...
+- unique issues: dwell times
+- what *hasn't* been done ...
+
+
+# SECTION 2.4: Providing information to commuters
+
+- all the apps out there ... 
+- time till arrival
+- journey planning
+
+  
+\end{comment}
 
 \textbf{What are we trying to do? }
 Prediction of travel (or arrival) time has many applications,
