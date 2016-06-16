@@ -14,12 +14,16 @@
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows}
 \tikzset{font=\scriptsize}
-\tikzstyle{startstop} = [rectangle, rounded corners, minimum width=2cm,%
-minimum height=0.5cm, text centered, draw=black, fill=mLightBrown]
-\tikzstyle{compute} = [rectangle, minimum width = 2cm, minimum height = 0.5cm,%
-text centered, draw=black, fill=mLightGreen]
+\tikzstyle{startstop} = [rectangle, rounded corners, minimum width=2.7cm,%
+minimum height=0.6cm, text centered, draw=black, fill=mLightBrown!50]
+\tikzstyle{compute} = [rectangle, minimum width = 2.7cm, minimum height = 0.7cm,%
+text centered, draw=black, fill=mLightGreen!40]
 \tikzstyle{logic} = [diamond, minimum width = 1.2cm,%
 text centered, draw=black, fill=mDarkTeal, text=white]
+\tikzstyle{data} = [circle, minimum width=0.5cm,text centered,%
+draw=black,fill=white]
+\tikzstyle{arrow} = [thick,->,>=stealth]
+\tikzstyle{line} = [thick]
 
 %% symbols
 \newcommand{\bX}{\mathbf{X}}
@@ -305,21 +309,67 @@ text centered, draw=black, fill=mDarkTeal, text=white]
 \end{frame}
 
 \begin{frame}{Modeling Real Time Data: Model III}
-  Particle Filter model, $X_k = f(X_{k-1}, Y_k, \sigma_v, \sigma_y)$
+  Particle Filter model, $\bX_k = f(\bX_{k-1}, \bY_k, \sigma_v, \sigma_y)$
 
-  \begin{tikzpicture}[node distance=1.5cm]
-    \node (start) [startstop] {Previous State};
-    \node (atStop) [logic, right of=start, xshift=1cm] {\tiny At stop?};
-    \node (move1) [compute, right of=atStop, xshift=1.5cm] {Move Forward};
-    \node (passStop) [logic, below of=move1] {\tiny Pass stop?};
-    \node (arrival) [compute, below of=passStop,align=center] {Compute arrival time\\ and sample $p$};
-    \node (dwell) [compute, left of=arrival,xshift=-1.5cm] {Sample dwell time};
-    \node (continue) [logic, below of=dwell] {\tiny Time left?};
-    \node (stateEst) [startstop, right of=continue, xshift=5cm] {Estimated State};
-    \node (resample) [compute, below of=stateEst,yshift=0.7cm] {Weighted Resample};
-    \node (stop) [startstop, below of=resample,yshift=0.7cm] {Final State};
+  \vspace{0.5cm}
+  \begin{tikzpicture}[node distance=1.4cm]
+    \node (start) [startstop] {Previous State, $\bX_{k-1}$};
+    \node (move) [compute, below of=start,align=center] {Add noise, $\sigma_v$\\ Move Forward};
+    \node (stateEst) [startstop, below of=move] {Estimated State, $\tilde\bX_k$};
+    \node (resample) [compute, below of=stateEst,align=center] %
+    {Compute likelihood, $\sigma_y$\\Weighted Resample};
+    \node (end) [startstop, below of=resample] {Final State, $\bX_k$};
+
+    \node (data) [data, right of=resample, xshift=1cm] {$\bY_k$};
+
+    \onslide<2->{\node (passStop) [logic, right of=move, xshift=1.5cm] {\tiny Pass stop?};
+    \node (arrival) [compute, right of=passStop, xshift=1.5cm, align=center]%
+      {Get arrival time\\ Sample $p \sim \text{Bern}(\pi)$\\%
+      Sample $\tau \sim \mathcal{E}(\mu_\tau)$};
+    \node (remaining) [logic, right of=arrival, xshift=1.5cm] {\tiny Time left?};
+    \node (moveForward) [compute, above of=arrival, align=center]%
+      {Get departure time\\Move forward};
+    \node (stopped) [compute, below of=arrival] {Position at stop};
+    }
+
+    \draw [arrow] (start) -- (move);
+    \draw [arrow] (stateEst) -- (resample);
+    \draw [arrow] (data) -- (resample);
+    \draw [arrow] (resample) -- (end);
+    \onslide<1>\draw [arrow] (move) -- (stateEst);
+    \onslide<2->\draw [arrow] (move) -- (passStop);
+
+    \draw [arrow] (passStop) -- node[anchor=south] {yes} (arrival);
+    \draw [arrow] (arrival) -- (remaining);
+    \draw [arrow] (remaining) |- node[anchor=west] {yes} (moveForward);
+    \draw [arrow] (moveForward) -| (passStop);
+    \draw [arrow] (remaining) |- node[anchor=west] {no} (stopped);
+    \draw [arrow] (stopped) -- coordinate[midway] (toEst) (stateEst);
+    \draw [line] (passStop) -- node[anchor=west] {no} (toEst);
   \end{tikzpicture}
 \end{frame}
+
+\begin{frame}{Modeling Real Time Data: Example}
+  \begin{itemize}
+    \item Applied to data collected from a bus route
+    \item Non-informative priors (speed, dwell times, stopping probabilities)
+    \item \emph{Always} a small probability of not moving (e.g., traffic lights)
+  \end{itemize}
+\end{frame}
+
+{ % all template changes are local to this group.
+    \setbeamercolor{background canvas}{bg=white}
+    \begin{frame}[plain]
+        \begin{tikzpicture}[remember picture,overlay]
+            \node[at=(current page.center)] {
+                \includegraphics[width=\paperwidth]{figs/complete_route.png}
+            };
+        \end{tikzpicture}
+     \end{frame}
+}
+
+
+
 
 
 \begin{frame}[standout]
