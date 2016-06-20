@@ -46,12 +46,19 @@ draw=black,fill=white]
 
 
 \begin{frame}{Bus arrival time prediction}
-  The problem: \emph{predicting future arrival times of buses}.
+  The problem: \emph{predicting future arrival times of buses} \ldots
+  \onslide<2-> accurately!
 
   
   \vspace{1cm}
-  \onslide<2->
-  Our solution: \emph{particle filter!}
+  \onslide<3->
+  Our solution:
+  \begin{itemize}
+  \item<alert@4> particle filter
+  \item prediction intervals
+  \item real-time speed information
+  \end{itemize}
+
 \end{frame}
 
 
@@ -135,6 +142,29 @@ draw=black,fill=white]
 
   \footnotesize\url{https://www.stat.auckland.ac.nz/~tell029/phd/animations/route049.gif}
 
+\end{frame}
+
+
+\begin{frame}{Arrival Time Prediction}
+  \begin{itemize}[<+->]
+  \item Use the same ``imaginary buses'' idea
+
+  \item Let each bus (particle) travel and see what time it arrives at future stops
+
+  \item Communicate the distribution of arrival times to commuters:
+    \begin{itemize}
+    \item Point estimates: ETA 5~minutes, ETA 20~minutes
+    \item Prediction interval: ETA 4--8~minutes, ETA 15--30~minutes
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Real-time traffic from other buses}
+  \begin{itemize}[<+->]
+  \item Historically, each bus treated independently
+  \item More recently, work on multiple buses sharing a route
+  \item How about buses sharing a road?
+  \end{itemize}
 \end{frame}
 
 
