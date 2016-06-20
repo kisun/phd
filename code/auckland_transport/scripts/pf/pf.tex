@@ -217,7 +217,7 @@ This will influence how we model $\omega_k$ and $\kappa_k$\ldots
 
 \begin{figure}[tbp]
   \centering
-  \includegraphics[width=0.8\textwidth]{../../figs/pf_singlebus/v3787/delta_distance_time.jpg}
+  \includegraphics[width=0.49\textwidth]{../../figs/pf_singlebus/v3787/delta_distance_time.jpg}
   \caption{Change in distance versus change in time after removing all observations where $\Delta_d \leq 0$.}
   \label{fig:delta-distance-time}
 \end{figure}
@@ -286,7 +286,7 @@ There are three situations when this occurs:
   are all too far away.
 
   \textbf{Detect:} neither (i) nor (ii) occur.
-\label{fig:delta-distance-time-2}
+
   \textbf{Solution:} rerun the simulation the same as before. If this doesn't solve the issue, it might be necessary
   to increase the number of particles for the step.
 \end{enumerate}
@@ -318,6 +318,37 @@ For this to work, we need to find a stop with low-frequency so the buses are sto
 
 At end of route, all particles seem to end up at stops, never between them where the bus is.
 Need to look at what's happening to speed/arrival/departure times.
+
+
+
+
+\section{Particle Motion Prediction}
+\label{sec:particle-prediction}
+
+Predicting the future location of particles is a key step in the PF. 
+It is separate from the main goal of predicting future arrival time 
+(which could be 5--30~minutes into the future, or longer)
+but it will provide a good ground work for that.
+i.e., we can't predict 30~minutes ahead if we can't predict 30~seconds.
+
+There are several ways we intend to attempt prediction:
+\begin{itemize}
+\item \textbf{dynamics}: this is what we used previously
+\item \textbf{(shifted) schedule}: this uses the schedule to estimate the distance that will be traveled
+\item \textbf{historical}: similar to schedule, but uses historical data instead
+\item \textbf{dynamics + historical (+ schedule)}: uses a combination of these, and schedule as a fallback
+\end{itemize}
+
+
+\subsection{Schedule}
+
+Ideally, this will be a baseline for prediction: before we have any historical data,
+or any previous state estimates, the best guess at where the bus will be will come from
+the schedule (i.e., the static arrival times at stops along the route).
+
+It involves taking the previous distance into trip, $d_{k-1}$, 
+mapping that to the scheduled \emph{time} at that distance,
+then adding $\delta_k$ and obtaining the new distance, $d_k$.
 
 
 

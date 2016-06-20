@@ -193,8 +193,8 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
                      sapply(NEW[1,], h, shape = shape))
     if (all(dist > 3 * gps)) {
         xhat <- sapply(NEW[1,], h, shape = shape)
-        addPoints(xhat[2, ], xhat[1, ], pch = 4,
-                  gp = list(col = "#99990030", cex = 1))
+        #addPoints(xhat[2, ], xhat[1, ], pch = 4,
+        #          gp = list(col = "#99990030", cex = 1))
         ## essentially an error if none of the particles are close to the bus
         ## which error code?
         attr(NEW, "code") <- 1

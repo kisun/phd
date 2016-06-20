@@ -16,7 +16,7 @@ con <- dbConnect(SQLite(), rtdb)
 
 ## pick a day:
 ## ts <- dbGetQuery(con, sprintf("SELECT DISTINCT timestamp FROM vehicle_positions"))$timestamp
-## dates <- format(as.POSIXct(ts, origin = "1970-1-1"), "%Y-%m-%d")
+## datesdates <- format(as.POSIXct(ts, origin = "1970-1-1"), "%Y-%m-%d")
 ## data.frame(table(dates),
 ##            dow = lubridate::wday(unique(dates), TRUE, FALSE))
 date <- "2016-01-25"
@@ -49,13 +49,13 @@ ts <- as.numeric(as.POSIXct(date))
 ##                             paste0(gsub("-.+", "", unique(tss$trip_id)[2]), "%")))
 ## routeN <- gsub("-.+", "", route[[1]][1])
 routeN <- "04901"
-date <- "2016-01-23"
+date <- "2016-01-25"
 
 ## tripids
 tids <- dbGetQuery(dbConnect(SQLite(), db),
                    sprintf("SELECT trip_id FROM trips WHERE route_id LIKE '%s'",
                            paste0(routeN, "%")))
-tripN <- unique(gsub("-.+", "", tids[[1]]))
+tripN <- unique(gsub("-.+", "", tids[[1]]))[1]
 
 
 ## and the row IDs for them .......
@@ -64,7 +64,7 @@ rowids <- dbGetQuery(con,
                               WHERE (%s) AND timestamp>=%s AND timestamp<%s
                               ORDER BY vehicle_id, timestamp",
                              paste0("trip_id LIKE '", tripN, "%'", collapse = " OR "),
-                             ts, ts + 60 * 60 * 24 * 5))$oid; length(rowids)
+                             ts, ts + 60 * 60 * 24 * 1))$oid; length(rowids)
 
 ## For each row, run something
 i <- 0
@@ -77,8 +77,11 @@ refresh <- TRUE
 mean.dist <- numeric(length(rowids))
 times <- numeric(length(rowids))
 
+
+
+
 pb <- txtProgressBar(1, length(rowids), style = 3)
-jpeg(paste0("figs/pf_singlebus/route_", routeN, "/particle_map%03d.jpg"), width = 1920, height = 1080)
+jpeg(paste0("figs/pf_singlebus/route_", routeN, "/particle_map%03d.jpg"), width = 1920, height = 1080, pointsize = 24)
 dir.create(paste0("figs/pf_singlebus/route_", routeN))
 for (i in seq_along(rowids)) {
     setTxtProgressBar(pb, i)
@@ -115,7 +118,7 @@ for (i in seq_along(rowids)) {
     }  
     if (refresh) {
         mobj <- iNZightMaps::iNZightMap(~lat, ~lon, data = shape)
-        plot(mobj, pch = NA)
+        plot(mobj, pch = NA, main = "")
         addLines(shape$lon, shape$lat, gp = list(lwd = 2, col = "#550000"))
         addPoints(schedule$stop_lon, schedule$stop_lat, pch = 21,
                   gp = list(cex = 0.4, col = "#550000", fill = "white", lwd = 2))
@@ -196,7 +199,7 @@ for (i in seq_along(rowids)) {
                            switch(info$status, "waiting" = "orange", "delayed" = "red",
                                   "inprogress" = "green2", "finished" = "blue"),
                        lwd = 3, cex = 0.4), pch = 3)
-}; dev.off(); close(pb)
+}; close(pb); dev.off()
 
 is.zero <- mean.dist == 0
 timeTS <- as.POSIXct(times[!is.zero], origin = "1970-01-01")
@@ -239,6 +242,23 @@ hist$trip_id <- gsub("-.+", "", hist$trip_id)
 iNZightPlots::iNZightPlot(timestamp, distance_into_trip, data = hist, plottype = "scatter",
                           cex.pt = 0.5)
 
-# dput(hist, "_data/route_history.rda")
+## dput(hist, "_data/route_history2.rda")
+## hist <- dget("_data/route_history.rda")
+hist <- dget("_data/route_history2.rda")
+
+
+
+
+
+
+
+## Schedule prediction:
+
+
+
+
+
+
+
 
 ## predicting arrival times:
