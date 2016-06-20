@@ -110,7 +110,7 @@ draw=black,fill=white]
   %\item Add some noise \ldots 
   \item Ask real bus where it (thinks it) actually is
   \item Weight imaginary buses by distance to the real one
-  \item Filter imaginary fleet based on weights
+  \item Filter imaginary fleet based on weights (sample with replacement)
   \end{itemize}
   
   \begin{overprint}
@@ -152,7 +152,7 @@ draw=black,fill=white]
 
 { % all template changes are local to this group.
     \setbeamercolor{background canvas}{bg=white}
-    \begin{frame}[plain]
+    \begin{frame}{Real Example}
         \begin{tikzpicture}[remember picture,overlay]
             \node[at=(current page.center)] {
                 \includegraphics[width=\paperwidth]{figs/complete_route.png}
@@ -164,29 +164,31 @@ draw=black,fill=white]
 
 
 \begin{frame}{Arrival Time Prediction}
+  \pause
   \begin{itemize}[<+->]
   \item Use the same ``imaginary buses'' idea
 
-  \item Let each bus (particle) travel and see what time it arrives at future stops
+  \item Let them continue until they reach stop
 
-  \item Communicate the distribution of arrival times to commuters:
+  \item Distribution of plausible arrival times
     \begin{itemize}
     \item Point estimates, e.g., median: ETA 5~minutes
     \item Prediction interval: ETA 4--8~minutes
     \end{itemize}
   \end{itemize}
 
+
   \begin{overprint}
-    \onslide<1>
+    \onslide<2>
     \centering
     \includegraphics[width=0.8\textwidth]{arrival/particle_arrival1.png}
-    \onslide<2-3>
+    \onslide<3-4>
     \centering
     \includegraphics[width=0.8\textwidth]{arrival/particle_arrival2.png}
-    \onslide<4>
+    \onslide<5>
     \centering
     \includegraphics[width=0.8\textwidth]{arrival/particle_arrival3.png}
-    \onslide<5>
+    \onslide<6>
     \centering
     \includegraphics[width=0.8\textwidth]{arrival/particle_arrival4.png}
   \end{overprint}
