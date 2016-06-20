@@ -45,50 +45,57 @@ draw=black,fill=white]
 \maketitle
 
 
-\begin{frame}{Bus arrival time prediction}
-  The problem: \emph{predicting future arrival times of buses} \ldots
-  \onslide<2-> accurately!
 
+\begin{frame}{Bus Arrival Time Prediction}
   
-  \vspace{1cm}
+  \textbf{Goal:} 
+  \alert<2>{to predict the} arrival time of buses at \alert<2>{future} stops as accurately as possible,
+  and communicate the remaining uncertainty to commuters.
+
   \onslide<3->
-  Our solution:
+  \vspace{1cm}
+  \textbf{Proposed solution:} particle filter
   \begin{itemize}
-  \item<alert@4> particle filter
-  \item prediction intervals
-  \item real-time speed information
+  \item<4-> \textbf{particle}: an ``imaginary bus'', a plausible trajectory for the real bus
+  \item<5-> \textbf{filter}: only keep imaginary buses that are likely given updated position
   \end{itemize}
 
 \end{frame}
 
 
-\begin{frame}{A particle what?}
-  \begin{itemize}[<+->]
-  \item[]
-    %Standard models use (normal) distributions for modeling and prediction:
-    Instead of dealing with a \emph{distribution} and estimating the parameters
-    (e.g. $\theta \sim \mathcal{N}(\mu, \sigma^2)$)
-    \vspace{1em}
+% \begin{frame}{Bus arrival time prediction}
+%   The problem: \emph{predicting future arrival times of buses} \ldots
+%   \onslide<2-> accurately!
 
-  \item[]
-    A particle filter uses ``particles'' that \emph{approximate} the distribution.
-    \vspace{1em}
-    
-  \item[]
-    Advantage: can separately model dynamics of each \emph{individual particle}
-
-    \vspace{1em}
-  \item[]
-    Single particle = ``imaginary'' bus!
-
-  \end{itemize}
   
-  \vspace{-2cm}
+%   \vspace{1cm}
+%   \onslide<3->
+%   Our solution:
+%   \begin{itemize}
+%   \item<alert@4> particle filter
+%   \item prediction intervals
+%   \item real-time speed information
+%   \end{itemize}
+
+% \end{frame}
+
+
+\begin{frame}{Particle Filter}
+  
+  Instead of dealing with a \alert<1>{distribution} and \alert<1>{estimating the parameters}\\
+  e.g. $\theta \sim \mathcal{N}(\mu, \sigma^2)$
+
   \begin{overprint}
     \onslide<1>\includegraphics[width=10cm]{normal_dist.png}
-    \onslide<2>\includegraphics[width=10cm]{particle_dist.png}
+    \onslide<2->\includegraphics[width=10cm]{particle_dist.png}
   \end{overprint}
-     
+  
+  \pause
+  A particle filter uses ``particles'' that \alert<2>{approximate the distribution}.
+  
+  \pause
+  \textbf{Advantage:} model \alert<3>{dynamics} of each \alert<3>{individual particle} separately.
+  
 \end{frame}
 
 
@@ -101,9 +108,9 @@ draw=black,fill=white]
   \item Start with an imaginary fleet
   \item Let each bus drive along the road and end up somewhere
   %\item Add some noise \ldots 
-  \item Ask bus where it (thinks it) actually is
+  \item Ask real bus where it (thinks it) actually is
   \item Weight imaginary buses by distance to the real one
-  \item Take a weighted sample (with replacement) to generate a new fleet
+  \item Filter imaginary fleet based on weights
   \end{itemize}
   
   \begin{overprint}
@@ -132,7 +139,7 @@ draw=black,fill=white]
 
 
 \begin{frame}{Real Example}
-  Buses actually travel along fixed routes.
+  Buses travel fixed routes, so think of distance along a 2-dimensional line.
   
   \onslide<2->
   Route 049, Henderson -- Britomart:
@@ -141,8 +148,19 @@ draw=black,fill=white]
   \includegraphics[width=\textwidth]{pf/particle_map001.jpg}}
 
   \footnotesize\url{https://www.stat.auckland.ac.nz/~tell029/phd/animations/route049.gif}
-
 \end{frame}
+
+{ % all template changes are local to this group.
+    \setbeamercolor{background canvas}{bg=white}
+    \begin{frame}[plain]
+        \begin{tikzpicture}[remember picture,overlay]
+            \node[at=(current page.center)] {
+                \includegraphics[width=\paperwidth]{figs/complete_route.png}
+            };
+        \end{tikzpicture}
+     \end{frame}
+}
+
 
 
 \begin{frame}{Arrival Time Prediction}
@@ -154,7 +172,7 @@ draw=black,fill=white]
   \item Communicate the distribution of arrival times to commuters:
     \begin{itemize}
     \item Point estimates, e.g., median: ETA 5~minutes
-    \item Prediction interval, e.g., quantiles: ETA 4--8~minutes
+    \item Prediction interval: ETA 4--8~minutes
     \end{itemize}
   \end{itemize}
 
@@ -175,13 +193,14 @@ draw=black,fill=white]
 \end{frame}
 
 
-\begin{frame}{Real-time traffic from other buses}
-  \begin{itemize}[<+->]
-  \item Historically, each bus treated independently
-  \item More recently, work on multiple buses sharing a route
-  \item How about buses sharing a road?
-  \end{itemize}
-\end{frame}
+
+% \begin{frame}{Real-time traffic from other buses}
+%   \begin{itemize}[<+->]
+%   \item Historically, each bus treated independently
+%   \item More recently, work on multiple buses sharing a route
+%   \item How about buses sharing a road?
+%   \end{itemize}
+% \end{frame}
 
 
 \begin{frame}[standout]

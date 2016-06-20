@@ -81,9 +81,9 @@ times <- numeric(length(rowids))
 
 
 pb <- txtProgressBar(1, length(rowids), style = 3)
-jpeg(paste0("figs/pf_singlebus/route_", routeN, "/particle_map%03d.jpg"), width = 1920, height = 1080, pointsize = 24)
+jpeg(paste0("figs/pf_singlebus/route_", routeN, "/particle_map%03d.jpg"), width = 1920, height = 1080, pointsize = 12*2)
 dir.create(paste0("figs/pf_singlebus/route_", routeN))
-for (i in seq_along(rowids)) {
+for (i in 1) {  ## seq_along(rowids)) {
     setTxtProgressBar(pb, i)
 #    i <- i + 1
     row <- dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE oid='%s'", rowids[i]))
@@ -119,7 +119,7 @@ for (i in seq_along(rowids)) {
     if (refresh) {
         mobj <- iNZightMaps::iNZightMap(~lat, ~lon, data = shape)
         plot(mobj, pch = NA, main = "")
-        addLines(shape$lon, shape$lat, gp = list(lwd = 2, col = "#550000"))
+        addLines(shape$lon, shape$lat, gp = list(lwd = 3, col = "#550000"))
         addPoints(schedule$stop_lon, schedule$stop_lat, pch = 21,
                   gp = list(cex = 0.4, col = "#550000", fill = "white", lwd = 2))
     }
