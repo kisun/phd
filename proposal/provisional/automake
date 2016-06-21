@@ -1,0 +1,1 @@
+while sleepuntilmod proposal.tex ; do latexmk -pdf proposal.tex ; done
