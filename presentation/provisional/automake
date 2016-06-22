@@ -1,0 +1,1 @@
+while sleepuntilmod provisional_presentation.tex ; do latexmk -pdf provisional_presentation.tex ; done
