@@ -56,8 +56,9 @@ draw=black,fill=white]
   \vspace{1cm}
   \textbf{Proposed solution:} particle filter
   \begin{itemize}
-  \item<4-> \textbf{particle}: an ``imaginary bus'', a plausible trajectory for the real bus
-  \item<5-> \textbf{filter}: only keep imaginary buses that are likely given updated position
+  \item<4-> \textbf{particle}: an ``imaginary bus'' with a plausible trajectory
+  \item<5-> \textbf{filter}: %only keep imaginary buses that are likely given updated position
+    filter out unlikely ones given updated position
   \end{itemize}
 
 \end{frame}
@@ -106,8 +107,7 @@ draw=black,fill=white]
 
   \begin{itemize}[<+- | alert@+>]
   \item Start with an imaginary fleet
-  \item Let each bus drive along the road and end up somewhere
-  %\item Add some noise \ldots 
+  \item Each follows own trajectory for fixed time
   \item Ask real bus where it (thinks it) actually is
   \item Weight imaginary buses by distance to the real one
   \item Filter imaginary fleet based on weights (sample with replacement)
@@ -139,7 +139,7 @@ draw=black,fill=white]
 
 
 \begin{frame}{Real Example}
-  Buses travel fixed routes, so think of distance along a 2-dimensional line.
+  Buses travel fixed routes: think of distance along a 2-dimensional line
   
   \onslide<2->
   Route 049, Henderson -- Britomart:
