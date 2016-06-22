@@ -51,11 +51,20 @@ ts <- as.numeric(as.POSIXct(date))
 routeN <- "04901"
 date <- "2016-01-25"
 
+tripTimes <- dbGetQuery(dbConnect(SQLite(), db),
+                        sprintf("SELECT trips.trip_id, departure_time
+                                 FROM trips, stop_times
+                                 WHERE route_id LIKE '%s' AND trips.trip_id=stop_times.trip_id
+                                    AND stop_sequence=1",
+                                paste0(routeN, "%_v37.28")))
+tripTimes                                     
+
 ## tripids
-tids <- dbGetQuery(dbConnect(SQLite(), db),
-                   sprintf("SELECT trip_id FROM trips WHERE route_id LIKE '%s'",
-                           paste0(routeN, "%")))
-tripN <- unique(gsub("-.+", "", tids[[1]]))[1]
+#tids <- dbGetQuery(dbConnect(SQLite(), db),
+#                   sprintf("SELECT trip_id FROM trips WHERE route_id LIKE '%s'",
+#                           paste0(routeN, "%")))
+#tripN <- unique(gsub("-.+", "", tids[[1]]))[7]
+tripN <- gsub("-.+", "", tripTimes$trip_id)[11]
 
 
 ## and the row IDs for them .......
@@ -264,12 +273,12 @@ hist <- dget("_data/route_history2.rda")
 ## predicting arrival times:
 
 ### super basic state projection:
-
+time2sec <- function(x) sapply(strsplit(x, ":"), function(y) sum(as.numeric(y) * 60^(2:0)))
 arrivalTime <- function(state, schedule, t = 0, stop = nrow(schedule), draw = TRUE) {
     ## if t = 0, then result is ETA; otherwise an actual time
     Sj <- schedule$distance_into_shape[stop]
     Ta <- (Sj - state[1, ]) / state[2, ]
-    Nrem <- nrow(schedule) - state[3,]
+    Nrem <- nrow(schedule) - ifelse(is.na(state[3,]), 0, state[3,])
     p <- rbinom(sum(Nrem), 1, 0.5)
     gamma <- 10
     tau <- rexp(sum(Nrem), 1/20)
@@ -278,13 +287,14 @@ arrivalTime <- function(state, schedule, t = 0, stop = nrow(schedule), draw = TR
         abline(h = Sj, lwd = 2, col = "#666666", lty = 2)
         points(Ta, rep(Sj, length(Ta)), pch = 4, cex = 0.5, col = "#cc0000")
     }
-    invisible(Ta)
+    if (all(Nrem == 0)) return(invisible(rep(t, ncol(state))))
+    invisible(pmin(10000, Ta))
 }
 
-
-jpeg(paste0("figs/pf_singlebus/route_", routeN, "/arrival_last%03d.jpg"), width = 1920, height = 1080)
-for (j in 5:(length(tx) - 1)) {
-    tx <- times - min(times)
+tx <- times - min(times)
+#jpeg(paste0("figs/pf_singlebus/route_", routeN, "/arrival_last%03d.jpg"),
+#     width = 1920/2, height = 1080/2)
+for (j in 5:(length(tx - 1)) {    
     plot(NA, xlim = c(0, 6000), ylim = range(state.hist[1,,], na.rm = TRUE),
          xlab = "Time (s)", ylab = "Distance into Trip (m)")
     Nt <- j
@@ -296,11 +306,33 @@ for (j in 5:(length(tx) - 1)) {
     }
     arrivalTime(state.hist[,,Nt], schedule, t = tx[j])
 }
-dev.off()
+#dev.off()
 
+## "all in one"
+##jpeg(paste0("figs/pf_singlebus/route_", routeN, "/arrival_last.jpg"),
+    ## width = 1920/2, height = 1080/2)
+tx <- times - min(times)
+arrival.last <- matrix(NA, length(tx), M)
+for (j in 1:length(tx)) {
+    arrival.last[j, ] <- arrivalTime(state.hist[,,j], schedule, t = tx[j], draw = FALSE)
+}
+par(mar = c(5.1, 6.1, 4.1, 2.1))
+plot(NA, ylim = c(0, max(arrival.last, na.rm = TRUE)),
+     xlim = c(0, max(state.hist[1,,], na.rm = TRUE)),
+     xlab = "Distance from Stop (m)", yaxt = "n", ylab = "")
+ETAmin <- pretty(c(0, max(arrival.last, na.rm = TRUE)) / 60, n = 15)
+ETA <- as.POSIXct(time2sec(schedule$arrival_time[1]) + ETAmin * 60,
+                  origin = "1970-01-01", tz = "NZDT")
+axis(2, at = ETAmin * 60, labels = format(ETA, "%H:%M:%S"), las = 2)
+title(ylab = "ETA", line = 5)
+for (j in 1:length(tx)) {
+    points(max(schedule$distance_into_shape) - state.hist[1,,j], arrival.last[j, ],
+           pch = 19, col = "#44444430")
+}
+abline(h = state.hist[4,,length(tx)] - min(times), col = "red", lty = 2)
+#dev.off()
 
 ## "delay" to last stop
-time2sec <- function(x) sapply(strsplit(x, ":"), function(y) sum(as.numeric(y) * 60^(2:0)))
 arrivalTimeSched <- function(state, schedule, stop = nrow(schedule), draw = TRUE) {
     Sj <- schedule$distance_into_shape[stop]
     Sa <- time2sec(schedule$arrival_time)  ## scheduled arrival times ...
