@@ -76,14 +76,14 @@ state = matrix(NA, 5, M)
 refresh <- TRUE
 mean.dist <- numeric(length(rowids))
 times <- numeric(length(rowids))
-
+state.hist <- array(NA, dim = c(5, M, length(rowids)))
 
 
 
 pb <- txtProgressBar(1, length(rowids), style = 3)
 jpeg(paste0("figs/pf_singlebus/route_", routeN, "/particle_map%03d.jpg"), width = 1920, height = 1080, pointsize = 12*2)
 dir.create(paste0("figs/pf_singlebus/route_", routeN))
-for (i in 1) {  ## seq_along(rowids)) {
+for (i in seq_along(rowids)) {
     setTxtProgressBar(pb, i)
 #    i <- i + 1
     row <- dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE oid='%s'", rowids[i]))
@@ -175,9 +175,8 @@ for (i in 1) {  ## seq_along(rowids)) {
                     cat("That didn't help either ... giving up.\n")
                 }
             }
-        } else {
-            mean.dist[i] <- mean(new.state[1, ], na.rm = TRUE)
         }
+        mean.dist[i] <- mean(new.state[1, ], na.rm = TRUE)
         STATE <- state
         state <- new.state
         attr(state, "ts") <- row$timestamp
@@ -192,6 +191,7 @@ for (i in 1) {  ## seq_along(rowids)) {
     } else {
         attr(state, "ts") <- row$timestamp
     }
+    state.hist[,,i] <- state
     times[i] <- row$timestamp
     addPoints(row$position_longitude, row$position_latitude,
               gp =
@@ -262,3 +262,38 @@ hist <- dget("_data/route_history2.rda")
 
 
 ## predicting arrival times:
+
+### super basic state projection:
+
+arrivalTime <- function(state, schedule, t = 0, stop = nrow(schedule), draw = TRUE) {
+    ## if t = 0, then result is ETA; otherwise an actual time
+    Sj <- schedule$distance_into_shape[stop]
+    Ta <- (Sj - state[1, ]) / state[2, ]
+    Nrem <- nrow(schedule) - state[3,]
+    p <- rbinom(sum(Nrem), 1, 0.5)
+    gamma <- 10
+    tau <- rexp(sum(Nrem), 1/20)
+    Ta <- t + Ta + tapply(p * (gamma + tau), rep(1:length(Ta), Nrem), sum)
+    if (draw) {
+        abline(h = Sj, lwd = 2, col = "#666666", lty = 2)
+        points(Ta, rep(Sj, length(Ta)), pch = 4, cex = 0.5, col = "#cc0000")
+    }
+    invisible(Ta)
+}
+
+
+jpeg(paste0("figs/pf_singlebus/route_", routeN, "/arrival_last%03d.jpg"), width = 1920, height = 1080)
+for (j in 5:(length(tx) - 1)) {
+    tx <- times - min(times)
+    plot(NA, xlim = c(0, 6000), ylim = range(state.hist[1,,], na.rm = TRUE),
+         xlab = "Time (s)", ylab = "Distance into Trip (m)")
+    Nt <- j
+    for (i in 1:Nt) {
+        points(rep(tx[i], M), state.hist[1,,i], pch = 3, col = "#00009920", cex = 0.5)
+    }
+    for (i in (Nt + 1):length(tx)) {
+        points(rep(tx[i], M), state.hist[1,,i], pch = 3, col = "#99999920", cex = 0.5)
+    }
+    arrivalTime(state.hist[,,Nt], schedule, t = tx[j])
+}
+dev.off()
