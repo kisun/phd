@@ -352,4 +352,38 @@ then adding $\delta_k$ and obtaining the new distance, $d_k$.
 
 
 
+
+
+
+
+\section{Arrival Time Prediction}
+\label{sec:arrival_time}
+
+Many ways to do this.
+First is to just let the particles continue in their current state until they reach the stop,
+including any dwell times along the way.
+First, let $S_j$ be the distance into the trip of stop $j$, then the arrival time at stop $j$ is
+\begin{equation}
+  \label{eq:state_pred}
+  T_j^{(i)} = T_0 + \frac{S_j - d_k^{(i)}}{v_k^{(i)}} + \sum_{\ell = s_k^{(i)} + 1}^{s_j} p_\ell^{(i)} (\gamma + \tau_\ell^{(i)})
+\end{equation}
+where $T_0$ is the departure time of the current stop if the bus hasn't left yet,
+otherwise the current time.
+Alternatively, $T_0$ can be 0 (or the time until departure) in which case $T_j$ will be 
+the remaining time until arrival.
+
+
+The second method involves using the schedule deviation.
+That is, take the deviatino between actual arrival and scheduled arrival at the most recent stop,
+and add that to the scheduled arrival time at the future stop(s), $\bar S_j$.
+\begin{equation}
+  \label{eq:sched_pred}
+  T_j^{(i)} = \bar S_j + \underbrace{T_{s_k}^{(i)} - \bar S_{s_k^{(i)}}}_{\text{schedule deviation}}
+\end{equation}
+
+
+
+
+
+
 \end{document}

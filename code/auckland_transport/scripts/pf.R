@@ -297,3 +297,43 @@ for (j in 5:(length(tx) - 1)) {
     arrivalTime(state.hist[,,Nt], schedule, t = tx[j])
 }
 dev.off()
+
+
+## "delay" to last stop
+time2sec <- function(x) sapply(strsplit(x, ":"), function(y) sum(as.numeric(y) * 60^(2:0)))
+arrivalTimeSched <- function(state, schedule, stop = nrow(schedule), draw = TRUE) {
+    Sj <- schedule$distance_into_shape[stop]
+    Sa <- time2sec(schedule$arrival_time)  ## scheduled arrival times ...
+    delay <- time2sec(format(as.POSIXct(state[4, ], origin = "1970-01-01"), "%H:%M:%S")) -
+        Sa[state[3, ]]
+    Ta <- Sa[stop] - min(Sa) + delay
+    if (draw) {
+        abline(h = Sj, lwd = 2, col = "#666666", lty = 2)
+        points(Ta, rep(Sj, length(Ta)), pch = 4, cex = 0.5, col = "#cc0000")
+    }
+    invisible(Ta)
+}
+
+
+
+## Loop is causing issues >_< but shouldn't matter!
+jpeg(paste0("figs/pf_singlebus/route_", routeN, "/arrival2_last%03d.jpg"), width = 1920, height = 1080)
+for (j in 5:(length(tx) - 1)) {
+##    dev.hold()
+    tx <- times - min(times)
+    plot(NA, xlim = c(0, 6000), ylim = range(state.hist[1,,], na.rm = TRUE),
+         xlab = "Time (s)", ylab = "Distance into Trip (m)")
+    Sa <- time2sec(schedule$arrival_time)
+    ## points(Sa - min(Sa), schedule$distance_into_shape, lwd = 2)
+    Nt <- j
+    for (i in 1:Nt) {
+        points(rep(tx[i], M), state.hist[1,,i], pch = 3, col = "#00009920", cex = 0.5)
+    }
+    for (i in (Nt + 1):length(tx)) {
+        points(rep(tx[i], M), state.hist[1,,i], pch = 3, col = "#99999920", cex = 0.5)
+    }
+    arrivalTimeSched(state.hist[,,Nt], schedule)
+##    dev.flush()
+}
+dev.off()
+
