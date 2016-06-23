@@ -57,7 +57,7 @@ tripTimes <- dbGetQuery(dbConnect(SQLite(), db),
                                  WHERE route_id LIKE '%s' AND trips.trip_id=stop_times.trip_id
                                     AND stop_sequence=1",
                                 paste0(routeN, "%_v37.28")))
-tripTimes                                     
+#tripTimes                                     
 
 ## tripids
 #tids <- dbGetQuery(dbConnect(SQLite(), db),
@@ -368,4 +368,21 @@ for (j in 5:(length(tx) - 1)) {
 ##    dev.flush()
 }
 dev.off()
+
+
+
+## use historical .... somehow
+do.call(cbind, apply(state.hist, 2, function(X) {
+    res <- tapply(X[5, ] - X[4, ], X[3, ], max, na.rm = TRUE)
+    ifelse(is.finite(res), res, NA)
+})) -> dwell
+
+p <- apply(dwell, 1, function(x) mean(x != 0, na.rm = TRUE))
+tau <- apply(dwell, 1, function(x) mean(x[x > 0], na.rm = TRUE))
+
+plot(NA, xlim = c(0, max(tau, na.rm = TRUE) * 1.04), ylim = c(0, length(tau) + 1),
+     xlab = "Mean Dwell Time (s)",
+     ylab = "Stop No.", type = "n", xaxs = "i", yaxs = "i")
+abline(h = 1:length(tau), lty = 3)
+points(tau, 1:length(tau), pch = 21, lwd = 2, bg = "white", cex = 1.5)
 
