@@ -408,6 +408,39 @@ so we are unable to implement their models.
 \subsection{Predicting Arrival Time}
 \label{sec:arrivaltimeprediction}
 
+Arrival time prediction has been evolving since some of the first \gls{avl}
+systems were installed in bus fleets.
+Prediction methods range from simple carry-on delay,
+do much more complicated prediction functions involving historical data,
+dwell time distributions, 
+and headway (the time between the last bus to travel the route and the current one).
+
+
+Delay models \ldots
+\cite{dailey:2001} just used state, arrival time, and delay.
+
+
+\cite{cathey-dailey:2003} included several examples of arrival time prediction models
+that could incorporate historical data, etc.
+KF to estimate state, then use that state to predict arrival time.
+
+
+Others, using KNN, ANN, SVM etc. use historical data to combine current
+realtime location to predict arrival.
+Including use of routes with multiple buses, recent travel times, etc.
+
+
+Other more advanced methods, \cite{hans-etal:2015} use PF to predict arrival.
+Other PF models that use historical data as particle trajectories.
+
+
+Doesn't look like there have been any uses of big-data models that use
+historical data of \emph{all} buses traveling along a road
+(not just those of the same route) as well as the same real-time data,
+and then making predictions using all of this.
+
+
+
 
 
 
@@ -730,30 +763,112 @@ so we are unable to implement their models.
 
 
 
+This work will focus on three main parts:
+real-time bus modeling using a particle filter,
+arrival time prediction using a combination of the particle filter,
+historical data, and ``real-time'' travel time information
+from other buses,
+and finally methods of providing this information to commuters,
+including prediction intervals.
 
-\begin{enumerate}
-\item 
-  We're going to implement a Particle Filter to model the busses,
-  and compare it to the KF (and other methods we can get working or compare with).
+
+\subsection{Particle Filtering}
+\label{sec:new-pf}
+
+Unlike several other studies, including those by \cite{hans-etal:2015},
+we will be working with only GTFS (realtime) data provided by Auckland Transport.
+One big difference between this data and many others is that we do not have
+access to actual arrival times.
+For example, in the models used by \cite{hans-etal:2015},
+actual arrival times were available, so they were able to use these to 
+good effect in their predictions.
 
 
-\item 
-  Then we're going to investigate better summary statistics.
-  The mean is great, but only if the posterior is normal.
-  It probably wont be, so maybe the median, or mode, or something else, will be better.
-  Also, prediction \emph{intervals}! Is the bus 2--3~minutes away, or 2--10~minutes away???
+Instead, we will need to rely on the distribution of particles providing us
+with estimated arrival times.
+Each particle's arrival time can be computed, so for each stop we can obtain 
+a posterior distribution of arrival times.
+In most cases, this should be fairly narrow;
+however, there will be situations where the bus could be traveling slow and arrive
+late and have a short (or non-existent) dwell time,
+or the bus could be traveling fast, arrive earlier,
+and have a long dwell time.
+This paragraph sucks.
 
-\item 
-  Then we will use as much data as possible and see if it improves predictions 
-  (like, ``realtime'' congestion data from other busses, historical data, \ldots).
 
-\item 
-  Then we want to apply the methods to a real data set (Auckland Transport PTS).
 
-\item 
-  And then make it available via the web and/or a phone app.
 
-\end{enumerate}
+
+
+
+\subsection{Prediction}
+\label{sec:new-prediction}
+
+
+Predicting bus arrival is the main goal of this work.
+As we will already have a posterior distribution for the current state of
+each bus, 
+we will be able to use this---along with any other information we
+have available---to predict arrival time.
+
+
+We will be comparing various methods of prediction:
+simple state prediction (that is, using only the current state of the 
+bus to predict arrival time),
+historical based prediction,
+real-time traffic conditions obtained from other buses,
+and combinations of these.
+In each of these, we will allow for stopping (with probability) at stops
+along the way, and the associated dwell times.
+
+
+
+
+\subsection{Commuter Information}
+\label{sec:commuter-info}
+
+
+The end goal of our work will be a free web application available to
+commuters, allowing them to check the status of their bus,
+and get information regarding the estimated time of arrival.
+We will investigate point estimates, as well as interval estimates to do this.
+
+
+Additionally, providing ETA to destination will also be useful,
+and this will pave the way for journey planning.
+This is where users can enter a start and end location,
+and be shown various routes they can take,
+with estimates of travel time and arrival time,
+allowing them to make informed decisions as to which route will get them
+to their destination on time, and/or as fast as possible.
+
+
+
+
+
+% \begin{enumerate}
+% \item 
+%   We're going to implement a Particle Filter to model the busses,
+%   and compare it to the KF (and other methods we can get working or compare with).
+
+
+% \item 
+%   Then we're going to investigate better summary statistics.
+%   The mean is great, but only if the posterior is normal.
+%   It probably wont be, so maybe the median, or mode, or something else, will be better.
+%   Also, prediction \emph{intervals}! Is the bus 2--3~minutes away, or 2--10~minutes away???
+
+% \item 
+%   Then we will use as much data as possible and see if it improves predictions 
+%   (like, ``realtime'' congestion data from other busses, historical data, \ldots).
+
+% \item 
+%   Then we want to apply the methods to a real data set (Auckland Transport PTS).
+
+% \item 
+%   And then make it available via the web and/or a phone app.
+
+% \end{enumerate}
 
 
 
