@@ -170,8 +170,8 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
     NEW[2,] <- msm::rtnorm(R, X[2,], ifelse(rerun, 4, 2), lower = 0, upper = 30)
     NEW[1,] <- X[1,] + NEW[2,] * pmax(0, (dt - tau))
     NEW[3,] <- X[3,]
-    NEW[4,] <- ifelse(is.na(X[5,]), X[4,], NA)
-    NEW[5,] <- ifelse(dt - tau > 0 & !is.na(NEW[4,]), tx + tau, NA)
+    NEW[4,] <- X[4,]   # ifelse(is.na(X[5,]), X[4,], NA)
+    NEW[5,] <- ifelse(dt - tau > 0 & at.stop, tx + tau, X[5,])
     ## work out stop-passing stuff ...
     w <- apply(NEW, 2, function(x) x[1] > s[x[3]+1])
     if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])

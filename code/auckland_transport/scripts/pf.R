@@ -292,26 +292,26 @@ arrivalTime <- function(state, schedule, t = 0, stop = nrow(schedule), draw = TR
 }
 
 tx <- times - min(times)
-#jpeg(paste0("figs/pf_singlebus/route_", routeN, "/arrival_last%03d.jpg"),
-#     width = 1920/2, height = 1080/2)
-for (j in 5:(length(tx - 1)) {    
-    plot(NA, xlim = c(0, 6000), ylim = range(state.hist[1,,], na.rm = TRUE),
-         xlab = "Time (s)", ylab = "Distance into Trip (m)")
-    Nt <- j
-    for (i in 1:Nt) {
-        points(rep(tx[i], M), state.hist[1,,i], pch = 3, col = "#00009920", cex = 0.5)
-    }
-    for (i in (Nt + 1):length(tx)) {
-        points(rep(tx[i], M), state.hist[1,,i], pch = 3, col = "#99999920", cex = 0.5)
-    }
-    arrivalTime(state.hist[,,Nt], schedule, t = tx[j])
-}
+## #jpeg(paste0("figs/pf_singlebus/route_", routeN, "/arrival_last%03d.jpg"),
+## #     width = 1920/2, height = 1080/2)
+## for (j in 5:(length(tx - 1))) {    
+##     plot(NA, xlim = c(0, 6000), ylim = range(state.hist[1,,], na.rm = TRUE),
+##          xlab = "Time (s)", ylab = "Distance into Trip (m)")
+##     Nt <- j
+##     for (i in 1:Nt) {
+##         points(rep(tx[i], M), state.hist[1,,i], pch = 3, col = "#00009920", cex = 0.5)
+##     }
+##     for (i in (Nt + 1):length(tx)) {
+##         points(rep(tx[i], M), state.hist[1,,i], pch = 3, col = "#99999920", cex = 0.5)
+##     }
+##     arrivalTime(state.hist[,,Nt], schedule, t = tx[j])
+## }
 #dev.off()
 
 ## "all in one"
-##jpeg(paste0("figs/pf_singlebus/route_", routeN, "/arrival_last.jpg"),
-    ## width = 1920/2, height = 1080/2)
-tx <- times - min(times)
+jpeg(paste0("figs/pf_singlebus/route_", routeN, "/arrival_last.jpg"),
+     width = 1920/2, height = 1080/2)
+otx <- times - min(times)
 arrival.last <- matrix(NA, length(tx), M)
 for (j in 1:length(tx)) {
     arrival.last[j, ] <- arrivalTime(state.hist[,,j], schedule, t = tx[j], draw = FALSE)
@@ -330,7 +330,7 @@ for (j in 1:length(tx)) {
            pch = 19, col = "#44444430")
 }
 abline(h = state.hist[4,,length(tx)] - min(times), col = "red", lty = 2)
-#dev.off()
+dev.off()
 
 ## "delay" to last stop
 arrivalTimeSched <- function(state, schedule, stop = nrow(schedule), draw = TRUE) {
@@ -377,6 +377,15 @@ do.call(cbind, apply(state.hist, 2, function(X) {
     ifelse(is.finite(res), res, NA)
 })) -> dwell
 
+apply(state.hist, 2, function(X) {
+          X <- state.hist[,1,]
+          tapply(X[4,], factor(X[3,], levels = 1:nrow(schedule)), max, na.rm = TRUE) - min(times)
+      }) -> Ta
+apply(state.hist, 2, function(X) {
+          X <- state.hist[,1,]
+          tapply(X[5,], factor(X[3,], levels = 1:nrow(schedule)), max, na.rm = TRUE) - min(times)
+      }) -> Td
+
 p <- apply(dwell, 1, function(x) mean(x != 0, na.rm = TRUE))
 tau <- apply(dwell, 1, function(x) mean(x[x > 0], na.rm = TRUE))
 
@@ -384,5 +393,13 @@ plot(NA, xlim = c(0, max(tau, na.rm = TRUE) * 1.04), ylim = c(0, length(tau) + 1
      xlab = "Mean Dwell Time (s)",
      ylab = "Stop No.", type = "n", xaxs = "i", yaxs = "i")
 abline(h = 1:length(tau), lty = 3)
-points(tau, 1:length(tau), pch = 21, lwd = 2, bg = "white", cex = 1.5)
+points(tau, 1:length(tau), pch = 21, lwd = 2, bg = "white", cex = 2 * sqrt(p))
 
+
+plot(NA, xlim = c(0, 80*60), ylim = c(0, max(schedule$distance_into_shape)),
+     xlab = "Time (min)", ylab = "Distance into Trip (m)", xaxs = "i", yaxs = "i", xaxt = "n")
+axis(1, at = pretty(c(0, 80)) * 60, labels = pretty(c(0, 80)))
+abline(h = schedule$distance_into_shape, lty = 3, col = "#99999980")
+apply(Ta, 2, function(y) points(y, schedule$distance_into_shape, pch = 19, col = "#99000030", cex = 0.5))
+apply(Td, 2, function(y) points(y, schedule$distance_into_shape, pch = 19, col = "#00009930", cex = 0.5))
+apply(state.hist, 2, function(X) points(tx, X[1,], pch = 19, col = "#99999930", cex = 0.2))
