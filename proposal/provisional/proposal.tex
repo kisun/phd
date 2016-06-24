@@ -33,6 +33,9 @@
 \newcommand{\bx}{\boldsymbol{x}}
 \newcommand{\by}{\boldsymbol{y}}
 \newcommand{\bz}{\boldsymbol{z}}
+\newcommand{\bY}{\mathbf{Y}}
+\newcommand{\bX}{\mathbf{X}}
+\newcommand{\btheta}{\boldsymbol{\theta}}
 
 \usepackage[acronym]{glossaries}
 \newacronym[shortplural={ATIS}]{atis}{ATIS}{advanced traveller information system}
@@ -43,6 +46,8 @@
 \newacronym{knn}{KNN}{$k$-nearest neighbour}
 \newacronym{ann}{ANN}{artificual neural networks}
 \newacronym{svm}{SVM}{support vector machines}
+\newacronym{kf}{KF}{Kalman Filter}
+\newacronym{pf}{PF}{Particle Filter}
 
 \usepackage[hidelinks]{hyperref}
 
@@ -316,7 +321,41 @@ are unknown.
 
 
 
-\subsection{Particle Filter}
+\subsection{Recursive Bayesian Filters}
+
+In a traditional modeling framework, all of the observations, $\bY$, are available before
+the analysis begins.
+In this case, the posterior distribution of the parameters, $\btheta$, is
+\begin{equation}
+  \label{eq:bayes_theorem}
+  \pi(\btheta|\bX) \propto \ell(\bX | \btheta) \pi(\btheta)
+\end{equation}
+where $\ell$ is the likelihood function of the data.
+
+When dealing with real-time observations, however, it makes more sense to update
+the posterior with the latest observation.
+This framework is known as recursive (Bayesian) filtering.
+A well known example is the \gls{kf},
+which has been used in bus arrival prediction since the 1990's \citep{cn}.
+
+The basic set up of the \gls{kf} is to start with a prior distribution,
+$\bX_0$, that represents some unknown \emph{state} of the system.
+For example, $\bX$ may be a vector of a vehicle's position and speed.
+Every time a new observation is recorded, the previous state is first used
+to \emph{predict} what the new state will be, 
+and then the observation is used to \emph{update} this state,
+allowing for measurement error.
+
+The main restriction of the basic \gls{kf} is that the model assumes the state $\bX$ 
+is multivariate normal, and the algorithms work directly with the mean (vector)
+and covariance matrix.
+In this way, the \gls{kf} can be very fast, especially when $\bX$ has only a few
+parameters.
+
+
+Some examples of \gls{kf} in buses \ldots
+
+
 
 Originally called a ``bootstrap filter'', the particle filter (PF) was first proposed by
 \cite{gordon-etal:1993} as a recursive Bayesian filter that needn't impose unnecessary assumptions,
