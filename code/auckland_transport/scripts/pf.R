@@ -302,7 +302,26 @@ plot(state.hist[1,,], state.hist[2,,], pch = 19, col = "#00000040",
      xlab = "Distance (m)", ylab = "Speed (m/s)")
 
 
-
+## draw a picture!!!!! only the ones that survive
+dev.hold()
+plot(NA, xlim = range(time.hist$arrival, na.rm = TRUE),
+     ylim = c(0, max(schedule$distance_into_shape)), yaxs = "i")
+abline(h = schedule$distance_into_shape, lty = 3, col = "#999999")
+for (i in 2:nrow(schedule)) {
+    points(time.hist$arrival[i,], rep(schedule$distance_into_shape[i], M),
+           col = "#99000020", pch = 19, cex = 0.8)
+    points(time.hist$departure[i,], rep(schedule$distance_into_shape[i], M),
+           col = "#00009920", pch = 19, cex = 0.5)
+}
+for (j in 1:M) {
+    xx <- c(times, time.hist$arrival[,j],
+                                        #ifelse(is.na(time.hist$departure[,j]), time.hist$arrival[,j],
+            time.hist$departure[,j])
+    yy <- c(state.hist[1,j,], schedule$distance_into_shape, schedule$distance_into_shape)
+    o <- order(xx)
+    lines(xx[o], yy[o], col = "#000000")
+}
+dev.flush()
 
 
 ## predicting arrival times:
