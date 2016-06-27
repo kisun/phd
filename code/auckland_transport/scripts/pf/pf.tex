@@ -198,51 +198,51 @@ This is implemented, and the logic is exactly the same as in \S~\ref{sec:move},
 but using $\eta_k$ instead of $\xi_k$.
 
 
-\subsection{$\delta_k$ depends on bus speed?}
+% \subsection{$\delta_k$ depends on bus speed?}
 
-No in depth study performed yet, but it looks like buses report their position less 
-frequently when they are stuck in traffic (or not moving very quickly for some other
-reason).
-This will influence how we model $\omega_k$ and $\kappa_k$\ldots
-
-
+% No in depth study performed yet, but it looks like buses report their position less 
+% frequently when they are stuck in traffic (or not moving very quickly for some other
+% reason).
+% This will influence how we model $\omega_k$ and $\kappa_k$\ldots
 
 
-\begin{figure}[hb!]
-  \centering
-  \includegraphics[width=0.8\textwidth]{../../figs/pf_singlebus/v3787/distance_time.jpg}
-  \caption{Distance into trip (km) of vehicle over course of the day.}
-  \label{fig:distance-time}
-\end{figure}
-
-\begin{figure}[tbp]
-  \centering
-  \includegraphics[width=0.49\textwidth]{../../figs/pf_singlebus/v3787/delta_distance_time.jpg}
-  \caption{Change in distance versus change in time after removing all observations where $\Delta_d \leq 0$.}
-  \label{fig:delta-distance-time}
-\end{figure}
 
 
-Need to investigate what happens if $\kappa_k = f(\delta_k)$,
-and also penalise $v_k$ using $\delta_k$ too: if $\delta_k$ is small, 
-then the bus may have sped up; if it is large, the bus may have slowed down.
+% \begin{figure}[hb!]
+%   \centering
+%   \includegraphics[width=0.8\textwidth]{../../figs/pf_singlebus/route_04901/distance_time.jpg}
+%   \caption{Distance into trip (km) of vehicle over course of the day.}
+%   \label{fig:distance-time}
+% \end{figure}
 
-And of course, this is completely observational right now \ldots see Figure~\ref{fig:distance-time}
-at about 8~a.m.; the gap corresponds to the right-most point in Figure~\ref{fig:delta-distance-time}.
+% \begin{figure}[tbp]
+%   \centering
+%   \includegraphics[width=0.49\textwidth]{../../figs/pf_singlebus/route_04901/delta_distance_time.jpg}
+%   \caption{Change in distance versus change in time after removing all observations where $\Delta_d \leq 0$.}
+%   \label{fig:delta-distance-time}
+% \end{figure}
 
 
-\textbf{Update:}
-This might be less common than first assumed.
-Perhaps the 12~minute observation was because the driver turned the bus off? 
-Or the location caused interference so the bus couldn't connect to the central server \ldots
+% Need to investigate what happens if $\kappa_k = f(\delta_k)$,
+% and also penalise $v_k$ using $\delta_k$ too: if $\delta_k$ is small, 
+% then the bus may have sped up; if it is large, the bus may have slowed down.
 
-\begin{figure}[hbt!]
-  \centering
-  \includegraphics[width=0.49\textwidth]{../../figs/pf_singlebus/v2933/delta_distance_time.jpg}
-  \includegraphics[width=0.49\textwidth]{../../figs/pf_singlebus/v3704/delta_distance_time.jpg}
-  \caption{Change in distance versus change in time for two other vehicles.}
-  \label{fig:delta-distance-time2}
-\end{figure}
+% And of course, this is completely observational right now \ldots see Figure~\ref{fig:distance-time}
+% at about 8~a.m.; the gap corresponds to the right-most point in Figure~\ref{fig:delta-distance-time}.
+
+
+% \textbf{Update:}
+% This might be less common than first assumed.
+% Perhaps the 12~minute observation was because the driver turned the bus off? 
+% Or the location caused interference so the bus couldn't connect to the central server \ldots
+
+% \begin{figure}[hbt!]
+%   \centering
+%   \includegraphics[width=0.49\textwidth]{../../figs/pf_singlebus/v2933/delta_distance_time.jpg}
+%   \includegraphics[width=0.49\textwidth]{../../figs/pf_singlebus/v3704/delta_distance_time.jpg}
+%   \caption{Change in distance versus change in time for two other vehicles.}
+%   \label{fig:delta-distance-time2}
+% \end{figure}
 
 
 \subsection{Particles all too far from observed location}
@@ -322,6 +322,33 @@ Need to look at what's happening to speed/arrival/departure times.
 
 
 
+
+\section{Particle Algorithm}
+\label{sec:particle_algorithm}
+
+
+The main issue at this point is creating a historical database 
+containing the particle filtered states.
+Need some way of saving the states, and which were \emph{kept}
+from one state to the next.
+i.e., particles die and are created at each step;
+need to save those that are \emph{transitioned} (i.e., kept).
+
+
+Simplest method: add another state parameter, $q_k^{(i)} \in \{0,1\}$,
+to indicate if a particle was ``kept'' in the resampling process \ldots
+
+
+There's also the issue of ``arrival time'' at \emph{every} stop.
+Currently, if multiple stops passed in one period,
+only the last one is retained.
+Also, particles can arrive and dwell, but then be deleted in the next
+update, so their dwell time is unknown.
+Need to find a way of saving arrival/dwell/departure times for every stop.
+And weight them properly.
+
+
+
 \section{Particle Motion Prediction}
 \label{sec:particle-prediction}
 
@@ -380,6 +407,11 @@ and add that to the scheduled arrival time at the future stop(s), $\bar S_j$.
   \label{eq:sched_pred}
   T_j^{(i)} = \bar S_j + \underbrace{T_{s_k}^{(i)} - \bar S_{s_k^{(i)}}}_{\text{schedule deviation}}
 \end{equation}
+
+
+
+
+
 
 
 

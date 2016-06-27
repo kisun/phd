@@ -1,0 +1,1 @@
+while sleepuntilmod pf.tex ; do latexmk -pdf pf.tex ; done

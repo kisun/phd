@@ -81,14 +81,13 @@ M <- 500
 info <- list(cur.trip = "", trip_id = character(), shapes = list(), schedules = list(),
              status = "")
 ## status: ['waiting', 'delayed', 'inprogress', 'finished']
-state = matrix(NA, 5, M)
+state = matrix(NA, 6, M)
 refresh <- TRUE
 mean.dist <- numeric(length(rowids))
 times <- numeric(length(rowids))
-state.hist <- array(NA, dim = c(5, M, length(rowids)))
-
-
-
+state.hist <- array(NA, dim = c(6, M, length(rowids)))
+time.hist <- #vector("list", length(rowids))
+    list(arrival = matrix(NA, length(rowids), M), departure = matrix(NA, length(rowids), M))
 pb <- txtProgressBar(1, length(rowids), style = 3)
 jpeg(paste0("figs/pf_singlebus/route_", routeN, "/particle_map%03d.jpg"), width = 1920, height = 1080, pointsize = 12*2)
 dir.create(paste0("figs/pf_singlebus/route_", routeN))
@@ -201,6 +200,16 @@ for (i in seq_along(rowids)) {
         attr(state, "ts") <- row$timestamp
     }
     state.hist[,,i] <- state
+    if (!is.null(attr(state, "times"))) {
+        for (j in 1:M) {
+            A <- attr(state, "times")[,j,,drop=FALSE]
+            Ta <- tapply(A[2,,], A[1,,], max)
+            Td <- tapply(A[3,,], A[1,,], max)
+            time.hist$arrival[as.numeric(names(Ta)), j] <- Ta
+            time.hist$departure[as.numeric(names(Ta)), j] <- Td
+        }
+    }
+    if (i > 1) state.hist[6, , i-1] <- as.numeric(1:M %in% attr(state, "wi"))
     times[i] <- row$timestamp
     addPoints(row$position_longitude, row$position_latitude,
               gp =
@@ -265,6 +274,32 @@ hist <- dget("_data/route_history2.rda")
 
 
 
+
+
+
+
+apply(state.hist[6,,], 2, sum)
+
+lapply(time.hist, dim)
+
+dev.hold()
+plot(NA, xlim = range(time.hist$arrival, na.rm = TRUE),
+     ylim = c(0, max(schedule$distance_into_shape)), yaxs = "i")
+abline(h = schedule$distance_into_shape, lty = 3, col = "#999999")
+for (i in 2:nrow(schedule)) {
+    points(time.hist$arrival[i,], rep(schedule$distance_into_shape[i], M),
+           col = "#99000020", pch = 19, cex = 0.8)
+    points(time.hist$departure[i,], rep(schedule$distance_into_shape[i], M),
+           col = "#00009920", pch = 19, cex = 0.5)
+}
+dev.flush()
+
+
+
+
+
+plot(state.hist[1,,], state.hist[2,,], pch = 19, col = "#00000040",
+     xlab = "Distance (m)", ylab = "Speed (m/s)")
 
 
 

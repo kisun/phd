@@ -167,7 +167,7 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
     stay <- rbinom(R, 1, ifelse(at.stop, 0.5,  ifelse(rerun, 0.5, 0.1)))
     tau <- ifelse(stay, rexp(R, 1 / dt), 0)
     ## sample new speed, and progress particles forward:
-    NEW[2,] <- msm::rtnorm(R, X[2,], ifelse(rerun, 4, 2), lower = 0, upper = 30)
+    NEW[2,] <- msm::rtnorm(R, X[2,], ifelse(rerun, 4, 2), lower = 0, upper = 25)
     NEW[1,] <- X[1,] + NEW[2,] * pmax(0, (dt - tau))
     NEW[3,] <- X[3,]
     NEW[4,] <- X[4,]   # ifelse(is.na(X[5,]), X[4,], NA)
@@ -176,6 +176,7 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
     w <- apply(NEW, 2, function(x) x[1] > s[x[3]+1])
     if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])
     w[is.na(w)] <- FALSE
+    TIMES <- array(NA, dim = c(3, ncol(NEW), 1))
     while (any(w, na.rm=TRUE)) {
         rtau <- rexp(sum(w, na.rm=TRUE), 1/20)
         rtau <- ifelse(rtau < gamma, 0, rtau)
@@ -184,6 +185,7 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
         NEW[3,w] <- pmin(NEW[3,w] + 1, max(s))
         NEW[4,w] <- tx + (s[NEW[3,w]] - X[1,w]) / NEW[2,w]
         NEW[5,w] <- ifelse(NEW[3,w] == max(s), tn, ifelse(rt > 0, tn - rt, NA))
+        TIMES <- abind::abind(TIMES, NEW[3:5, ])
         w <- apply(NEW, 2, function(x) x[1] > s[x[3]+1])
         if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])
         w[is.na(w)] <- FALSE
@@ -205,9 +207,12 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
     if (sum(pr > 0) < 5)  ## less than 5 valid particles
         return(structure(NEW[,1:ncol(Xold)], code = 3))
     wt <- pr / sum(pr)
-    X <- NEW[, sample(R, size = ncol(Xold), replace = TRUE, prob = wt)]
+    wi <- sample(R, size = ncol(Xold), replace = TRUE, prob = wt)
+    X <- NEW[, wi]
     attr(X, "xhat") <- NEW
     attr(X, "code") <- 0
+    attr(X, "wi") <- unique(wi)
+    attr(X, "times") <- TIMES[, wi, -1, drop = FALSE]
     X
 }
 h <- function(x, shape) {
