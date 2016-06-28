@@ -48,26 +48,31 @@ ts <- as.numeric(as.POSIXct(date))
 ##                     sprintf("SELECT route_id FROM trips WHERE trip_id LIKE '%s'",
 ##                             paste0(gsub("-.+", "", unique(tss$trip_id)[2]), "%")))
 ## routeN <- gsub("-.+", "", route[[1]][1])
-routeN <- "04901"
+## routeN <- "04901"
+routeN <- "27401"
 date <- "2016-01-25"
 
 tripTimes <- dbGetQuery(dbConnect(SQLite(), db),
                         sprintf("SELECT trips.trip_id, departure_time
                                  FROM trips, stop_times
                                  WHERE route_id LIKE '%s' AND trips.trip_id=stop_times.trip_id
-                                    AND stop_sequence=1",
+                                    AND stop_sequence=1 ORDER BY departure_time",
                                 paste0(routeN, "%_v37.28")))
-#tripTimes                                     
+tripTimes                                     
 
 ## tripids
 #tids <- dbGetQuery(dbConnect(SQLite(), db),
 #                   sprintf("SELECT trip_id FROM trips WHERE route_id LIKE '%s'",
 #                           paste0(routeN, "%")))
 #tripN <- unique(gsub("-.+", "", tids[[1]]))[7]
-tripN <- gsub("-.+", "", tripTimes$trip_id)[11]
+## tripN <- gsub("-.+", "", tripTimes$trip_id)[11]
+tripN <- gsub("-.+", "", tripTimes$trip_id)[3]
+
+#GOGOGO(tripN)
 
 
 ## and the row IDs for them .......
+#GOGOGO <- function(tripN) {
 rowids <- dbGetQuery(con,
                      sprintf("SELECT oid FROM vehicle_positions
                               WHERE (%s) AND timestamp>=%s AND timestamp<%s
@@ -86,10 +91,11 @@ refresh <- TRUE
 mean.dist <- numeric(length(rowids))
 times <- numeric(length(rowids))
 state.hist <- array(NA, dim = c(6, M, length(rowids)))
-time.hist <- #vector("list", length(rowids))
-    list(arrival = matrix(NA, length(rowids), M), departure = matrix(NA, length(rowids), M))
+time.hist <- vector("list", length(rowids))
+    ## list(arrival = matrix(NA, length(rowids), M), departure = matrix(NA, length(rowids), M))
 pb <- txtProgressBar(1, length(rowids), style = 3)
-jpeg(paste0("figs/pf_singlebus/route_", routeN, "/particle_map%03d.jpg"), width = 1920, height = 1080, pointsize = 12*2)
+jpeg(paste0("figs/pf_singlebus/route_", routeN, "/particle_map%03d.jpg"),
+     width = 1920, height = 1080, pointsize = 12*2)
 dir.create(paste0("figs/pf_singlebus/route_", routeN))
 for (i in seq_along(rowids)) {
     setTxtProgressBar(pb, i)
@@ -163,6 +169,7 @@ for (i in seq_along(rowids)) {
                     info$status <- "inprogress"
                     state[2, ] <- ifelse(is.na(state[2, ]), runif(M, 0, 30), state[2, ])
                     state[3, ] <- 1
+                    state[4, ] <- ifelse(is.na(state[4, ]), row$timestamp, state[4, ])
                 }
             }
         }
@@ -200,15 +207,16 @@ for (i in seq_along(rowids)) {
         attr(state, "ts") <- row$timestamp
     }
     state.hist[,,i] <- state
-    if (!is.null(attr(state, "times"))) {
-        for (j in 1:M) {
-            A <- attr(state, "times")[,j,,drop=FALSE]
-            Ta <- tapply(A[2,,], A[1,,], max)
-            Td <- tapply(A[3,,], A[1,,], max)
-            time.hist$arrival[as.numeric(names(Ta)), j] <- Ta
-            time.hist$departure[as.numeric(names(Ta)), j] <- Td
-        }
-    }
+    time.hist[[i]] <- attr(state, "times")
+    ## if (!is.null(attr(state, "times"))) {
+        ## for (j in 1:M) {
+        ##     A <- attr(state, "times")[,j,,drop=FALSE]
+        ##     Ta <- tapply(A[2,,], A[1,,], max)
+        ##     Td <- tapply(A[3,,], A[1,,], max)
+        ##     time.hist$arrival[as.numeric(names(Ta)), j] <- Ta
+        ##     time.hist$departure[as.numeric(names(Ta)), j] <- Td
+        ## }
+    ## }
     if (i > 1) state.hist[6, , i-1] <- as.numeric(1:M %in% attr(state, "wi"))
     times[i] <- row$timestamp
     addPoints(row$position_longitude, row$position_latitude,
@@ -244,25 +252,25 @@ plot(diff(secs)[pos] / 60, diff(dists)[pos],
      ylab = expression(paste(Delta[d], " (m)")))
 dev.off()
 
-cor(diff(secs)[pos] / 60, diff(dists)[pos])
+## cor(diff(secs)[pos] / 60, diff(dists)[pos])
 
 
 ## save
-hist <- data.frame(
-    dbGetQuery(con,
-               sprintf("SELECT trip_id, vehicle_id FROM vehicle_positions WHERE oid IN ('%s')",
-                       paste0(rowids, collapse = "','"))),
-    timestamp = times,
-    distance_into_trip = mean.dist
-)
-hist$trip_id <- gsub("-.+", "", hist$trip_id)
+## hist <- data.frame(
+##     dbGetQuery(con,
+##                sprintf("SELECT trip_id, vehicle_id FROM vehicle_positions WHERE oid IN ('%s')",
+##                        paste0(rowids, collapse = "','"))),
+##     timestamp = times,
+##     distance_into_trip = mean.dist
+## )
+## hist$trip_id <- gsub("-.+", "", hist$trip_id)
 
-iNZightPlots::iNZightPlot(timestamp, distance_into_trip, data = hist, plottype = "scatter",
-                          cex.pt = 0.5)
+## iNZightPlots::iNZightPlot(timestamp, distance_into_trip, data = hist, plottype = "scatter",
+##                           cex.pt = 0.5)
 
-## dput(hist, "_data/route_history2.rda")
-## hist <- dget("_data/route_history.rda")
-hist <- dget("_data/route_history2.rda")
+## ## dput(hist, "_data/route_history2.rda")
+## ## hist <- dget("_data/route_history.rda")
+## hist <- dget("_data/route_history2.rda")
 
 
 
@@ -273,61 +281,195 @@ hist <- dget("_data/route_history2.rda")
 ## Schedule prediction:
 
 
+## apply(state.hist[6,,], 2, sum)
+
+## lapply(time.hist, dim)
 
 
+## time.hist[[4]][,,2]
 
-
-
-apply(state.hist[6,,], 2, sum)
-
-lapply(time.hist, dim)
-
+jpeg(paste0("figs/pf_singlebus/route_", routeN, "/distance_traveled.jpg"),
+     width = 1920, height = 1080, pointsize = 12*2)
 dev.hold()
-plot(NA, xlim = range(time.hist$arrival, na.rm = TRUE),
-     ylim = c(0, max(schedule$distance_into_shape)), yaxs = "i")
+plot(NA, xlim = range(times, na.rm = TRUE), xaxt = "n",
+     ylim = c(0, max(schedule$distance_into_shape)), yaxs = "i",
+     xlab = "Time", ylab = "Distance into Trip (m)")
+Xlab <- pretty(as.POSIXct(times, origin = "1970-01-01"))
+axis(1, at = Xlab, label = format(Xlab, "%H:%M"))
 abline(h = schedule$distance_into_shape, lty = 3, col = "#999999")
-for (i in 2:nrow(schedule)) {
-    points(time.hist$arrival[i,], rep(schedule$distance_into_shape[i], M),
-           col = "#99000020", pch = 19, cex = 0.8)
-    points(time.hist$departure[i,], rep(schedule$distance_into_shape[i], M),
-           col = "#00009920", pch = 19, cex = 0.5)
+invisible(apply(state.hist[1,,], 1, function(x)
+    points(times, x, pch = 19, col = "#00009930")))
+ds <- schedule$distance_into_shape
+for (i in 2:length(rowids)) {
+    for (j in 1:M) {
+        Xij <- state.hist[,j,i]
+        kept <- state.hist[6,j,i-1]
+        if (TRUE){#kept) {
+            Tm <- time.hist[[i]][,j,,drop=FALSE]
+            if (dim(Tm)[3] == 0) {
+                Ta <- NULL
+                Td <- NULL
+            } else {
+                Ta <- tapply(Tm[2, ,1], Tm[1, ,1], max)
+                Td <- tapply(Tm[3, ,1], Tm[1, ,1], max)
+            }
+            xx <- c(times[i-1], Ta, Td, times[i])
+            yy <- c(state.hist[1,j,i-1], ds[as.numeric(names(Ta))],
+                    ds[as.numeric(names(Td))], Xij[1])
+            o <- order(xx)
+            xx <- xx[o]
+            yy <- yy[o]
+            w <- xx >= times[i-1] & xx <= times[i]
+            lines(xx[w], yy[w], col = "#99000040")
+        }
+    }
 }
 dev.flush()
+dev.off()
 
+t0 <- time2sec(schedule$departure_time[1]) + dayStartSec(times[1])
+time2sec <- function(x) sapply(strsplit(x, ":"), function(y) sum(as.numeric(y) * 60^(2:0)))
+dayStartSec <- function(x)
+    as.numeric(as.POSIXct(format(as.POSIXct(x, origin = "1970-01-01"), "%Y-%m-%d")))
+## remove dwell times for each particle ...
+as.numfact <- function(x, N = nrow(schedule)) factor(x, levels = 1:N)
+Ta <- Td <- 
+    TT <- matrix(NA, nrow(schedule), M)
+for (i in 2:nrow(schedule)) {
+    Tai <- sapply(time.hist, function(X) {
+        if (is.null(X)) return (rep(NA, M))
+        apply(X, 2, function(Y) {
+            yy <- Y[2,Y[1,] == i]
+            if (all(is.na(yy))) return(NA)
+            max(yy, na.rm = TRUE)
+        })
+    })
+    Ta[i,] <- apply(Tai, 1, function(x)
+        if (all(is.na(x))) return (NA) else return(max(x, na.rm = TRUE)))
+    Tdi1 <- sapply(time.hist, function(X) {
+        if (is.null(X)) return (rep(NA, M))
+        apply(X, 2, function(Y) {
+            yy <- Y[3,Y[1,] == i-1]
+            if (all(is.na(yy))) return(NA)
+            max(yy, na.rm = TRUE)
+        })
+    })
+    Td[i-1,] <- apply(Tdi1, 1, function(x)
+        if (all(is.na(x))) return (NA) else return(max(x, na.rm = TRUE)))
+    TT[i,] <- pmax(0, Ta[i,] - Td[i-1,])
+}
+#Ta <- apply(state.hist, 2, function(P)
+#    tapply(P[4,], as.numfact(P[3,]), function(z)
+#         if (all(is.na(z))) return(NA) else max(z, na.rm = TRUE)))
+#Ta[1, ] <- t0
+#Td <- apply(state.hist, 2, function(P)
+#    tapply(P[5,], as.numfact(P[3,]), function(z)
+#         if (all(is.na(z))) return(NA) else max(z, na.rm = TRUE)))
+#travel.t <- Ta[-1, ] - Td[-nrow(Td), ]
+tt.hat <- apply(TT, 1, median, na.rm = TRUE)[-1]
+#tt.quant <- apply(TT, 1, quantile, c(0.05, 0.95), na.rm = TRUE)[,-1]
+dwell <- Td - Ta
+dwell[dwell <= 10] <- NA
+Ta.hat <- apply(Ta, 1, median, na.rm = TRUE)
+if (is.na(Ta.hat[1]))
+    Ta.hat[1] <- t0
+## dwell <- apply(dwell, 2, function(x) pmax(0, x))
+## dwell[is.na(dwell)] <- 0
+## cumdwell <- apply(dwell, 2, cumsum)
+## cumdwell
 
+jpeg(paste0("figs/pf_singlebus/route_", routeN, "/distance_average.jpg"),
+     width = 1920, height = 1080, pointsize = 12*2)
+dev.hold()
+plot(NA, xlim = c(0, max(times) - t0)/60, xaxs = "i",
+     ylim = c(0, max(schedule$distance_into_shape)), yaxs = "i",
+     xlab = "Travel Time (min)", ylab = "Distance into Trip (m)")
+#Xlab <- pretty(as.POSIXct(times, origin = "1970-01-01"))
+#axis(1, at = Xlab, label = format(Xlab, "%H:%M"))
+abline(h = schedule$distance_into_shape, lty = 3, col = "#999999")
+apply(TT, 2, function(x) {
+    lines(c(0, cumsum(ifelse(is.na(x), 0, x)[-1])) / 60, ds, col = "#cc000040")
+})
+lines(txx <- c(0, cumsum(tt.hat))/60, ds, lwd = 2)
+#lines(c(0, cumsum(tt.quant[1,]))/60, ds, lty = 2, lwd = 2)
+#lines(c(0, cumsum(tt.quant[2,]))/60, ds, lty = 2, lwd = 2)
+points(txx, ds, cex = apply(!is.na(dwell), 1, mean), col = cc <- "#222222", pch = 19)
+dwell.start <- txx
+dwell.mean <- apply(dwell, 1, median, na.rm = TRUE)/60
+arrows(dwell.start, ds, dwell.start + dwell.mean, code = 0, lwd = 2, col = cc)
+dev.flush()
+dev.off()
 
-
-
+jpeg(paste0("figs/pf_singlebus/route_", routeN, "/distance_speed.jpg"),
+     width = 1920, height = 1080, pointsize = 12*2)
 plot(state.hist[1,,], state.hist[2,,], pch = 19, col = "#00000040",
      xlab = "Distance (m)", ylab = "Speed (m/s)")
+dev.off()
+
+hist.df <- data.frame(trip_id = tid, route_id = row$route_id,
+                      date = format(ts2dt(t0), "%Y-%m-%d"),
+                      vehicle_id = row$vehicle_id,
+                      stop_no = 1:nrow(schedule),
+                      arrival_time = Ta.hat,
+                      dwell_time = ifelse(is.na(dwell.mean), 0, dwell.mean * 60),
+                      pr_stop = apply(!is.na(dwell), 1, mean, na.rm = TRUE),
+                      pr_stop_se = apply(!is.na(dwell), 1, sd) / sqrt(M),
+                      travel_time = c(tt.hat, 0))
+ENT <- paste(apply(hist.df, 1, paste, collapse = "','"), collapse = "'), ('")
+dbGetQuery(dbConnect(SQLite(), "db/hist.db"),
+           sprintf("INSERT INTO travel_history (%s)
+       VALUES ('%s')", paste(colnames(hist.df), collapse = ", "), ENT))
+#}
 
 
-## draw a picture!!!!! only the ones that survive
-dev.hold()
-plot(NA, xlim = range(time.hist$arrival, na.rm = TRUE),
-     ylim = c(0, max(schedule$distance_into_shape)), yaxs = "i")
-abline(h = schedule$distance_into_shape, lty = 3, col = "#999999")
-for (i in 2:nrow(schedule)) {
-    points(time.hist$arrival[i,], rep(schedule$distance_into_shape[i], M),
-           col = "#99000020", pch = 19, cex = 0.8)
-    points(time.hist$departure[i,], rep(schedule$distance_into_shape[i], M),
-           col = "#00009920", pch = 19, cex = 0.5)
-}
-for (j in 1:M) {
-    xx <- c(times, time.hist$arrival[,j],
-                                        #ifelse(is.na(time.hist$departure[,j]), time.hist$arrival[,j],
-            time.hist$departure[,j])
-    yy <- c(state.hist[1,j,], schedule$distance_into_shape, schedule$distance_into_shape)
-    o <- order(xx)
-    lines(xx[o], yy[o], col = "#000000")
-}
-dev.flush()
+
+
+
+NULL
+
+## dev.hold()
+## plot(NA, xlim = range(time.hist$arrival, na.rm = TRUE),
+##      ylim = c(0, max(schedule$distance_into_shape)), yaxs = "i")
+## abline(h = schedule$distance_into_shape, lty = 3, col = "#999999")
+## for (i in 2:nrow(schedule)) {
+##     points(time.hist$arrival[i,], rep(schedule$distance_into_shape[i], M),
+##            col = "#99000020", pch = 19, cex = 0.8)
+##     points(time.hist$departure[i,], rep(schedule$distance_into_shape[i], M),
+##            col = "#00009920", pch = 19, cex = 0.5)
+## }
+## dev.flush()
+
+
+
+
+
+
+
+## ## draw a picture!!!!! only the ones that survive
+## dev.hold()
+## plot(NA, xlim = range(time.hist$arrival, na.rm = TRUE),
+##      ylim = c(0, max(schedule$distance_into_shape)), yaxs = "i")
+## abline(h = schedule$distance_into_shape, lty = 3, col = "#999999")
+## for (i in 2:nrow(schedule)) {
+##     points(time.hist$arrival[i,], rep(schedule$distance_into_shape[i], M),
+##            col = "#99000020", pch = 19, cex = 0.8)
+##     points(time.hist$departure[i,], rep(schedule$distance_into_shape[i], M),
+##            col = "#00009920", pch = 19, cex = 0.5)
+## }
+## for (j in 1:M) {
+##     xx <- c(times, time.hist$arrival[,j],
+##                                         #ifelse(is.na(time.hist$departure[,j]), time.hist$arrival[,j],
+##             time.hist$departure[,j])
+##     yy <- c(state.hist[1,j,], schedule$distance_into_shape, schedule$distance_into_shape)
+##     o <- order(xx)
+##     lines(xx[o], yy[o], col = "#000000")
+## }
+## dev.flush()
 
 
 ## predicting arrival times:
 
 ### super basic state projection:
-time2sec <- function(x) sapply(strsplit(x, ":"), function(y) sum(as.numeric(y) * 60^(2:0)))
 arrivalTime <- function(state, schedule, t = 0, stop = nrow(schedule), draw = TRUE) {
     ## if t = 0, then result is ETA; otherwise an actual time
     Sj <- schedule$distance_into_shape[stop]

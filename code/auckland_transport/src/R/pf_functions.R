@@ -177,6 +177,7 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
     if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])
     w[is.na(w)] <- FALSE
     TIMES <- array(NA, dim = c(3, ncol(NEW), 1))
+    TIMES[,,1] <- NEW[3:5, ]
     while (any(w, na.rm=TRUE)) {
         rtau <- rexp(sum(w, na.rm=TRUE), 1/20)
         rtau <- ifelse(rtau < gamma, 0, rtau)
@@ -184,7 +185,7 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
         NEW[1,w] <- pmin(s[NEW[3,w]+1] + (rt > 0) * NEW[2,w] * rt, max(shape$distance_into_shape))
         NEW[3,w] <- pmin(NEW[3,w] + 1, max(s))
         NEW[4,w] <- tx + (s[NEW[3,w]] - X[1,w]) / NEW[2,w]
-        NEW[5,w] <- ifelse(NEW[3,w] == max(s), tn, ifelse(rt > 0, tn - rt, NA))
+        NEW[5,w] <- ifelse(NEW[3,w] == max(s), tn, ifelse(rt > 0, tn - rt, tn))
         TIMES <- abind::abind(TIMES, NEW[3:5, ])
         w <- apply(NEW, 2, function(x) x[1] > s[x[3]+1])
         if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])
@@ -212,7 +213,7 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
     attr(X, "xhat") <- NEW
     attr(X, "code") <- 0
     attr(X, "wi") <- unique(wi)
-    attr(X, "times") <- TIMES[, wi, -1, drop = FALSE]
+    attr(X, "times") <- TIMES[, wi, , drop = FALSE]
     X
 }
 h <- function(x, shape) {
