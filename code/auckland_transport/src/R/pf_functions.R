@@ -168,14 +168,14 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
     tau <- ifelse(stay, rexp(R, 1 / dt), 0)
     ## sample new speed, and progress particles forward:
     NEW[2,] <- msm::rtnorm(R, X[2,], ifelse(rerun, 4, 2), lower = 0, upper = 25)
-    NEW[1,] <- X[1,] + NEW[2,] * pmax(0, (dt - tau))
+    NEW[1,] <- pmin(X[1,] + NEW[2,] * pmax(0, (dt - tau)), max(s))
     NEW[3,] <- X[3,]
     NEW[4,] <- X[4,]   # ifelse(is.na(X[5,]), X[4,], NA)
     NEW[5,] <- ifelse(dt - tau > 0 & at.stop, tx + tau, X[5,])
     ## work out stop-passing stuff ...
-    w <- apply(NEW, 2, function(x) x[1] > s[x[3]+1])
-    if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])
-    w[is.na(w)] <- FALSE
+    w <- apply(NEW, 2, function(x) if (x[3] < length(s)) return(x[1] >= s[x[3]+1]) else FALSE)
+    ## if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])
+    ## w[is.na(w)] <- FALSE
     TIMES <- array(NA, dim = c(3, ncol(NEW), 1))
     TIMES[,,1] <- NEW[3:5, ]
     while (any(w, na.rm=TRUE)) {
@@ -183,13 +183,13 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
         rtau <- ifelse(rtau < gamma, 0, rtau)
         rt <- dt - rtau - (s[NEW[3,w]+1] - X[1,w]) / NEW[2,w]
         NEW[1,w] <- pmin(s[NEW[3,w]+1] + (rt > 0) * NEW[2,w] * rt, max(shape$distance_into_shape))
-        NEW[3,w] <- pmin(NEW[3,w] + 1, max(s))
+        NEW[3,w] <- pmin(NEW[3,w] + 1, length(s))
         NEW[4,w] <- tx + (s[NEW[3,w]] - X[1,w]) / NEW[2,w]
         NEW[5,w] <- ifelse(NEW[3,w] == max(s), tn, ifelse(rt > 0, tn - rt, tn))
         TIMES <- abind::abind(TIMES, NEW[3:5, ])
-        w <- apply(NEW, 2, function(x) x[1] > s[x[3]+1])
-        if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])
-        w[is.na(w)] <- FALSE
+        w <- apply(NEW, 2, function(x) if (x[3] < length(s)) return(x[1] >= s[x[3]+1]) else FALSE)
+        #if (any(is.na(w))) NEW[1,] <- pmin(s[NEW[3,]], NEW[1,])
+        #w[is.na(w)] <- FALSE
     }
     ## compute weights:
     dist <- distance(t(row[, c("position_latitude", "position_longitude")]),
@@ -234,3 +234,6 @@ h <- function(x, shape) {
     if (d == 0) return(as.numeric(sj[1:2]))
     partialSegment(as.numeric(sj[1:2]), Psi, d)
 }
+time2sec <- function(x) sapply(strsplit(x, ":"), function(y) sum(as.numeric(y) * 60^(2:0)))
+dayStartSec <- function(x)
+    as.numeric(as.POSIXct(format(as.POSIXct(x, origin = "1970-01-01"), "%Y-%m-%d")))
