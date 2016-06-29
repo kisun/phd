@@ -66,7 +66,7 @@ tripTimes
 #                           paste0(routeN, "%")))
 #tripN <- unique(gsub("-.+", "", tids[[1]]))[7]
 ## tripN <- gsub("-.+", "", tripTimes$trip_id)[11]
-tripN <- gsub("-.+", "", tripTimes$trip_id)[5]
+tripN <- gsub("-.+", "", tripTimes$trip_id)[6]
 
 #GOGOGO(tripN)
 
@@ -386,19 +386,7 @@ plot(state.hist[1,,], state.hist[2,,], pch = 19, col = "#00000040",
      xlab = "Distance (m)", ylab = "Speed (m/s)")
 dev.off()
 
-hist.df <- data.frame(trip_id = tid, route_id = row$route_id,
-                      date = format(ts2dt(t0), "%Y-%m-%d"),
-                      vehicle_id = row$vehicle_id,
-                      stop_no = 1:nrow(schedule),
-                      arrival_time = Ta.hat,
-                      dwell_time = ifelse(is.na(dwell.mean), 0, dwell.mean * 60),
-                      pr_stop = apply(!is.na(dwell), 1, mean, na.rm = TRUE),
-                      pr_stop_se = apply(!is.na(dwell), 1, sd) / sqrt(M),
-                      travel_time = c(tt.hat, 0))
-ENT <- paste(apply(hist.df, 1, paste, collapse = "','"), collapse = "'), ('")
-dbGetQuery(dbConnect(SQLite(), "db/hist.db"),
-           sprintf("INSERT INTO travel_history (%s)
-       VALUES ('%s')", paste(colnames(hist.df), collapse = ", "), ENT))
+
 #}
 
 
@@ -495,7 +483,8 @@ plot(NA, ylim = c(0, min(max(arrival.last, na.rm = TRUE),
                          diff(range(time2sec(schedule$arrival_time))) + 90*60)),
      xlim = c(0, max(state.hist[1,,], na.rm = TRUE)),
      xlab = "Distance from Stop (m)", yaxt = "n", ylab = "")
-ETAmin <- pretty(c(0, max(arrival.last, na.rm = TRUE)) / 60, n = 15)
+ETAmin <- pretty(par()$usr[1:2] / 60, n = 15)
+## ETAmin <- pretty(c(0, max(arrival.last, na.rm = TRUE)) / 60, n = 15)
 ETA <- as.POSIXct(time2sec(schedule$arrival_time[1]) + ETAmin * 60,
                   origin = "1970-01-01", tz = "NZDT")
 axis(2, at = ETAmin * 60, labels = format(ETA, "%H:%M:%S"), las = 2)
@@ -533,7 +522,8 @@ plot(NA, ylim = c(0, min(max(arrival.last, na.rm = TRUE),
                          diff(range(time2sec(schedule$arrival_time))) + 90*60)),
      xlim = c(0, max(state.hist[1,,], na.rm = TRUE)),
      xlab = "Distance from Stop (m)", yaxt = "n", ylab = "")
-ETAmin <- pretty(c(0, max(arrival.last, na.rm = TRUE)) / 60, n = 15)
+ETAmin <- pretty(par()$usr[1:2] / 60, n = 15)
+## ETAmin <- pretty(c(0, max(arrival.last, na.rm = TRUE)) / 60, n = 15)
 ETA <- as.POSIXct(time2sec(schedule$arrival_time[1]) + ETAmin * 60,
                   origin = "1970-01-01", tz = "NZDT")
 axis(2, at = ETAmin * 60, labels = format(ETA, "%H:%M:%S"), las = 2)
@@ -600,13 +590,82 @@ dev.off()
 ## apply(Ta, 2, function(y) points(y, schedule$distance_into_shape, pch = 19, col = "#99000030", cex = 0.5))
 ## apply(Td, 2, function(y) points(y, schedule$distance_into_shape, pch = 19, col = "#00009930", cex = 0.5))
 ## apply(state.hist, 2, function(X) points(tx, X[1,], pch = 19, col = "#99999930", cex = 0.2))
-
-
-save.image()
-
-setwd("../")
-.libPaths("../../.Rlibrary")
-library(RSQLite)
-load(".RData")
-
+#
+#save.image()
+#
+#setwd("../")
+#.libPaths("../../.Rlibrary")
+#library(RSQLite)
+#load(".RData")
+#
 ## Historical!
+arrivalTimeHist <- function(state, schedule, t = 0, route.id,
+                            stop = nrow(schedule), draw = FALSE,
+                            hdb = "db/hist.db") {
+    hist <- dbGetQuery(dbConnect(SQLite(), hdb),
+                       sprintf("SELECT * FROM travel_history
+                                WHERE route_id = '%s'",
+                               route.id, min(state[3,], na.rm = TRUE), stop))
+    ds <- schedule$distance_into_shape
+    ts <- tapply(hist$travel_time, hist$stop_no, mean)
+    pr <- tapply(hist$pr_stop, hist$stop_no, mean)
+    gamma <- 10
+    tau <- pmax(0, tapply(hist$dwell_time, hist$stop_no, mean) - gamma)
+    stopl <- stop - 1
+    TT <- apply(state, 2, function(x) {
+        if (x[3] == stop) return(0)
+        ## travel time remaining
+        tr <- (1 - (x[1] - ds[x[3]]) / (ds[x[3]+1] - ds[x[3]])) * ts[x[3]]
+        if (x[3]+1 == stop) return(tr)
+        tr <- tr + sum(ts[-(1:x[3])])
+        ## dwell times
+        Nr <- stop - x[3] - 1
+        #if (Nr == 0) return(tr)
+        p <- rbinom(Nr, 1, pr[x[3]:stopl])
+        tau <- rexp(Nr, 1 / pmax(1, tau[x[3]:stopl]))
+        tr <- tr + sum(p * (gamma + tau))
+    })
+    TT + t
+}
+##
+jpeg(paste0("figs/pf_singlebus/route_", routeN, "/arrival_last_hist.jpg"),
+     width = 1920/2, height = 1080/2)
+otx <- times - min(times)
+arrival.last <- matrix(NA, length(tx), M)
+for (j in 1:length(tx)) {
+    arrival.last[j, ] <- arrivalTimeHist(state.hist[,,j], schedule, t = tx[j],
+                                         route.id = row$route_id, draw = FALSE)
+}
+par(mar = c(5.1, 6.1, 4.1, 2.1))
+plot(NA, ylim = c(0, min(max(arrival.last, na.rm = TRUE),
+                         diff(range(time2sec(schedule$arrival_time))) + 90*60)),
+     xlim = c(0, max(state.hist[1,,], na.rm = TRUE)),
+     xlab = "Distance from Stop (m)", yaxt = "n", ylab = "")
+ETAmin <- pretty(par()$usr[1:2] / 60, n = 15)
+ETA <- as.POSIXct(time2sec(schedule$arrival_time[1]) + ETAmin * 60,
+                  origin = "1970-01-01", tz = "NZDT")
+axis(2, at = ETAmin * 60, labels = format(ETA, "%H:%M:%S"), las = 2)
+title(ylab = "ETA", line = 5)
+for (j in 1:length(tx)) {
+    points(max(schedule$distance_into_shape) - state.hist[1,,j], arrival.last[j, ],
+           pch = 19, col = "#44444430")
+}
+abline(h = (state.hist[4,,length(tx)]) - min(times), col = "#aa000040", lty = 2)
+dev.off()
+
+
+
+
+hist.df <- data.frame(trip_id = tid, route_id = row$route_id,
+                      date = format(ts2dt(t0), "%Y-%m-%d"),
+                      vehicle_id = row$vehicle_id,
+                      stop_no = 1:nrow(schedule),
+                      arrival_time = Ta.hat,
+                      dwell_time = ifelse(is.na(dwell.mean), 0, dwell.mean * 60),
+                      pr_stop = apply(!is.na(dwell), 1, mean, na.rm = TRUE),
+                      pr_stop_se = apply(!is.na(dwell), 1, sd) / sqrt(M),
+                      travel_time = c(tt.hat, 0))
+ENT <- paste(apply(hist.df, 1, paste, collapse = "','"), collapse = "'), ('")
+dbGetQuery(dbConnect(SQLite(), "db/hist.db"),
+           sprintf("INSERT INTO travel_history (%s)
+       VALUES ('%s')", paste(colnames(hist.df), collapse = ", "), ENT))
