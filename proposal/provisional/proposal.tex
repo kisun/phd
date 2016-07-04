@@ -402,6 +402,10 @@ this makes the \gls{kf} somewhat restrictive,
 and not ideal for modeling processes which to not obide strictly to linear dynamic equations.
 
 
+
+\subsubsection{Particle Filter}
+\label{sec:particle_filter}
+
 In response to the restricted nature of the \gls{kf}, there have been many 
 alternatives described, such as the Extended Kalman Filter,
 but the one we are most interested in is the \gls{pf}.
@@ -446,6 +450,9 @@ with a \gls{pf}, however, we only need to worry about each particle.
 Given a sample of particles, we can allow each one to stop with some prior probability,
 so that we end up with a multi-modal distribution of particles; those that stopped, 
 and those that didn't.
+
+
+
 
 
 
