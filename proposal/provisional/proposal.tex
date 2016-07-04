@@ -13,14 +13,15 @@
  \usepackage{comment}
 %\usepackage{times}
  \usepackage{setspace}
- \onehalfspacing
+% \onehalfspacing
+\doublespacing
 
  \oddsidemargin  -10mm
  \evensidemargin -10mm
  \headheight 0mm
  \headsep -3mm
 \textheight 250mm
-\textwidth 180mm
+\textwidth 150mm % 180mm
 \topmargin -4mm
 \topskip -10mm
 
@@ -414,43 +415,58 @@ state transitions and measurement, rather than be limited by matrices.
 
 
 Instead of modeling the state distribution, the \gls{pf} instead uses a sample of independent 
-state estimates, which can each be modeled individually, and then resampled using the observed data.
+state estimates, which can each be modeled individually, and then resampled (with replacement) 
+using the likelihood of each particle given the observed data as sampling weights.
 Similar to a standard \gls{mcmc}, the sample can be used to make inferences about the true state.
-In our case, we assume to bus starts with a state of $\bX_0 = [0\ v_0]^T$,
-where $v_0$ is given a useful prior distribution, 
-or may be based off of the state from a previous trip.
+In our case, we assume the bus starts with a state of $\bX_0 = [0\ v_0]^T$,
+where $v_0$ has a prior distribution based on historical data 
+or the state from the bus' previous trip.
 Therefore, an individual particle is denoted $\bX_0^{(i)} = [0, v_0^{(i)}]^T$.
 
 
 Once a prior distribution of particles is generated, 
-we can model each one individually (and independently) using the state transition function,
+we can model each one individually (and independently) using the state transition function, $f$,
+applied to the previous state,
 as well as any other information we have available (see \cref{sec:busbehavior}) and process noise,
 \begin{equation}
   \label{eq:pf_statetransition}
   \bX_k^{(i)} = f(\bX_{k-1}^{(i)}, \ldots, \mat{w}_k^{(i)}).
 \end{equation}
 Now, since each particle has an estimate of $d_k$, we can use the shape information to
-find the GPS location of that particle,
+find the coordinates of that particle,
 \begin{equation}
   \label{eq:pf_measurement}
   \bZ_k^{(i)} = h(\bX_k^{(i)}).
 \end{equation}
-We can then use the distance between two GPS coordinates to weight the particles (the likelihood),
-and use these weights to resample and generate a posterior distribution of the new state.
+We can then use the distance between two GPS coordinates %, $d(\bZ_k^{(i)}, \bY_k)$,
+to generate weights for each particle.
+The weight of the $i^{\mathrm{th}}$ particle is given by its likelihood divided by the sum of the likelihood
+of all $M$ particles:
+\begin{equation}
+  \label{eq:pf_likelihood}
+  w_i = \frac{p(\bZ_k^{(i)} | \bY_k)}{\sum_{j=1}^M p(\bZ_k^{(j)} | \bY_k)}
+\end{equation}
+These weights are used to resample with replacement and generate a posterior distribution 
+of particles in the new state.
 
 
-The main advantage of the \gls{pf} is that we make unnecessary assumptions about the distributions
+The main advantage of the \gls{pf} is that we make no unnecessary assumptions about the distributions
 involved, and we are not restricted to linear transitions between states (except for computational
 complexity).
 One of the key features here, which is unique to modeling buses, 
-is \emph{dwell times}, which are discussed in \cref{sec:busbehavior}.
-In a \gls{kf} framework, it is very difficult, or perhaps impossible, to accurately
-model dwell times;
-with a \gls{pf}, however, we only need to worry about each particle.
-Given a sample of particles, we can allow each one to stop with some prior probability,
-so that we end up with a multi-modal distribution of particles; those that stopped, 
-and those that didn't.
+is \emph{dwell times}, which are discussed in \cref{sec:busbehavior},
+which is easily modeled using a \gls{pf} framework \citep{hans-etal:2015,cn}.
+In this and other situations, multimodality is common, 
+and the \gls{kf} assumes unimodal distributions for all parameters.
 
+
+Another advantage of the \gls{pf} is that it extends easily to the problem of arrival time prediction.
+At any time $k$, we have a posterior distribution for the current state,
+with each particle having a unique position and velocity. 
+These particles can be projected forward, including dwell times and any other information
+we have available, to give a sample of arrival times, the distribution of which we make no assumptions about.
+In contrast, the \gls{kf} requires that the arrival time predictions be based on the current state,
+which is a mean vector and covariance matrix, so predictions are based off of a multivariate normal distribution.
 
 
 
@@ -1113,19 +1129,44 @@ to their destination on time, and/or as fast as possible.
 
 
 
-We will need access to a GTFS realtime feed.
-There a plenty of these, but we would particulary like access to Auckland Transport's.
-It's on its way, apparently, otherwise we might need to sign confidentiality agreements which would be less 
-fun that using open, publically accessble data.
+
+Throughout our work, we will be working will publicly available (via API keys) \gls{gtfs}
+(-realtime) data.
+The specification itself is maintained by Google, 
+while the feed we will be using is provided by Auckland Transport.
+\gls{gtfs} consists of two parts:
+the static data, which contains information about schedules, trips, stop locations,
+and trip shapes, as well as a real-time feed, which gives the most recent locations
+of all buses in the Auckland Transport fleet.
 
 
-We will eventually need a dedicated machine to run the computations continuously to provide the predictions
-for the apps.
-Hopefully, a low-spec machine will be enough if we can write the algorithms efficiently enough 
-(a lot of the historical data can be computed at night while the busses are sleeping).
-However, if more power is needed, we will cross that bridge when we get to it.
-Ideally, the final ``product'' will be easy to implement on a system so can ``pass it on''
-to another user (like AT) and anyone who wants it for them to maintain.
+Additionaly, we will need to store our own historical records of travel times and other
+variables for use in our prediction models. 
+This will likely be stored in a database, although the exact details of this are yet unknown.
+
+
+Due to the computer intensive nature of our work, when we come to deploying a full-scale implementation,
+we will require a dedicated server that can request vehicle positions,
+update the estimated states using a \gls{pf} algorithm,
+and update the predicted arrival times of all buses at future stops.
+We will also require a websever to make these predictiosn available to the public.
+
+
+
+
+% We will need access to a GTFS realtime feed.
+% There a plenty of these, but we would particulary like access to Auckland Transport's.
+% It's on its way, apparently, otherwise we might need to sign confidentiality agreements which would be less 
+% fun that using open, publically accessble data.
+
+
+% We will eventually need a dedicated machine to run the computations continuously to provide the predictions
+% for the apps.
+% Hopefully, a low-spec machine will be enough if we can write the algorithms efficiently enough 
+% (a lot of the historical data can be computed at night while the busses are sleeping).
+% However, if more power is needed, we will cross that bridge when we get to it.
+% Ideally, the final ``product'' will be easy to implement on a system so can ``pass it on''
+% to another user (like AT) and anyone who wants it for them to maintain.
 
 
 
