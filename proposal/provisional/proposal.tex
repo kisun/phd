@@ -35,7 +35,9 @@
 \newcommand{\bz}{\boldsymbol{z}}
 \newcommand{\bY}{\mathbf{Y}}
 \newcommand{\bX}{\mathbf{X}}
+\newcommand{\bZ}{\mathbf{Z}}
 \newcommand{\btheta}{\boldsymbol{\theta}}
+\newcommand{\mat}[1]{\mathbf{#1}}
 
 \usepackage[acronym]{glossaries}
 \newacronym[shortplural={ATIS}]{atis}{ATIS}{advanced traveller information system}
@@ -48,8 +50,12 @@
 \newacronym{svm}{SVM}{support vector machines}
 \newacronym{kf}{KF}{Kalman Filter}
 \newacronym{pf}{PF}{Particle Filter}
+\newacronym{mcmc}{MCMC}{Markov chain Monte Carlo}
+
 
 \usepackage[hidelinks]{hyperref}
+\usepackage{cleveref}
+
 
 \begin{document}
 
@@ -274,7 +280,8 @@ The particular family of \gls{api} we will be working with is \gls{gtfs}
 
 
 
-\subsection{Arrival Time Prediction}
+\subsection{A History of Bus Arrival Prediction}
+\label{sec:history}
 
 
 The simplest arrival time prediction techniques use a combination of arrival times at previous stops
@@ -322,94 +329,215 @@ are unknown.
 
 
 \subsection{Recursive Bayesian Filters}
+\label{sec:recursive}
 
-In a traditional modeling framework, all of the observations, $\bY$, are available before
-the analysis begins.
-In this case, the posterior distribution of the parameters, $\btheta$, is
+
+Of the many approaches to modeling real-time bus positions discussed in \cref{sec:history},
+our work will be focussing on recursive Bayesian filters.
+These are a class of model specially suited to data that is observed over time,
+and in most cases analysed in real-time.
+In our case, the observations are of bus locations,
+which we wish to analyse use to make future arrival time predictions in real-time.
+
+
+In the general framework of recursive Bayesian filters,
+there is a true state $\bX_k$, which is unknown and unmeasurable.
+However, there is also a \emph{hiden Markov process},
+which has state $\bY_k$ that is dependend on $\bX_k$, 
+for which we can make observations.
+
+
+In our case, the true state is the \emph{distance into trip}, $d_k$, 
+and speed, $v_k$, of a bus.
+That is, $\bX_k = [d_k\ v_k]^T$.
+However, we only have access to measurements of the GPS position, 
+(latitude and longitude), 
+as well as the time since the last observation, $\delta_k$,
+so the observation state is $\bY_k = [\phi_k\ \lambda_k\ \delta_k]^T$.
+
+
+
+\subsubsection{Kalman Filter}
+\label{sec:kalman_filter}
+
+Of the various recursive Bayesian filters, one that has been predominant in 
+many real-time applications which, apart from its use in buses described here,
+has also had military applications such as submarine and missile navigation, 
+is the \gls{kf}.
+It most of these applications, the models are fairly simple and use only
+linear state transition equations (such as Newton's Laws of Motion),
+and Gaussian noise is an adequate assumption \citep{cn}.
+
+
+In a \gls{kf}, the model assumes that there is a known, linear state transition specified by
+a matrix $\mat{A}$, with Gaussian process noise $\mat{w}_k$.
+That is, 
 \begin{equation}
-  \label{eq:bayes_theorem}
-  \pi(\btheta|\bX) \propto \ell(\bX | \btheta) \pi(\btheta)
+  \label{eq:kf_statetransition}
+  \bX_k = \mat{A}\bX_{k-1} + \mat{w}_k.
 \end{equation}
-where $\ell$ is the likelihood function of the data.
-
-When dealing with real-time observations, however, it makes more sense to update
-the posterior with the latest observation.
-This framework is known as recursive (Bayesian) filtering.
-A well known example is the \gls{kf},
-which has been used in bus arrival prediction since the 1990's \citep{cn}.
-
-The basic set up of the \gls{kf} is to start with a prior distribution,
-$\bX_0$, that represents some unknown \emph{state} of the system.
-For example, $\bX$ may be a vector of a vehicle's position and speed.
-Every time a new observation is recorded, the previous state is first used
-to \emph{predict} what the new state will be, 
-and then the observation is used to \emph{update} this state,
-allowing for measurement error.
-
-The main restriction of the basic \gls{kf} is that the model assumes the state $\bX$ 
-is multivariate normal, and the algorithms work directly with the mean (vector)
-and covariance matrix.
-In this way, the \gls{kf} can be very fast, especially when $\bX$ has only a few
-parameters.
-
-
-Some examples of \gls{kf} in buses \ldots
-
-
-
-Originally called a ``bootstrap filter'', the particle filter (PF) was first proposed by
-\cite{gordon-etal:1993} as a recursive Bayesian filter that needn't impose unnecessary assumptions,
-such as linearity and Gaussian noise in a Kalman Filter (KF).
-In their simulation example, the PF greatly outperformed the KF,
-a result which has been restated in successive studies
-including one by \cite{gustafsson-etal:2002} whose work involved position, navigation, and tracking.
-
-
-Similar to the KF, the PF involves two main steps.
-First, proposals are made which form the prediction step.
-Unlike in a KF, however, these proposals have no restrictions, and so can be any
-desired function;
-predictions are made for each individual particle, rather than the estimated state as a whole.
-Second, the particles are resampled, with replacement, using weights determined by the likelihood
-of each particle given the latest observation.
-The main advantage of using the PF is that no unnecessary assumptions need to be made. 
-
-
-Let us denote the (current) state by $x_k$, which we want to corresepond in some way to the as yet
-unavailable observation $y_k$.
-In general, we will define a function $h$ mapping the state to the observation,
-such that $h(x_k) = y_k$.
-Before observing $y_k$, we need to estimate $x_k$ based on $x_{k-1}$ and any other information
-we have available (such as schedule information or historical data),
-as well as process noice, $u_k \sim \mathcal{N}(0,\sigma^2)$\footnote{this doesn't necessarily need to be Gaussian}.
-That is, $\hat x_k = f(x_{k-1}, \mathbf{D}) + u_k$.
-
-In the context of particle filtering, the function $f$ is unrestricted (except by computational complexity).
-Therefore, $f$ can describe the behaviour of an individual \emph{particle}, $x_{k-1}^{(i)}$, 
-rather than the entire distribution of $x_{k-1}$.
-This is especially useful in the context of bus behaviour as multimodality is common,
-for example a bus can either stop and wait at a bus stop, or it can drive past without stopping
-(see section~\ref{sec:busbehavior}).
-Thus, the prior state estimate $\hat x_k$ is represented 
-by a sample of particles $x_k^{(i)} = f(x_{k-1}^{(i)}, \mathbf{D}) + u_k^{(i)}$.
-
-
-Once the data is obtained, Bayesian bootstrapping is used to resample the prior samples to generate
-a posterior distribution for $x_k$.
-This is achieved using the likelihood, $\ell(y_k | h(\hat x_k), \sigma_y^2)$,
-where $\sigma_y^2$ represents the measurment (i.e., GPS) error,
-to obtain sampling weights for each particle:
+The relationship between the unknown state and the hidden Markox state is described
+by a measurement matrix $\mat{H}$, along with the measurement error $\mat{v}_k$,
 \begin{equation}
-  \label{eq:particle_weights}
-  w_i = \frac{\ell(y_k | h( x_k^{(i)}), \sigma_y^2)}{\sum_{j=1}^M \ell(y_k | h( x_k^{(j)}), \sigma_y^2)}
+  \label{eq:kf_measurement}
+  \bY_k = \mat{H}\bX_{k-1} + \mat{v}_k.
 \end{equation}
+The limitation here is that the relationship between $\bX$ and $\bY$ needs to be a linear
+combination of the state parameters.
 
-Again, $\ell$ is unrestricted in a PF framework, however in our situation it makes sense to 
-compute the (Great Circle\footnote{this automatically accounts for differences in the scale of latitute
-and longitude}) 
-distance between each particle and the true position:
-closer particles will have higher weights than those farther away.
-The new sample is then used to predict the future state $x_{k+1}$.
+
+The \gls{kf} works in two steps.
+First, the new state is \emph{predicted} from the previous one, $\hat\bX_k = \mat{A}\bX_{k-1}$,
+and then the state is \emph{updated} using the observations.
+Each state is associated with a mean vector (the state) and associated covariance matrix.
+In this way, the state is assumed to have a multivariate normal distribution.
+
+
+In the \gls{kf} implementation described by \cite{cathey-dailey:2003},
+they were required to first estimate the distance into trip to make observations 
+$\bZ_k = \mat{H}\bX_{k-1} + \mat{v}_k$, where $\mat{H} = [1\ 0]$.
+These approximated observations are then what was used to update the state.
+Along with the Gaussian assumptions of all errors,
+this makes the \gls{kf} somewhat restrictive,
+and not ideal for modeling processes which to not obide strictly to linear dynamic equations.
+
+
+In response to the restricted nature of the \gls{kf}, there have been many 
+alternatives described, such as the Extended Kalman Filter,
+but the one we are most interested in is the \gls{pf}.
+This generalised model allows us to use unrestricted \emph{functions} to model
+state transitions and measurement, rather than be limited by matrices.
+
+
+Instead of modeling the state distribution, the \gls{pf} instead uses a sample of independent 
+state estimates, which can each be modeled individually, and then resampled using the observed data.
+Similar to a standard \gls{mcmc}, the sample can be used to make inferences about the true state.
+In our case, we assume to bus starts with a state of $\bX_0 = [0\ v_0]^T$,
+where $v_0$ is given a useful prior distribution, 
+or may be based off of the state from a previous trip.
+Therefore, an individual particle is denoted $\bX_0^{(i)} = [0, v_0^{(i)}]^T$.
+
+
+Once a prior distribution of particles is generated, 
+we can model each one individually (and independently) using the state transition function,
+as well as any other information we have available (see \cref{sec:busbehavior}) and process noise,
+\begin{equation}
+  \label{eq:pf_statetransition}
+  \bX_k^{(i)} = f(\bX_{k-1}^{(i)}, \ldots, \mat{w}_k^{(i)}).
+\end{equation}
+Now, since each particle has an estimate of $d_k$, we can use the shape information to
+find the GPS location of that particle,
+\begin{equation}
+  \label{eq:pf_measurement}
+  \bZ_k^{(i)} = h(\bX_k^{(i)}).
+\end{equation}
+We can then use the distance between two GPS coordinates to weight the particles (the likelihood),
+and use these weights to resample and generate a posterior distribution of the new state.
+
+
+The main advantage of the \gls{pf} is that we make unnecessary assumptions about the distributions
+involved, and we are not restricted to linear transitions between states (except for computational
+complexity).
+One of the key features here, which is unique to modeling buses, 
+is \emph{dwell times}, which are discussed in \cref{sec:busbehavior}.
+In a \gls{kf} framework, it is very difficult, or perhaps impossible, to accurately
+model dwell times;
+with a \gls{pf}, however, we only need to worry about each particle.
+Given a sample of particles, we can allow each one to stop with some prior probability,
+so that we end up with a multi-modal distribution of particles; those that stopped, 
+and those that didn't.
+
+
+
+
+
+% In a traditional modeling framework, all of the observations, $\bY$, are available before
+% the analysis begins.
+% In this case, the posterior distribution of the parameters, $\btheta$, is
+% \begin{equation}
+%   \label{eq:bayes_theorem}
+%   \pi(\btheta|\bX) \propto \ell(\bX | \btheta) \pi(\btheta)
+% \end{equation}
+% where $\ell$ is the likelihood function of the data.
+
+% When dealing with real-time observations, however, it makes more sense to update
+% the posterior with the latest observation.
+% This framework is known as recursive (Bayesian) filtering.
+% A well known example is the \gls{kf},
+% which has been used in bus arrival prediction since the 1990's \citep{cn}.
+
+% The basic set up of the \gls{kf} is to start with a prior distribution,
+% $\bX_0$, that represents some unknown \emph{state} of the system.
+% For example, $\bX$ may be a vector of a vehicle's position and speed.
+% Every time a new observation is recorded, the previous state is first used
+% to \emph{predict} what the new state will be, 
+% and then the observation is used to \emph{update} this state,
+% allowing for measurement error.
+
+% The main restriction of the basic \gls{kf} is that the model assumes the state $\bX$ 
+% is multivariate normal, and the algorithms work directly with the mean (vector)
+% and covariance matrix.
+% In this way, the \gls{kf} can be very fast, especially when $\bX$ has only a few
+% parameters.
+
+
+% Some examples of \gls{kf} in buses \ldots
+
+
+
+% Originally called a ``bootstrap filter'', the particle filter (PF) was first proposed by
+% \cite{gordon-etal:1993} as a recursive Bayesian filter that needn't impose unnecessary assumptions,
+% such as linearity and Gaussian noise in a Kalman Filter (KF).
+% In their simulation example, the PF greatly outperformed the KF,
+% a result which has been restated in successive studies
+% including one by \cite{gustafsson-etal:2002} whose work involved position, navigation, and tracking.
+
+
+% Similar to the KF, the PF involves two main steps.
+% First, proposals are made which form the prediction step.
+% Unlike in a KF, however, these proposals have no restrictions, and so can be any
+% desired function;
+% predictions are made for each individual particle, rather than the estimated state as a whole.
+% Second, the particles are resampled, with replacement, using weights determined by the likelihood
+% of each particle given the latest observation.
+% The main advantage of using the PF is that no unnecessary assumptions need to be made. 
+
+
+% Let us denote the (current) state by $x_k$, which we want to corresepond in some way to the as yet
+% unavailable observation $y_k$.
+% In general, we will define a function $h$ mapping the state to the observation,
+% such that $h(x_k) = y_k$.
+% Before observing $y_k$, we need to estimate $x_k$ based on $x_{k-1}$ and any other information
+% we have available (such as schedule information or historical data),
+% as well as process noice, $u_k \sim \mathcal{N}(0,\sigma^2)$\footnote{this doesn't necessarily need to be Gaussian}.
+% That is, $\hat x_k = f(x_{k-1}, \mathbf{D}) + u_k$.
+
+% In the context of particle filtering, the function $f$ is unrestricted (except by computational complexity).
+% Therefore, $f$ can describe the behaviour of an individual \emph{particle}, $x_{k-1}^{(i)}$, 
+% rather than the entire distribution of $x_{k-1}$.
+% This is especially useful in the context of bus behaviour as multimodality is common,
+% for example a bus can either stop and wait at a bus stop, or it can drive past without stopping
+% (see section~\ref{sec:busbehavior}).
+% Thus, the prior state estimate $\hat x_k$ is represented 
+% by a sample of particles $x_k^{(i)} = f(x_{k-1}^{(i)}, \mathbf{D}) + u_k^{(i)}$.
+
+
+% Once the data is obtained, Bayesian bootstrapping is used to resample the prior samples to generate
+% a posterior distribution for $x_k$.
+% This is achieved using the likelihood, $\ell(y_k | h(\hat x_k), \sigma_y^2)$,
+% where $\sigma_y^2$ represents the measurment (i.e., GPS) error,
+% to obtain sampling weights for each particle:
+% \begin{equation}
+%   \label{eq:particle_weights}
+%   w_i = \frac{\ell(y_k | h( x_k^{(i)}), \sigma_y^2)}{\sum_{j=1}^M \ell(y_k | h( x_k^{(j)}), \sigma_y^2)}
+% \end{equation}
+
+% Again, $\ell$ is unrestricted in a PF framework, however in our situation it makes sense to 
+% compute the (Great Circle\footnote{this automatically accounts for differences in the scale of latitute
+% and longitude}) 
+% distance between each particle and the true position:
+% closer particles will have higher weights than those farther away.
+% The new sample is then used to predict the future state $x_{k+1}$.
 
 
 
