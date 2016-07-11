@@ -54,6 +54,7 @@
 \newacronym{pf}{PF}{particle filter}
 \newacronym{mcmc}{MCMC}{Markov chain Monte Carlo}
 \newacronym{eta}{ETA}{expected time of arrival}
+\newacronym{at}{AT}{Auckland Transport}
 
 
 \usepackage[hidelinks]{hyperref}
@@ -456,6 +457,16 @@ so each individual particle is denoted $\bX_k^{(i)} = [d_k^{(i)}\ v_k^{(i)}]^T$,
 $i = 1, \ldots, M$.
 
 
+\begin{figure}[b]
+  \centering
+  \includegraphics[width=0.45\textwidth]{gps-dist1.jpg}
+  \includegraphics[width=0.45\textwidth]{gps-dist2.jpg}
+  \caption{Relationship between GPS coordinates and a trip's shape (LEFT), 
+    and a bus' distance into trip (RIGHT).}
+  \label{fig:gps-dist}
+\end{figure}
+
+
 When a new observation is recieved,
 we can model each particle individually and independently using the state transition function, $f$,
 applied to the particle's current state,
@@ -466,9 +477,10 @@ as well as any other information we have available (see \cref{sec:busbehavior}) 
 \end{equation}
 Since each particle has its own value of $d_k$, 
 we can use the shape information supplied by \gls{gtfs} to
-find the coordinates of that particle (see FIGURE).
+find the coordinates of that particle (see \cref{fig:gps-dist}).
 
-[! FIGURE]
+
+
 
 Now, instead of generating pseudo-observations of distance
 as required by a \gls{kf} approach, we are mapping the unknown state into 
