@@ -14,14 +14,14 @@
 %\usepackage{times}
  \usepackage{setspace}
 % \onehalfspacing
-\doublespacing
+ \doublespacing
 
  \oddsidemargin  -10mm
  \evensidemargin -10mm
  \headheight 0mm
  \headsep -3mm
 \textheight 250mm
-\textwidth 150mm % 180mm
+\textwidth 180mm
 \topmargin -4mm
 \topskip -10mm
 
@@ -196,13 +196,16 @@ Once such system is the global positioning system (GPS),
 which is used by many transit providers, including Auckland Transport.
 
 \textbf{The main purpose:}
-As a result of this real-time location information, many studies have investigated methods of
-predicting travel time of buses (and hence arrival time at future stops).
-The goal of these studies was to make accurate predictions about the estimated time until arrival (ETA) 
+While most of the \gls{avl} systems were implemented for operational purposes,
+many studies have investigated methods of using this \gls{rti} to
+predict travel time of buses, and hence arrival time at future stops.
+The goal of these studies was to make accurate predictions about the \gls{eta}
 of a bus for passengers waiting at a bus stop.
+The \gls{avl} system and associated prediction algorithms are refered to as \glspl{atis}.
 Consequently, studies have shown that when a countdown is displayed, percieved waiting times are less 
 than actual wait times \citep{cn}.
-However, this is only true so long as the countdown is accurate.
+However, if predictions are not accurate, it can have the opposite effect.
+
 
 In Auckland, there are two main cases where inaccuracy can cause frustration for passengers:
 the first is when uncertainty is large, and ETAs can increase suddenly, 
@@ -459,10 +462,11 @@ $i = 1, \ldots, M$.
 
 \begin{figure}[b]
   \centering
-  \includegraphics[width=0.45\textwidth]{gps-dist1.jpg}
   \includegraphics[width=0.45\textwidth]{gps-dist2.jpg}
-  \caption{Relationship between GPS coordinates and a trip's shape (LEFT), 
-    and a bus' distance into trip (RIGHT).}
+  \includegraphics[width=0.45\textwidth]{gps-dist1.jpg}
+  \caption{Relationship between a particle's distance into trip (right) and associated GPS coordinates
+  (left). The single value of distance can be mapped to a GPS coordinate,
+  which can in turn be compared to the observed position.}
   \label{fig:gps-dist}
 \end{figure}
 
@@ -556,8 +560,12 @@ those that stopped, and those that didn't.
 % However, Auckland Transport currently has no such data publicy accessible,
 % so we are unable to implement their models.
 
-[[ FIGURE: \emph{particles passing a stop} ]]
-
+\begin{figure}[bt]
+  \centering
+  \includegraphics[width=0.6\textwidth]{particle-stop.pdf}
+  \caption{Multimodal proposal distribution of particles when passing a stop.}
+  \label{fig:particle-stop}
+\end{figure}
 
 Other features somewhat unique to bus tracking, 
 in contrast to other tracking algorithms,
