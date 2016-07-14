@@ -183,62 +183,50 @@ Confirmed PhD registration is now sought.
 % system.
 % There is a close relationship between EndNote and {BibTeX}.
 
-\textbf{Background:}
-Public transport is central to city planning and traffic management in large cities.
-There are various forms, including trains, trams, ferries, and of particular interest to us, buses.
-Over the years, the technologies involved in these systems has become ever more complex,
-one evident example being the introduction of cashless payment systems such as 
-Auckland Transport's HOP cards \citep{cn}.
-
-Another technology that is widely used in public transport vehicles is positioning devices,
+Public transport is central to city planning and traffic management in cities around the world.
+They key to success in any public transport system is reliability and punctuality,
+otherwise commuters can become frustrated and find alternatives.
+Over the years, the technologies involved in public transport have become ever more complex.
+One technology that is widely used in public transport vehicles is positioning devices,
 referred to in the literature as automatic vehicle location (AVL) systems.
 Once such system is the global positioning system (GPS),
-which is used by many transit providers, including Auckland Transport.
+which is used by many transit providers around the world, including Auckland Transport.
 
-\textbf{The main purpose:}
+
 While most of the \gls{avl} systems were implemented for operational purposes,
-many studies have investigated methods of using this \gls{rti} to
-predict travel time of buses, and hence arrival time at future stops.
+numerous studies have investigated methods of using this \gls{rti} 
+to provide passengers with information, such as predicted arrival times.
 The goal of these studies was to make accurate predictions about the \gls{eta}
 of a bus for passengers waiting at a bus stop.
-The \gls{avl} system and associated prediction algorithms are refered to as \glspl{atis}.
-Consequently, studies have shown that when a countdown is displayed, percieved waiting times are less 
-than actual wait times \citep{cn}.
-However, if predictions are not accurate, it can have the opposite effect.
+[The \gls{avl} system and associated prediction algorithms are refered to as \glspl{atis}.]
+Consequent studies have shown that when a countdown is displayed, percieved waiting times are less 
+than actual wait times \citep{tcrp:2003} [expand!].
+However, this typically assumes that the countdowns are accurate within some threshold.
 
 
-In Auckland, there are two main cases where inaccuracy can cause frustration for passengers:
-the first is when uncertainty is large, and ETAs can increase suddenly, 
-while the second occurs when a bus that is not running for whatever reason is still displayed 
-on the board, so commuters are left waiting for a bus that isn't coming.
-The first of these is an issue we will be targeting, while the second may only be something we can allow for.
-
-
-\textbf{Work that has been done:}
-Previous studies have used a range of different modeling and prediction techniques to obtain ETAs.
-These ranged from fairly simple real-time only Kalman Filter models \citep{cn}, 
+A range of different modeling and prediction techniques are available to obtain ETAs,
+ranging from Kalman Filter models relying solely on real-time \gls{avl} \citep{cn}, 
 to data-driven models such as 
 $k$-nearest neighbour (KNN) \citep{cn}, 
 artificial neural networks (ANNs) \citep{cn}, 
 and support vector machines (SVMs) \citep{cn}.
-Recently, several particle filter models have been used in various ways to solve transit problems,
+More recently, particle filter models have been used to solve several transit problems,
 such as \cite{hans-etal:2015} who used a particle filter to model the bunching behaviour of buses
 in the hopes of coming up with better management techniques.
 
 
-
-\textbf{What we hope to achieve:}
-There are several areas we hope to target in our research.
+There are several problems we will be targeting in our work.
 The first of these is to improve predictions by using more of the available data,
 including travel times of other buses traveling along the same road ways, 
-not necessarily the same route.
+but not necessarily the same route.
 The second is to investigate predictions intervals as a way of communicating uncertainty to commuters.
-Finally, we hope to create a user interface (UI) that allows commuters to (i) find out the ETA of their bus,
-and (ii) a journey planning application that lets commuters choose the best (fastest) journey to their destination.
-
-To do all this, we are going to focus on implementing a particle filter to model the dynamic motion of buses,
+Finally, we hope to create a user interface (UI) that (i) allows commuters to find out the ETA of their bus,
+and (ii) provides a journey planning application that lets commuters choose the optimal journey to their destination.
+We will be using a particle filter to model the dynamic motion of buses,
 and use this in conjunction with historical data and the travel times of other buses to estimate ETA.
 
+
+[ more here? ]
 
 
 % ----------------------------------------------------------------------
@@ -271,67 +259,58 @@ to \glspl{atis}, most notably \gls{rti} and journey planning \citep{tcrp:2003}.
 Most of the early \gls{avl} implementations used a signpost system,
 in which signposts fitted with transmitters would be positioned along a route
 and communicate with passing buses.
-
-More recently, the \gls{gps} has become incresingly popular as an \gls{avl} technology,
+More recently, the \gls{gps} has become increasingly popular as an \gls{avl} technology,
 and is implemented in the Auckland Transport fleet
 and many other fleets around the world.
 For this reason, our work will focus solely on \gls{gps}-based systems.
 
 
-In a \gls{gps}-based \gls{avl} system, vehicles report their position to a central server.
-The frequency of these reports depends on the system being used.
+In a \gls{gps}-based \gls{avl} system, vehicles report their position to a central server,
+the frequency of which depends on the particular system.
 In some, the \gls{gps} reports are triggered by proximity to a bus stop,
-while in others there is a relatively fixed interval---for example, 30~seconds---allowing
-for communication delays and signal interference.
+while more commonly there is a fixed interval---for example, 30~seconds---although
+actual frequency can fluctuate due to communication delays and signal interference.
 If the agency has made it available, 
-these locations can then be accessed through public \glspl{api}
+these locations can be accessed through public \glspl{api}
 \citep{tcrp:2003}.
 The particular family of \gls{api} we will be working with is \gls{gtfs}
 (see section~\ref{sec:data}),
-which is a global, standardised format for providing transit data to developers
+which is a globally standardised format for providing transit data to developers
 \citep{gtfs}.
-
-
 Once a fleet has been fitted with an \gls{avl} system, 
-it can be used for a variety of purposes, most notably arrival time prediction.
-The simplest prediction techniques use a combination of previous arrival and travel times,
-such as those implemented by \cite{cn}.
-The arrival time of the current bus at its last stop is recorded, 
-and then travel time between the last stop and the next one, 
-provided by previous buses or schedule information,
-is added to it to predict the arrival time at the next stop.
-This method requires arrival times, so in \gls{avl} systems that to not record
-these when a bus arrives, they must be estimated.
+it can be used for a variety of purposes, most notably \gls{atis} including arrival time prediction.
 
 
-\cite{dailey:2001} implemented an algorithm in Seattle, Washington,
-in which a \gls{kf} (see \cref{sec:kalman_filter}) 
-approach was used to predict arrival time in a situation where
-actual arrival time was unavailable,
-using a signpost and odometer \gls{avl} system to record the distance travelled along a route.
-\cite{cathey-dailey:2003} produced a general prescription for arrival time prediction using
+\cite{dailey:2001} implemented a prediction algorithm in Seattle, Washington,
+in which a \gls{kf} (see \cref{sec:kalman_filter}) was used to estimate the state of a bus, 
+which was then combined with historical data to predict arrival time in a situation where
+actual arrival time was unavailable.
+They had access to a signpost and odometer \gls{avl} system to record the distance travelled along a route.
+\cite{cathey-dailey:2003} released a general prescription for arrival time prediction using
 a \gls{gps}-based system.
 Their algorithm consisted of three parts:
 the first involved the ``tracker'', in which GPS location was converted to distance into trip
 based on static schedule information;
 the second involved estimating the \emph{true state} of the vehicle (distance into trip, speed, 
 and acceleration) using a \gls{kf};
-and the third presented some alternative arrival time prediction methods and example implementations.
+and the third presented some alternative arrival time prediction methods and example implementations,
+including historical-based methods.
 
 
-As most of the simple arrival time prediction methods were only accurate for
-a few stops ahead \citep{cn},
-many other prediction algorithms were proposed, compared, and implemented
+As most of the \gls{kf} arrival time prediction methods were only accurate for
+a few stops ahead \citep{yu-etal:2006},
+many other prediction algorithms have been proposed, compared, and implemented
 to varying degrees over the next decade.
 These included data-driven models such as \gls{knn} regression,
 \gls{ann}, and \gls{svm} 
-\citep{chang-etal:2010,jeong-rilett:2005,yu-etal:2006,yu-etal:2010,yu-etal:2011}.
-In these, historical data was collected over a period of time,
+\citep{chang-etal:2010,jeong-rilett:2005,yu-etal:2006,yu-etal:2010,yu-etal:2011} [!! add more].
+In these, historical data was collected over a period of time using on-board or at-stop recording,
 and then used in combination with
 real-time \gls{avl} data to generate arrival time predictions.
-These methods, in particular \gls{ann} (OR \gls{svm}??),
+These methods, in particular \gls{ann} and \gls{svm},
 were shown to give reasonably accurate predictions for many stops ahead 
 \citep{cn}.
+However, both of these require significant dataset size to train the model.
 
 
 A more recent approach to modeling the state of transit vehicles is the \gls{pf},
@@ -342,10 +321,10 @@ by proposing particle trajectories from a historical database,
 while \cite{hans-etal:2015} used a particle filter in an operations research setting,
 in which their goal was to propose control strategies to reduce the ``bunching''
 of consecutive buses along a common route.
-Additionally, they had actual arrival times available, as well as traffic light data,
+[They had actual arrival times available, as well as traffic light data,
 so their models aren't applicable in a general setting.
 As far as we know, the particle filter has not yet been used as a predictive model for arrival times
-in a general GPS-based system in which actual arrival times are unknown.
+in a general GPS-based system in which actual arrival times are unknown.]
 
 
 
@@ -782,6 +761,30 @@ and combinations of these.
 In each of these, we will allow for stopping (with probability) at stops
 along the way, and the associated dwell times.
 
+
+In the absense of historical data---for example, in a new system or when
+routes are changed---many models will be unavailable until data has been collected.
+In this case, it's good to have a baseline prediction model that can use 
+only the current state, in combination with sheduled arrival times,
+to predict arrival times \ldots
+
+
+More refined models can be built once data has been obtained, 
+and then used to make predictions based on what happened previously.
+``Historical'' can refer to previous days or weeks,
+but also to previous \emph{trips} on the same day.
+In many routes around Auckland, there are often multiple trips per day,
+so we can expect the most recent of these to be a good predictor for the current trip.
+Models of this kind exist, however we wish to take it one step further:
+to use travel times from other buses traveling along similar routes
+(i.e., use the same roads) but aren't identical.
+This will be especially useful on routes that run less frequently,
+as we will be able to obtain near-real-time traffic information.
+
+
+In theory, this should be straightforward,
+however the actual shape files provided are not consistent, so some complex ``route matching''
+algorithms will need to be employed.
 
 
 
