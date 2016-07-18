@@ -169,3 +169,48 @@ for (j in 1:50) {
     
     #dev.off()
 }
+
+
+
+
+
+## schedule times
+sx <- c(0, 10, 20, 40, 50, 55, 80, 100)
+st <- c(0, 1, 2, 5, 6, 6, 9, 10)
+
+pl <- function(file=NULL) {
+    if (!is.null(file))
+	png(file, width = 600, height = 300, bg = "transparent")
+    par(mar = c(2.1, 2.1, 2.1, 2.1))
+    plot(st, sx, xaxt = "n", yaxt = "n", xlab = "", ylab = "", xaxs = "i", yaxs = "i",
+         pch = 19, xlim = c(0, 12), ylim = c(0, 110))
+    title(xlab = "Time", ylab = "Distance into Trip", line = 1)
+    lines(c(st, 12), c(sx, 120), lty = 3)
+    abline(h = max(sx), lty = 2, col = "#666666")
+}
+
+## fig 1:
+pl("figs/pred-sched-frame1.png")
+dev.off()
+
+
+## fig 2:
+X <- 30
+pl("figs/pred-sched-frame2.png")
+lines(c(0, 0.1), c(X, X), lty = 2, col = "#990000")
+points(0.1, X, col = "#990000", pch = 4, lwd = 2)
+dev.off()
+
+## fig 3:
+Xt <- 3.5
+pl("figs/pred-sched-frame3.png")
+lines(c(0, Xt), c(X, X), lty = 2, col = "#990000")
+points(Xt, X, col = "#990000", pch = 4, lwd = 2)
+dev.off()
+
+## fig 4:
+pl("figs/pred-sched-frame4.png")
+lines(c(0, Xt), c(X, X), lty = 2, col = "#990000")
+arrows(Xt, X + 1, y1 = max(sx) - 1, length = 0.1, code = 3, lwd = 2, col = "#000099")
+text(Xt, X + (max(sx) - X) / 2, "Scheduled Travel Time", pos = 2, cex = 0.8)
+dev.off()

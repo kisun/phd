@@ -44,10 +44,10 @@ draw=black,fill=white]
 
 \maketitle
 
-\begin{frame}{Table of contents}
-  \setbeamertemplate{section in toc}[sections numbered]
-  \tableofcontents[hideallsubsections]
-\end{frame}
+% \begin{frame}{Table of contents}
+%   \setbeamertemplate{section in toc}[sections numbered]
+%   \tableofcontents[hideallsubsections]
+% \end{frame}
 
 \section{Introduction}
 
@@ -85,8 +85,12 @@ draw=black,fill=white]
   \onslide<+->
   \begin{itemize}[<+- | alert@+>]
     \item General Transit Feed Specification
-    \item GPS location of buses
-    \item Static schedule information: trips, routes, shapes, schedules
+      \begin{itemize}
+      \item Static schedule information: trips, routes, shapes,
+        schedules
+      \item GPS location of buses
+      \end{itemize}
+
     \item Standardised by Google and used globally
     \item API provided by Auckland Transport (AT)\\
       \url{https://dev-portal.at.govt.nz}
@@ -142,7 +146,8 @@ draw=black,fill=white]
     \item Used in robotics, GPS tracking, etc.
 
     \item Several bus tracking/prediction applications\\
-      (Cathey \& Dailey, 2004; more people \ldots)
+      (Wall \& Dailey (1999), Dailey \emph{et.~al} (2001),
+      Cathey \& Dailey, 2004)
 
     \item Very fast (matrix multiplication), two steps:
       \begin{enumerate}
@@ -176,8 +181,11 @@ draw=black,fill=white]
         e.g., $d_k = d_{k-1} + v_{k-1}\delta_k + \text{process noise}$
         (Newton's laws of motion)
 
-      \item not easy to include complex features:
-        e.g., dwell times
+        \begin{itemize}
+        \item not easy to include complex features: e.g., dwell
+          times
+        \end{itemize}
+
 
       \item can't cope with multi-modal posterior:
         \begin{itemize}[<1->]
@@ -368,6 +376,157 @@ draw=black,fill=white]
      \end{frame}
 }
 
+
+
+
+
+\begin{frame}{Predicting Arrival Times}
+  \onslide<+->
+
+  \begin{itemize}[<+- | alert@+>]
+  \item each future stop along a route; up to 1~hour in advance
+  \item prediction model needs to be far more precise than state model
+  \item can be computationally complex
+    \begin{itemize}
+    \item over 1000 buses at peak times
+    \item each with up to 10, 20, 30?? stops ahead
+    \end{itemize}
+  \end{itemize}
+
+  \onslide<+->
+\end{frame}
+
+
+\begin{frame}{Predicting Arrival Times: Schedule}
+  \onslide<+->
+
+  \begin{itemize}[<+- | alert@+>]
+  \item each \emph{trip} has a \emph{schedule} with ``average'' arrival times
+  \item given a particle's distance into trip, use scheduled travel time
+    to predict ETA to a stop
+    \begin{itemize}
+    \item each particle has a distance into trip
+    \item compare to scheduled ``arrival time'' at that ``distance''
+    \item compute scheduled travel time to a stop
+    \end{itemize}
+  \end{itemize}
+
+
+  \begin{overprint}
+    \onslide<3>
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame1.png}
+    \onslide<4>
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame2.png}
+    \onslide<5>
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame3.png}
+    \onslide<6>
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame4.png}
+  \end{overprint}
+
+  \onslide<+->
+\end{frame}
+
+
+\begin{frame}{Predicting Arrival Times: Historical Data}
+  \onslide<+->
+
+  \begin{itemize}[<+- | alert@+>]
+  \item replace schedule times with \emph{historical times}
+  \item can build up models: trip, day of the week, time of day, etc
+  \item historical data based on \emph{particle filter}: save summaries
+  \item requires a lot of data (ANN, SVM, \ldots)
+  \end{itemize}
+
+  \onslide<+->
+\end{frame}
+
+
+\begin{frame}{Predicting Arrival Times: Realtime Data}
+  \onslide<+->
+  
+  \begin{itemize}[<+- | alert@+>]
+  \item have realtime data for 100's of buses around Auckland
+  \item previous models use other buses traveling \emph{same route}
+    (cite)
+  \item propose: combining travel times/speed of \emph{all} buses in Auckland
+    \begin{itemize}
+    \item most up to date traffic/congestion data
+    \item available \emph{now}, not after several weeks of data collection
+    \end{itemize}
+  \end{itemize}
+
+  \onslide<+->
+\end{frame}
+
+
+
+\begin{frame}{Example with Predictions}
+  Bus Route 274, Three Kings to Britomart
+
+
+  \begin{overprint}
+    \onslide<1>
+    \centering
+    \includegraphics[width=1\textwidth]{figs/r274/TRIP5/particle_map001.jpg}
+
+    \onslide<2>
+    \vspace{2em}
+    Particle Filter State Estimates and Transitions, 7~am trip
+    \centering
+    \includegraphics[width=1\textwidth]{figs/r274/TRIP5/distance_traveled.jpg}
+
+    \onslide<3>
+    \vspace{2em}
+    ``Historical'' Data, 5:30~am, 6:00~am, 6.30~am, 6:50~am
+    \centering
+    \includegraphics[width=0.45\textwidth]{figs/r274/TRIP1/distance_traveled.jpg}
+    \includegraphics[width=0.45\textwidth]{figs/r274/TRIP2/distance_traveled.jpg}\\
+    \includegraphics[width=0.45\textwidth]{figs/r274/TRIP3/distance_traveled.jpg}
+    \includegraphics[width=0.45\textwidth]{figs/r274/TRIP4/distance_traveled.jpg}
+
+    \onslide<4>
+    \vspace{2em}
+    Arrival time prediction based on 4 previous trips
+    \centering
+    \includegraphics[width=1\textwidth]{figs/r274/TRIP5/arrival_last_hist.jpg}
+  \end{overprint}
+\end{frame}
+
+
+
+\begin{frame}{Communicating Prediction}
+  \onslide<+->
+
+  \begin{itemize}[<+- | alert@+>]
+
+  \item target audience: \emph{general public}
+    
+  \item inevitably going to be significant uncertainty in predictions, 
+    particularly from a long way off
+
+  \item need to convey \emph{distribution of particles} in an easy to understand manner
+
+  \item \textbf{point estimates}:
+    \begin{itemize}
+    \item good for displays that can only fit a single digit
+    \item for commuters, they imply ``accuracy''
+    \end{itemize}
+    
+  \item \textbf{interval estimates}:
+    \begin{itemize}
+    \item standard practice for most statistical analyses
+    \item but how to give a \emph{meaningful} interval to commuters?
+      i.e., ETA: 3--7~mins = BETWEEN 3 and 7 minutes, with 100\% probability?
+    \item also want non-symmetrical interval: being early to the bus stop is better than being late!
+    \end{itemize}
+  \end{itemize}
+
+  \onslide<+->
+\end{frame}
 
 
 
