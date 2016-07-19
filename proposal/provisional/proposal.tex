@@ -603,29 +603,33 @@ More advanced models include \gls{ann} and \gls{svm},
 which are computer learning algoriths that use historical data to
 learn patterns which can then be used to make predictions.
 
-One predictor used by \cite{cn} was the trajectory of previous buses,
-and using the ``headway'' (how far behind one bus is from another)
-of the previous bus to predict the next.
-This is only applicable on routes that have multiple trips per day,
-and typically require a high-frequency route.
+
+Several studies have used the concept of \emph{headway},
+which is the time difference between consecutive buses traveling along the same route.
+In these, travel times of the most recent bus along the same route can be used
+to predict future travel times of the current bus, and therefore arrival times.
+\cite{yu-etal:2011} took this a step further and were able to use travel times
+from multiple \emph{different routes} that all used the same stops in one part of the route.
+They showed that this was more accurate than using just a single route.
+However, their work involved \gls{avl} technologies that recorded actual arrival times,
+and therefore actual travel times between stops,
+and it was restricted to routes that used the same sequence of stops (at least for part of a route).
 
 
-More recently, \cite{hans-etal:2015} used a \gls{pf} to predict arrival.
-Other PF models that use historical data as particle trajectories
-\citep{chen-rakha:2014}.
+More recently, \cite{hans-etal:2015} used a \gls{pf} to predict arrival time, 
+for which headway was one of their predictors.
+They also included models for dwell times and traffic signals.
+A different approach to using historical data was proposed by \cite{chen-rakha:2014}, 
+who used historical trip trajectories to replace low-weighted particles.
+Their results were promising, however only applied to travel times along a freeway,
+and required several months of data.
 
 
-Doesn't look like there have been any uses of big-data models that use
-historical data of \emph{all} buses traveling along a road
-(not just those of the same route) as well as the same real-time data,
-and then making predictions using all of this.
-
-
-
-
-
-
-
+One common thread in the current literature is that most of the models have been applied to a
+specific \gls{avl} system, rather than to a general \gls{gtfs} feed.
+One likely reason for this is that most of the studies have been funded,
+at least partially, by the transit companies, and so they have had access to data
+that is not usually available through public developer \glspl{api}.
 
 
 
@@ -700,6 +704,7 @@ including prediction intervals
 to display uncertainty
 
 
+
 \subsection{Particle Filtering}
 \label{sec:new-pf}
 
@@ -712,15 +717,16 @@ actual arrival times were recorded by the \gls{avl} system,
 so they were able to use these to good effect in their predictions.
 
 
-To estimate arrival times, we will use the distribution provided by the \gls{pf}.
-Each particle's arrival time can be computed, so for each stop we can obtain 
-a posterior distribution of arrival times.
-In most cases, this should be fairly narrow;
-however, there will be situations where the bus could be traveling slow and arrive
-late and have a short (or non-existent) dwell time,
-or the bus could be traveling fast, arrive earlier,
-and have a long dwell time.
-This paragraph sucks.
+
+Similar to a standard \gls{mcmc} algorithm, we obtain a posterior sample from the posterior
+distribution, represented by the particles.
+Each particle will have its own values for the parameters,
+which we can expand to include arrival time at the previous stop.
+That is, when a particle passes a stop, it's arrival time is recorded in its state.
+We can then use these arrival times to obtain a posterior distribution of arrival times
+for a bus at a given stop.
+[still not sure about this para]
+
 
 
 There are several situations we hope our \gls{pf} will be able to improve on.
@@ -880,6 +886,7 @@ Throughout our work, we will be working will publicly available (via API keys) \
 (-realtime) data.
 The specification itself is maintained by Google, 
 while the feed we will be using is provided by Auckland Transport.
+This is available at \url{https://dev-portal.at.govt.nz}.
 \gls{gtfs} consists of two parts:
 the static data, which contains information about schedules, trips, stop locations,
 and route shapes, as well as a real-time feed, which gives the most recent locations
