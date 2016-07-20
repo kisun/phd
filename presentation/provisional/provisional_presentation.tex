@@ -3,6 +3,7 @@
 \usetheme[progressbar=frametitle,sectionpage=none]{metropolis}
 
 \usepackage{booktabs}
+\usepackage{natbib}
 \usepackage[scale=2]{ccicons}
 
 \usepackage{pgfplots}
@@ -10,6 +11,7 @@
 
 \usepackage{xspace}
 \newcommand{\themename}{\textbf{\textsc{metropolis}}\xspace}
+
 
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows}
@@ -52,30 +54,17 @@ draw=black,fill=white]
 \section{Introduction}
 
 \begin{frame}[fragile]{Overview}
-  \onslide<+->
-  \begin{enumerate}[<+- | alert@+>]
+  \begin{enumerate}
     \item General Transit Feed Specification (GTFS)
 
-    \item Sequential state space models
-      \begin{itemize}[<1->]
-        \item Kalman Filter
-        \item Particle filter
-      \end{itemize}
+    \item Recursive Bayesian filtering
 
     \item Predictive models: future arrival times
-      \begin{itemize}[<1->]
-        \item Schedule
-        \item Historical data
-        \item Current state
-        \item ``Real time'' travel/congestion from other buses
-        \item Combinations of the above
-      \end{itemize}
 
     \item Communicating predictive error to commuters
 
-    \item Solving other common problems
+    \item Journey Planning
   \end{enumerate}
-  \onslide<+->
 \end{frame}
 
 
@@ -86,9 +75,9 @@ draw=black,fill=white]
   \begin{itemize}[<+- | alert@+>]
     \item General Transit Feed Specification
       \begin{itemize}
-      \item Static schedule information: trips, routes, shapes,
+      \item \textbf{Static}: schedule information: trips, routes, shapes,
         schedules
-      \item GPS location of buses
+      \item \textbf{Realtime}: GPS location of buses
       \end{itemize}
 
     \item Standardised by Google and used globally
@@ -109,11 +98,14 @@ draw=black,fill=white]
 \end{frame}
 
 
-\section{Modeling Real Time Data}
 
-\begin{frame}{Modeling Real Time Data}
+
+
+\section{Recursive Bayesian Filtering}
+
+\begin{frame}{Recursive Bayesian Filtering}
   \onslide<+->
-  \begin{itemize}[<+- | alert@+>]
+  \begin{itemize}[<+->]
     \item new observations every 30 seconds:
       \begin{equation*}
         \bY_k =
@@ -123,7 +115,7 @@ draw=black,fill=white]
       \end{equation*}
       $\phi$ = latitude (north/south), $\lambda$ = longitude (east/west)
 
-    \item each observation corresponds to an unknown \emph{state}:
+    \item correspond to unknown and unmeasurable \emph{state}:
       \begin{equation*}
         \bX_k =
         \begin{bmatrix}
@@ -132,108 +124,118 @@ draw=black,fill=white]
       \end{equation*}
       $d$ = distance into trip (m), $v$ = velocity (speed, m/s)
 
-    \item want to \emph{update} the state of the model from the previous state using the latest observation
+    \item new state \emph{predicted} using previous state, \emph{updated} using latest observation:
       \begin{equation*}
         \bX_k = f(\bX_{k-1}, \bY_k)
       \end{equation*}
   \end{itemize}
-  \onslide<+->
+
 \end{frame}
 
-\begin{frame}{Modeling Real Time Data: Kalman Filter I}
+\begin{frame}{Recursive Bayesian Filtering: Kalman Filter I}
   \onslide<+->
-  \begin{itemize}[<+- | alert@+>]
-    \item Used in robotics, GPS tracking, etc.
+  \begin{itemize}%[<+- | alert@+>]
+    \item Used in robotics, navigation, tracking, etc.
 
     \item Several bus tracking/prediction applications\\
-      (Wall \& Dailey (1999), Dailey \emph{et.~al} (2001),
-      Cathey \& Dailey, 2004)
+      (\cite{wall-dailey:1999}, \cite{dailey:2001}, \cite{cathey-dailey:2003}, \ldots)
 
-    \item Very fast (matrix multiplication), two steps:
-      \begin{enumerate}
-        \item Predict:
-          \begin{equation*}
-            \bX_k = \mat{A}_k \bX_{k-1} + \vec{w}_k
-          \end{equation*}
-          $\mat{A}_k$ depends on $\delta_k$ = time since last observation\\
-          $\vec{w}_k$ = Gaussian process noise
-        \item Update:
-          \begin{equation*}
-            \vec{z}_k = \mat{H} \bX_k + \vec{v}_k
-          \end{equation*}
-          $\mat{H} $ = observation model\\
-          $\vec{v}_k$ = Gaussian measurement error\\
-          $\vec{z}_k$ = observed data$^\dagger$
-      \end{enumerate}
+    \item Very fast (matrix multiplication) = good for real-time applications
+    \end{itemize}
+
+
+    \begin{enumerate}[<+->]
+    \item \textbf{Predict}:
+      \begin{equation*}
+        \bX_k = \mat{A}_k \bX_{k-1} + \vec{w}_k
+      \end{equation*}
+      $\mat{A}_k$ depends on $\delta_k$ = time since last observation\\
+      $\vec{w}_k$ = Gaussian process noise
+    \item \textbf{Update}:
+      \begin{equation*}
+        \vec{z}_k = \mat{H} \bX_k + \vec{v}_k
+      \end{equation*}
+      $\mat{H} $ = observation model\\
+      $\vec{v}_k$ = Gaussian measurement error\\
+      $\vec{z}_k$ = observed data$^\dagger$
+    \end{enumerate}
+
+
+\end{frame}
+
+\begin{frame}{Recursive Bayesian Filtering: Kalman Filter II}
+  \onslide<+->
+  \begin{itemize}[<+->]
+      \item Everything is normal: mean vector and covariance matrix
+
+      \item Cannot compare $\bX_k$ directly to $\bY_k$,
+        first estimate $\vec{z}_k$\\
+        i.e., given $\bY_k$, where on the route (2D line) is the bus most likely?
+
+      \item Dynamics/transitions specified in matrix $\mat{A}_k$: e.g., 
+        \begin{equation*}
+          \hat\bX_k = \mat{A}_k \bX_{k-1} = \begin{bmatrix} 1 & \delta_k \\ 0 & 1 \end{bmatrix}
+          \begin{bmatrix} d_{k-1} \\ v_{k-1} \end{bmatrix}
+        \end{equation*}
+        $\hat d_k = d_{k-1} + v_{k-1}\delta_k$
+        (Newton's Laws of Motion)
+
+      \item not easy to include complex features: e.g., dwell times
+
+      \item assumes \textbf{multivariate normality} --- stops, loops = multimodal
   \end{itemize}
   \onslide<+->
 \end{frame}
 
-\begin{frame}{Modeling Real Time Data: Kalman Filter II}
+
+\begin{frame}{Recursive Bayesian Filtering: Particle Filter I}
   \onslide<+->
-  \begin{itemize}[<+- | alert@+>]
-      \item Assumes all errors are normal
+  \begin{itemize}[<+->]
+    \item Generalises the Kalman Filter
+      
+    \item Sample of particles (``imaginary buses'') with state $\bX_k^{(i)}$
 
-      \item Cannot map $\bX_k$ directly to $\bY_k$,
-        complicated algorithms to first \emph{estimate} $\vec{z}_k$
-
-      \item All dynamics need to be specified in $\mat{A}_k$\\
-        e.g., $d_k = d_{k-1} + v_{k-1}\delta_k + \text{process noise}$
-        (Newton's laws of motion)
-
-        \begin{itemize}
-        \item not easy to include complex features: e.g., dwell
-          times
-        \end{itemize}
-
-
-      \item can't cope with multi-modal posterior:
-        \begin{itemize}[<1->]
-          \item loops
-          \item delays/detours
-        \end{itemize}
-
-      \item posterior is (multivariate) normal
-  \end{itemize}
-  \onslide<+->
-\end{frame}
-
-
-\section{Particle Filter}
-
-\begin{frame}{Modeling Real Time Data: Particle Filter I}
-  \onslide<+->
-  \begin{itemize}[<+- | alert@+>]
-    \item Generalises almost everything from KF
-
-    \item Simulates ``imaginary'' buses with state $\bX_k^{(i)}$
-
-    \item Predict each particle to generate \emph{prior distribution}:
+    \item \textbf{Predict} step: model particles \emph{individually}:
       \begin{equation*}
         \tilde\bX_k^{(i)} = f(\bX_{k-1}^{(i)}, \sigma_v^2)
       \end{equation*}
       No restrictions on $f$ (except computational)
 
-    \item Resample particles based on observed GPS coordinates:
+    \item \textbf{Update} step: weighted resample (importance resampling)
       \begin{equation*}
-        w_1^{(i)} = \frac{p(\bY_k | \tilde\bX_k^{(i)})}{\sum_{j=1}^M p(\bY_k | \tilde\bX_k^{(j)})}
+        w_k^{(i)} = \frac{p(\bY_k | \tilde\bX_k^{(i)})}{\sum_{j=1}^M p(\bY_k | \tilde\bX_k^{(j)})}
       \end{equation*}
-      $p(y,x)$ is the \emph{likelihood}
+      
+    \item no intermediate estimation of $\vec{z}_k$
 
-    \item New sample is the \emph{posterior distribution} of $\bX_k$
+    \item New sample approximates \emph{posterior distribution} of $\bX_k$
   \end{itemize}
-  \onslide<+->
 \end{frame}
 
 
-\begin{frame}{Modeling Real Time Data: Particle Filter II}
+\begin{frame}{Recursive Bayesian Filtering: Particle Filter II}
+  Transform particle's distance into a lat/lon coordinate using shape information \ldots
+  
+  \begin{tikzpicture}[remember picture]
+    \node[at=(current page.center)] {
+      \includegraphics[width=0.5\textwidth]{gps-dist2.jpg}
+      \includegraphics[width=0.5\textwidth]{gps-dist1.jpg}
+    };
+  \end{tikzpicture}        
+  
+  Likelihood now the distance between two points.
+\end{frame}
+
+
+
+\begin{frame}{Recursive Bayesian Filtering: Particle Filter III}
   A simple example using only one dimension (distance).
 
   \onslide<+->
 
   \begin{itemize}[<+- | alert@+>]
     \item Start with previous state $\bX_{k-1}$
-    \item Use model to predict state $\tilde\bX_{k}$
+    \item Use model (bus dynamics, dwell times, etc) to predict state $\tilde\bX_{k}$
     \item Add process noise
     \item Get observation $\bY_k$
     \item Compute weights based on distance from observation
@@ -264,59 +266,55 @@ draw=black,fill=white]
 \end{frame}
 
 
-\begin{frame}{Modeling Real Time Data: Model I}
+\begin{frame}{Real-time Models I: Bus Behaviour}
   \onslide<+->
-  \begin{itemize}[<+- | alert@+>]
-    \item Newton's Laws of Motion
-      \begin{itemize}[<1->]
-        \item Model dynamic motion of vehicles with time\\
-          $d_k = d_{k-1} + \delta_k v_{k}$, $v_k = v_{k-1} + \text{noise}$
-        \item Not good for buses stopping frequently for passengers
-      \end{itemize}
-
-    \item Bus behaviour
-      \begin{itemize}
-        \item Follow motion laws between stops
-        \item Stop at bus stop $j$ with probability $\pi_j$
-        \item If bus stops:
-          \begin{itemize}[<1->]
-            \item decelerate and open doors
-            \item allow passengers to alight and embark
-            \item close doors and accelerate
-          \end{itemize}
-        \item If bus doesn't stop, do none of the above
-        \item Traffic lights: just use a very small ``$\pi$''
-          that works in almost the same way
-      \end{itemize}
+  \begin{itemize}[<+->]
+  \item Follow motion laws between stops
+  \item Stop at bus stop $j$ with probability $\pi_j$
+  \item If bus stops:
+    \begin{itemize}[<1->]
+    \item decelerate and open doors
+    \item allow passengers to alight and embark
+    \item close doors and accelerate
+    \end{itemize}
+  \item If bus doesn't stop, do none of the above
+  \item Traffic lights: no info (yet) on their locations (in Auckland)
   \end{itemize}
-  \onslide<+->
 \end{frame}
 
-\begin{frame}{Modeling Real Time Data: Model II}
+\begin{frame}{Real-time Bus Models II: Dwell Times}
   \onslide<+->
-  \begin{itemize}[<+- | alert@+>]
-    \item Dwell time at stop $j$
-      \begin{itemize}
-        \item Given a bus stops \ldots
-        \item it will always decelerate,
-          open/close doors, and accelerate: $\gamma$
-        \item it will then wait at the bus stop until passengers
-          have alighted/boarded: $\tau_j \sim \mathcal{E}(\mu_\tau)$
-        \item Total travel time lost at bus stop = dwell time
+  \begin{itemize}[<+->]
+    \item Dwell time at stop $j = \tau_j$ = \emph{time lost due to stopping}
+
+    \item Given a bus stops \ldots
+      
+      \begin{itemize}[<1->]
+      \item every stop: decelerate, open/close doors, and accelerate: $\gamma$
+      \item stop $j$: wait until passengers have alighted/boarded: $\tau_j'$
+      \item dwell time: $\tau_j = \gamma + \tau_j'$
       \end{itemize}
 
     \item Particle filter model
       \begin{itemize}
-        \item Just include logic in $f$
-        \item $p_j^{(i)} \sim \text{Bernoulli}(\pi_j)$
-        \item if $p_j^{(i)} = 1$, then \ldots\\
-          \ldots wait at stop for $\gamma + \tau_j^{(i)}$~seconds before continuing
+        \item Include logic in $f$
+        \item Does particle (``imaginary bus'') stop?\\
+          $p_j^{(i)} \sim \text{Bernoulli}(\pi_j)$, $\tau_j'^{(i)} \sim \mathcal{E}(\mu_\tau)$
+        \item dwell time =  $p_j^{(i)} (\gamma + \tau_j'^{(i)})$
+        \item multimodal distribution!
       \end{itemize}
   \end{itemize}
+
+  \vspace{-6em}
+  \begin{overprint}
+    \onslide<3>
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/dwell_time.png}
+  \end{overprint}
   \onslide<+->
 \end{frame}
 
-\begin{frame}{Modeling Real Time Data: Model III}
+\begin{frame}{Real-time Bus Models III}
   Particle Filter model, $\bX_k = f(\bX_{k-1}, \bY_k, \sigma_v, \sigma_y)$
 
   \vspace{0.5cm}
@@ -357,7 +355,7 @@ draw=black,fill=white]
   \end{tikzpicture}
 \end{frame}
 
-\begin{frame}{Modeling Real Time Data: Example}
+\begin{frame}{Example}
   \begin{itemize}
     \item Applied to data collected from a bus route
     \item Non-informative priors (speed, dwell times, stopping probabilities)
@@ -381,9 +379,7 @@ draw=black,fill=white]
 
 
 \begin{frame}{Predicting Arrival Times}
-  \onslide<+->
-
-  \begin{itemize}[<+- | alert@+>]
+  \begin{itemize}
   \item each future stop along a route; up to 1~hour in advance
   \item prediction model needs to be far more precise than state model
   \item can be computationally complex
@@ -391,7 +387,18 @@ draw=black,fill=white]
     \item over 1000 buses at peak times
     \item each with up to 10, 20, 30?? stops ahead
     \end{itemize}
+    
+    \onslide<+->
+  \item three examples:
+    \begin{enumerate}
+    \item schedule
+      
+    \item historical data
+      
+    \item real-time data
+    \end{enumerate}
   \end{itemize}
+
 
   \onslide<+->
 \end{frame}
@@ -402,27 +409,22 @@ draw=black,fill=white]
 
   \begin{itemize}[<+- | alert@+>]
   \item each \emph{trip} has a \emph{schedule} with ``average'' arrival times
-  \item given a particle's distance into trip, use scheduled travel time
-    to predict ETA to a stop
-    \begin{itemize}
-    \item each particle has a distance into trip
-    \item compare to scheduled ``arrival time'' at that ``distance''
-    \item compute scheduled travel time to a stop
-    \end{itemize}
+  \item given a particle's distance into trip
+  \item compare to scheduled ``arrival time'' at that ``distance''
+  \item compute scheduled travel time to a stop
   \end{itemize}
 
-
   \begin{overprint}
-    \onslide<3>
+    \onslide<2>
     \centering
     \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame1.png}
-    \onslide<4>
+    \onslide<3>
     \centering
     \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame2.png}
-    \onslide<5>
+    \onslide<4>
     \centering
     \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame3.png}
-    \onslide<6>
+    \onslide<5->
     \centering
     \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame4.png}
   \end{overprint}
@@ -434,37 +436,38 @@ draw=black,fill=white]
 \begin{frame}{Predicting Arrival Times: Historical Data}
   \onslide<+->
 
-  \begin{itemize}[<+- | alert@+>]
+  \begin{itemize}
   \item replace schedule times with \emph{historical times}
-  \item can build up models: trip, day of the week, time of day, etc
-  \item historical data based on \emph{particle filter}: save summaries
-  \item requires a lot of data (ANN, SVM, \ldots)
+  \item can build up models: day of the week, time of day, etc
+  \item requires a lot of data (ANN, SVM, \ldots)\\
+    \cite{mazloumi-etal:2011}: 6~months\\
+    \cite{chen-rakha:2014}: 4~months \\
+    \emph{For only a selection of test routes!}
+  \item relies on patterns
   \end{itemize}
 
-  \onslide<+->
 \end{frame}
 
 
-\begin{frame}{Predicting Arrival Times: Realtime Data}
-  \onslide<+->
+\begin{frame}{Predicting Arrival Times: Real-time Data}  
+  \begin{itemize}
+  \item Real-time data for up to 1000+ Auckland buses
+  \item Particle Filter provides distribution of speed at coordinates, $v_k$
+  \item \cite{yu-etal:2011}: bus stops with multiple routes\\
+    e.g., along Symonds St
   
-  \begin{itemize}[<+- | alert@+>]
-  \item have realtime data for 100's of buses around Auckland
-  \item previous models use other buses traveling \emph{same route}
-    (cite)
-  \item propose: combining travel times/speed of \emph{all} buses in Auckland
+    \vspace{1em}
+  \item<2-> \textbf{Proposal}: combine travel times and speed estimates of \emph{all} buses
     \begin{itemize}
     \item most up to date traffic/congestion data
-    \item available \emph{now}, not after several weeks of data collection
+    \item no extensive data collection, storage required
     \end{itemize}
   \end{itemize}
-
-  \onslide<+->
 \end{frame}
 
 
 
-\begin{frame}{Example with Predictions}
+\begin{frame}{Example}
   Bus Route 274, Three Kings to Britomart
 
 
@@ -498,30 +501,30 @@ draw=black,fill=white]
 
 
 
-\begin{frame}{Communicating Prediction}
+\begin{frame}{Communicating Predictions}
   \onslide<+->
 
-  \begin{itemize}[<+- | alert@+>]
+  \begin{itemize}[<+->]
 
   \item target audience: \emph{general public}
     
-  \item inevitably going to be significant uncertainty in predictions, 
-    particularly from a long way off
+  \item significant uncertainty in predictions
 
-  \item need to convey \emph{distribution of particles} in an easy to understand manner
+  \item how to convey \emph{distribution of particles}?
 
   \item \textbf{point estimates}:
-    \begin{itemize}
+    \begin{itemize}[<1->]
     \item good for displays that can only fit a single digit
     \item for commuters, they imply ``accuracy''
     \end{itemize}
     
   \item \textbf{interval estimates}:
-    \begin{itemize}
+    \begin{itemize}[<1->]
     \item standard practice for most statistical analyses
-    \item but how to give a \emph{meaningful} interval to commuters?
-      i.e., ETA: 3--7~mins = BETWEEN 3 and 7 minutes, with 100\% probability?
-    \item also want non-symmetrical interval: being early to the bus stop is better than being late!
+    \item \emph{meaningful} interval for commuters?\\
+      i.e., ETA: 3--7~mins = BETWEEN 3 and 7 minutes?
+    \item non-symmetrical interval for journey planning:\\
+      bus arriving later (8~min) better than earlier (2~min)!
     \end{itemize}
   \end{itemize}
 
@@ -529,6 +532,52 @@ draw=black,fill=white]
 \end{frame}
 
 
+
+\begin{frame}{Journey Planning}
+  \begin{itemize}[<+->]
+  \item \alert<5->{``I want to travel from A to B \ldots}
+    \begin{itemize}
+    \item \alert<5>{``\ldots leaving whenever, by the fastest route.''}
+    \item \alert<6>{``\ldots and arrive ASAP.''}
+    \item \alert<7>{``\ldots and arrive before 8am.''}
+    \end{itemize}
+  \end{itemize}
+  
+  \vspace{1em}
+  \metroset{block=fill}
+  \begin{overprint}
+    \onslide<5>
+    \begin{block}{Fastest route}
+      \begin{itemize}
+      \item If there are multiple routes, which is fastest?
+      \item What time should I be at the stop by to minimise wait time, but not miss the
+        bus?
+      \end{itemize}
+    \end{block}
+    \onslide<6>
+    \begin{block}{Arrive ASAP}
+      \begin{itemize}
+      \item Which bus from A will arrive at B soonest
+      \item that hasn't left yet/by the time I get to the bus stop
+      \end{itemize}
+    \end{block}
+    \onslide<7>
+    \begin{block}{Arrive on time}
+      \begin{itemize}
+      \item If there are multiple routes, which will get there on time?
+      \item Without being \emph{too} early?
+      \item Which is most reliable?
+      \end{itemize}
+    \end{block}
+  \end{overprint}
+\end{frame}
+
+
+\begin{frame}{References}
+  \scriptsize
+  \bibliographystyle{./elsart-harv} % elsart-harv,plain,unsrt,alpha
+  \bibliography{./myrefs}
+\end{frame}
 
 
 \begin{frame}[standout]

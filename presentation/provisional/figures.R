@@ -214,3 +214,21 @@ lines(c(0, Xt), c(X, X), lty = 2, col = "#990000")
 arrows(Xt, X + 1, y1 = max(sx) - 1, length = 0.1, code = 3, lwd = 2, col = "#000099")
 text(Xt, X + (max(sx) - X) / 2, "Scheduled Travel Time", pos = 2, cex = 0.8)
 dev.off()
+
+
+
+## dwell time:
+png("figs/dwell_time.png", width = 600, height = 300, bg = "transparent")
+par(mar = c(2.1, 2.1, 2.1, 2.1))
+plot(NULL, xaxt = "n", yaxt = "n", xlab = "", ylab = "", xaxs = "i", yaxs = "i",
+     pch = 19, xlim = c(0, 10), ylim = c(0, 100))
+title(xlab = "Time", ylab = "Distance into Trip", line = 1)
+abline(h = 40, lty = 2, lwd = 2)
+points(1, 10, pch = 19, col = "#000099")
+#lines(c(1, 2), c(10, 30), col = "#000099", lwd = 2, lty = 3)
+lines(c(1, 6), c(10, 110), col = "#000099", lwd = 2, lty = 3)
+lines(c(2, 2.5, 2.7, 2.8, 4, 6, 6.2, 6.3, 6.5, 7, 10),
+      c(30, 37, 38, 38.5, 40, 40, 41.5, 42, 43, 50, 110), col = "#990000", lwd = 2, lty = 3)
+arrows(4.1, 70, 7.9, length = 0.15, code = 3, lwd = 2)
+text(6, 70, expression(tau[j]), pos = 3)
+dev.off()
