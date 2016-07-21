@@ -381,30 +381,32 @@ shown up in several transit applications
 
 The \gls{kf} has been predominant in 
 many real-time applications which, apart from its use in transit described here,
-has also had applications in navigational systems, including military
-missiles and the International Space Station \citep{cn}.
+include missile guidance systems and the navigational systems of
+the International Space Station \citep{cn}.
 In many applications, the \gls{kf} model is based on linear physics equations,
 such as Newton's Laws of Motion, to predict future position
-given current position, speed, and acceleration \citep{cn}.
-They typically include multiple sources of input, 
-including accelerometers and gyroscopes, to improve accuracy.
+given current position, speed, acceleration, and many other inputs \citep{cn}.
 
 
 The \gls{kf} works in two steps.
 First, the new state is \emph{predicted} from the previous one,
 and then the state is \emph{updated} using the observations.
-Each state is associated with a mean vector (the state) and associated covariance matrix.
-In this way, the state is assumed to have a multivariate normal distribution.
+Each state is specified by a mean vector and covariance matrix,
+which represents process noice and measurement error,
+balanced by the algorithm;
+therefore, the state is assumed to have a multivariate normal distribution.
 
 
-In the first step, the prediction model assumes a linear state transition specified by
+The \gls{kf} assumes a linear state transition specified by
 a matrix $\mat{A}$, with Gaussian process noise $\mat{w}_k$.
 That is, 
 \begin{equation}
   \label{eq:kf_statetransition}
   \bX_k = \mat{A}\bX_{k-1} + \mat{w}_k.
 \end{equation}
-The relationship between the unknown state and the hidden Markov state is described
+There can also be a control vector for inputs such as turning or acceleration,
+but these are not applicable in our setting so they are left out.
+The relationship between the unknown state and the observable state is described
 by a measurement matrix $\mat{H}$, along with the measurement error $\mat{v}_k$,
 \begin{equation}
   \label{eq:kf_measurement}
@@ -412,13 +414,16 @@ by a measurement matrix $\mat{H}$, along with the measurement error $\mat{v}_k$,
 \end{equation}
 The limitation here is that the relationship between $\bX$ and $\bY$ needs to be a linear
 combination of the state parameters that can be expressed in a matrix.
+For example, if the observation is of the distance traveled (such as provided by an odometer), 
+the measurement matrix would simply be $\mat{H} = \left[1\ 0\right]$, 
+which extracts the distance from the state vector.
 
 
 In the \gls{kf} implementation mentioned earlier,
 \cite{cathey-dailey:2003} were required to first estimate the 
-distance into the trip in their ``first step'' to make intermediate ``observations''
-$\bZ_k = \mat{H}\bX_{k-1} + \mat{v}_k$, where $\mat{H} = [1\ 0]$.
-These approximate observations were then used to update the state.
+distance into the trip in their ``tracker'' step to make intermediate ``observations'',
+denote $\bZ_k$, allowing them to use $\mat{H}$ as defined above.
+These approximate observations were used in the update step of the \gls{kf}.
 Along with the assumption of Gaussian errors,
 this makes the \gls{kf} somewhat restrictive,
 and not ideal for modeling processes which do not obide strictly to linear dynamic equations
@@ -430,8 +435,8 @@ and not ideal for modeling processes which do not obide strictly to linear dynam
 \label{sec:particle_filter}
 
 In response to the restrictive nature of the \gls{kf}, there have been many 
-alternatives described, such as the Extended Kalman Filter \citep{cn},
-but we will focus on the \gls{pf}.
+alternatives described, such as the Extended Kalman Filter \citep{cn};
+however, we will focus on the \gls{pf}.
 This generalised filter allows the use of \emph{unrestricted functions} to define
 state transitions and measurements, rather than be limited by matrices,
 and makes no unnecessary assumptions about the distributions involved.
@@ -465,37 +470,39 @@ as well as any other information we have available (see \cref{sec:busbehavior}) 
   \label{eq:pf_statetransition}
   \bX_k^{(i)} = f(\bX_{k-1}^{(i)}, \ldots, \mat{w}_k^{(i)}).
 \end{equation}
+
+
 Since each particle has its own value of $d_k$, 
 we can use the shape information supplied by \gls{gtfs} to
 find the coordinates of that particle (see \cref{fig:gps-dist}).
-
-
-
-
 Now, instead of generating pseudo-observations of distance
-as required by a \gls{kf} approach, we are mapping the unknown state into 
+as in the \gls{kf} approach, we do the reverse: map the unknown state into 
 a space we can compare directly to the observations (i.e., \gls{gps} coordinates):
 \begin{equation}
   \label{eq:pf_measurement}
   \bZ_k^{(i)} = h(\bX_k^{(i)}).
 \end{equation}
-The distance between two GPS coordinates can then be used to generate weights for each particle.
+The distance between two GPS coordinates (the Great Circle Distance)
+can then be used to generate weights for each particle.
 The weight of the $i^{\mathrm{th}}$ particle is given by
 \begin{equation}
   \label{eq:pf_likelihood}
   w_i = \frac{p(\bZ_k^{(i)} | \bY_k)}{\sum_{j=1}^M p(\bZ_k^{(j)} | \bY_k)}
 \end{equation}
-Note that the likelihood uses the distance between the points.
-These weights are used to resample with replacement and generate a posterior distribution 
+Note that the likelihood uses the distance between the particle and the 
+reported \gls{gps} location.
+These weights are used to resample with replacement, generating a posterior distribution 
 of particles approximating the new state.
 
 
 The main advantage of the \gls{pf} is that we make no unnecessary 
 assumptions about the error distributions, 
-and are no longer restricted to linear transitions between states 
-(instead only by computational complexity).
+and are no longer restricted to linear transitions between states;
+instead, only by computational complexity.
 One of the unique features of modeling bus movement
-is \emph{dwell times}, which are discussed in \cref{sec:busbehavior}.
+is \emph{dwell times},  discussed in \cref{sec:busbehavior},
+which can introduce transitions between states which are conditional on
+how long a bus spends at each stop (which can be zero).
 Multimodality is also common around bus stops, particularly in the proposal distributions, 
 which can be problematic for a \gls{kf} 
 which assumes unimodal distributions for all parameters.
@@ -504,9 +511,10 @@ which assumes unimodal distributions for all parameters.
 Another advantage of the \gls{pf} is that it extends easily to the problem of arrival time prediction.
 At any time $k$, we have a posterior distribution for the current state,
 where each particle has its own value for distance and velocity. 
-These particles can be projected forward to obtain a sample of arrival times
+These particles can be projected forward using state information and historical data
+to obtain a sample of arrival times
 based on a predictive model applied to each particle,
-rather than an entire state estimate.
+rather than a full state distribution.
 The predictive distribution makes no assumptions other than those in the model
 used to obtain it.
 
