@@ -53,6 +53,34 @@ draw=black,fill=white]
 
 \section{Introduction}
 
+
+\begin{frame}{Motivation}
+  \begin{itemize}[<+->]
+  \item ``Bus prediction'' isn't something new
+
+  \item Automatic Vehicle Location (AVL) technologies
+    \begin{itemize}
+    \item 1964: Hamburg, Germany
+    \item Auckland Transport uses GPS --- buses report position periodically
+    \item Not perfect: interference etc
+    \end{itemize}
+
+  \item Prediction models not that good (at least in Auckland)
+    \begin{itemize}
+    \item Input: AVL data, scheduling information? historical? (black box)
+    \item Doesn't cope with many situations: major delays, no bus
+    \end{itemize}
+
+  \item \emph{Improved} bus prediction
+    \begin{itemize}[<1->]
+    \item more accurate predictions: model, ``real-time'' data
+    \item prediction intervals
+    \item accessibility: UI, journey planning
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+
 \begin{frame}[fragile]{Overview}
   \begin{enumerate}
     \item General Transit Feed Specification (GTFS)
