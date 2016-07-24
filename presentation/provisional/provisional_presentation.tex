@@ -1,17 +1,18 @@
 \documentclass[10pt,t]{beamer}
 
-\usetheme[progressbar=frametitle,sectionpage=none]{metropolis}
+\usetheme[progressbar=frametitle]{metropolis}
 
 \usepackage{booktabs}
 \usepackage{natbib}
 \usepackage[scale=2]{ccicons}
+\usepackage{lmodern}
 
 \usepackage{pgfplots}
 \usepgfplotslibrary{dateplot}
 
 \usepackage{xspace}
 \newcommand{\themename}{\textbf{\textsc{metropolis}}\xspace}
-
+\renewcommand\textbullet{\ensuremath{\bullet}}
 
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows}
@@ -27,15 +28,17 @@ draw=black,fill=white]
 \tikzstyle{arrow} = [thick,->,>=stealth]
 \tikzstyle{line} = [thick]
 
+
 %% symbols
 \newcommand{\bX}{\mathbf{X}}
 \newcommand{\bY}{\mathbf{Y}}
 \newcommand{\mat}[1]{\mathbf{#1}}
 \renewcommand{\vec}[1]{\boldsymbol{#1}}
 
+
 \title{Real time prediction of bus arrival}
 %\subtitle{}
-\date{July 31, 2016}
+\date{SET THE DATE, 2016}
 \author{Tom Elliott}
 \institute{Supervised by Professor Thomas Lumley\\[2em]
 \includegraphics[height=1.5cm]{stat-logo.png}}
@@ -46,12 +49,6 @@ draw=black,fill=white]
 
 \maketitle
 
-% \begin{frame}{Table of contents}
-%   \setbeamertemplate{section in toc}[sections numbered]
-%   \tableofcontents[hideallsubsections]
-% \end{frame}
-
-\section{Introduction}
 
 
 \begin{frame}{Motivation}
@@ -65,20 +62,51 @@ draw=black,fill=white]
     \item Not perfect: interference etc
     \end{itemize}
 
-  \item Prediction models not that good (at least in Auckland)
+  \item AVL based prediction models not that good (at least in Auckland)
     \begin{itemize}
-    \item Input: AVL data, scheduling information? historical? (black box)
-    \item Doesn't cope with many situations: major delays, no bus
-    \end{itemize}
-
-  \item \emph{Improved} bus prediction
-    \begin{itemize}[<1->]
-    \item more accurate predictions: model, ``real-time'' data
-    \item prediction intervals
-    \item accessibility: UI, journey planning
+    \item Inputs: AVL, schedule, historical \ldots ?
+    \item Several problematic situations: major delays, cancellations, \textbf{loops}
     \end{itemize}
   \end{itemize}
+
+  %\metroset{block=fill}
+%  \item \emph{Improved} bus prediction
+  % \onslide<+->
+  % \begin{block}{Improved Bus Prediction}
+  %   \begin{enumerate}[<1->]
+  %   \item more robust real-time model
+  %   \item improved prediction model: ``real-time'' data
+  %   \item arrival time \emph{prediction intervals}, journey planning
+  %   \end{enumerate}
+  % \end{block}
+
+ % \end{itemize}
 \end{frame}
+
+
+\begin{frame}{Motivation: Example}
+  An example of a situation where a loop breaks the current model,
+  evidenced by AT's \emph{Track My Bus} app:
+
+  \onslide<2->{Scheduled Arrival stop 5594: 7:24am (counter-clockwise loop)}
+  
+  \vspace{0.5em}
+  \centering
+  \includegraphics<3>[width=0.45\textwidth,trim={0 0 0 15cm},clip]{figs/bus-loop-durp1.jpg}
+  \includegraphics<4>[width=0.45\textwidth,trim={0 0 0 15cm},clip]{figs/bus-loop-durp2.jpg}
+
+  \begin{overprint}
+    \onslide<3>
+    \centering
+    7:24am
+    \onslide<4>
+    \centering
+    7:26am
+  \end{overprint}
+
+\end{frame}
+
+
 
 
 \begin{frame}[fragile]{Overview}
@@ -87,20 +115,27 @@ draw=black,fill=white]
 
     \item Recursive Bayesian filtering
 
+    \item Real-time bus models
+
     \item Predictive models: future arrival times
 
-    \item Communicating predictive error to commuters
+    \item Making it available to commuters
+      \begin{itemize}
+      \item Communicating predictive errors, uncertainty
+      \item Journey Planning application
+      \end{itemize}
 
-    \item Journey Planning
   \end{enumerate}
 \end{frame}
+
+
 
 
 \section{GTFS}
 
 \begin{frame}{GTFS}
-  \onslide<+->
-  \begin{itemize}[<+- | alert@+>]
+
+  \begin{itemize}[<+->]
     \item General Transit Feed Specification
       \begin{itemize}
       \item \textbf{Static}: schedule information: trips, routes, shapes,
@@ -108,13 +143,13 @@ draw=black,fill=white]
       \item \textbf{Realtime}: GPS location of buses
       \end{itemize}
 
-    \item Standardised by Google and used globally
+    \item Developed and standardised by Google and used globally
     \item API provided by Auckland Transport (AT)\\
       \url{https://dev-portal.at.govt.nz}
   \end{itemize}
 
   \begin{overprint}
-    \onslide<5>
+    \onslide<4>
     \begin{figure}
       \vspace{-3em}
       \centering
@@ -122,7 +157,7 @@ draw=black,fill=white]
       \caption{Global GTFS feeds, \url{http://transitfeeds.com/}}
     \end{figure}
   \end{overprint}
-  \onslide<+->
+
 \end{frame}
 
 
@@ -160,6 +195,7 @@ draw=black,fill=white]
 
 \end{frame}
 
+
 \begin{frame}{Recursive Bayesian Filtering: Kalman Filter I}
   \onslide<+->
   \begin{itemize}%[<+- | alert@+>]
@@ -188,8 +224,8 @@ draw=black,fill=white]
       $\vec{z}_k$ = observed data$^\dagger$
     \end{enumerate}
 
-
 \end{frame}
+
 
 \begin{frame}{Recursive Bayesian Filtering: Kalman Filter II}
   \onslide<+->
@@ -212,8 +248,9 @@ draw=black,fill=white]
 
       \item assumes \textbf{multivariate normality} --- stops, loops = multimodal
   \end{itemize}
-  \onslide<+->
+
 \end{frame}
+
 
 
 \begin{frame}{Recursive Bayesian Filtering: Particle Filter I}
@@ -242,16 +279,16 @@ draw=black,fill=white]
 
 
 \begin{frame}{Recursive Bayesian Filtering: Particle Filter II}
-  Transform particle's distance into a lat/lon coordinate using shape information \ldots
-  
-  \begin{tikzpicture}[remember picture]
-    \node[at=(current page.center)] {
-      \includegraphics[width=0.5\textwidth]{gps-dist2.jpg}
-      \includegraphics[width=0.5\textwidth]{gps-dist1.jpg}
-    };
-  \end{tikzpicture}        
-  
-  Likelihood now the distance between two points.
+  \begin{itemize}[<+->]
+  \item Likelihood depends on distance between particle ($d_k^{(i)}$) and reported position ($\bY_k$)
+  \item Transform particle's distance to coordinate using shape information
+    
+    \includegraphics[width=0.45\textwidth]{gps-dist2.jpg}
+    \includegraphics[width=0.45\textwidth]{gps-dist1.jpg} 
+    
+  \item Use (Great Circle) distance between two coordinates
+  \item No estimation of $\vec{z}_k$ required!
+  \end{itemize}
 \end{frame}
 
 
@@ -260,7 +297,6 @@ draw=black,fill=white]
   A simple example using only one dimension (distance).
 
   \onslide<+->
-
   \begin{itemize}[<+- | alert@+>]
     \item Start with previous state $\bX_{k-1}$
     \item Use model (bus dynamics, dwell times, etc) to predict state $\tilde\bX_{k}$
@@ -294,6 +330,8 @@ draw=black,fill=white]
 \end{frame}
 
 
+\section{Real-time Bus Models}
+
 \begin{frame}{Real-time Models I: Bus Behaviour}
   \onslide<+->
   \begin{itemize}[<+->]
@@ -310,11 +348,11 @@ draw=black,fill=white]
   \end{itemize}
 \end{frame}
 
+
 \begin{frame}{Real-time Bus Models II: Dwell Times}
   \onslide<+->
   \begin{itemize}[<+->]
     \item Dwell time at stop $j = \tau_j$ = \emph{time lost due to stopping}
-
     \item Given a bus stops \ldots
       
       \begin{itemize}[<1->]
@@ -331,7 +369,7 @@ draw=black,fill=white]
         \item dwell time =  $p_j^{(i)} (\gamma + \tau_j'^{(i)})$
         \item multimodal distribution!
       \end{itemize}
-  \end{itemize}
+    \end{itemize}
 
   \vspace{-6em}
   \begin{overprint}
@@ -339,11 +377,11 @@ draw=black,fill=white]
     \centering
     \includegraphics[width=0.8\textwidth]{figs/dwell_time.png}
   \end{overprint}
-  \onslide<+->
 \end{frame}
 
+
 \begin{frame}{Real-time Bus Models III}
-  Particle Filter model, $\bX_k = f(\bX_{k-1}, \bY_k, \sigma_v, \sigma_y)$
+  Particle Filter model, $\bX_k = f(\bX_{k-1}, \bY_k, \sigma_v, \sigma_y, \ldots)$
 
   \vspace{0.5cm}
   \begin{tikzpicture}[node distance=1.4cm]
@@ -383,6 +421,7 @@ draw=black,fill=white]
   \end{tikzpicture}
 \end{frame}
 
+
 \begin{frame}{Example}
   \begin{itemize}
     \item Applied to data collected from a bus route
@@ -404,7 +443,7 @@ draw=black,fill=white]
 
 
 
-
+\section{Predicting Arrival Times}
 
 \begin{frame}{Predicting Arrival Times}
   \begin{itemize}
@@ -415,9 +454,11 @@ draw=black,fill=white]
     \item over 1000 buses at peak times
     \item each with up to 10, 20, 30?? stops ahead
     \end{itemize}
-    
-    \onslide<+->
-  \item three examples:
+  \end{itemize}
+
+  %\item<2-> three examples:
+  \onslide<2->
+  \begin{exampleblock}{Three examples}
     \begin{enumerate}
     \item schedule
       
@@ -425,10 +466,8 @@ draw=black,fill=white]
       
     \item real-time data
     \end{enumerate}
-  \end{itemize}
-
-
-  \onslide<+->
+  \end{exampleblock}
+  %\end{itemize}
 \end{frame}
 
 
@@ -466,26 +505,26 @@ draw=black,fill=white]
 
   \begin{itemize}
   \item replace schedule times with \emph{historical times}
-  \item can build up models: day of the week, time of day, etc
-  \item requires a lot of data (ANN, SVM, \ldots)\\
+  \item can build up models (monotone regression?)\\
+    covariates: day of the week, time of day, etc
+  \item requires a lot of data (KNN, ANN, SVM, \ldots)\\
     \cite{mazloumi-etal:2011}: 6~months\\
     \cite{chen-rakha:2014}: 4~months \\
     \emph{For only a selection of test routes!}
   \item relies on patterns
   \end{itemize}
-
 \end{frame}
 
 
 \begin{frame}{Predicting Arrival Times: Real-time Data}  
   \begin{itemize}
-  \item Real-time data for up to 1000+ Auckland buses
-  \item Particle Filter provides distribution of speed at coordinates, $v_k$
+  \item Real-time data for up to 1000+ Auckland buses available
+  \item Particle Filter model provides distribution of speed at coordinates, $v_k$
   \item \cite{yu-etal:2011}: bus stops with multiple routes\\
     e.g., along Symonds St
   
     \vspace{1em}
-  \item<2-> \textbf{Proposal}: combine travel times and speed estimates of \emph{all} buses
+  \item<2-> \textbf{Proposal}: combine travel times and speed estimates of \textbf{all} buses
     \begin{itemize}
     \item most up to date traffic/congestion data
     \item no extensive data collection, storage required
@@ -494,8 +533,9 @@ draw=black,fill=white]
 \end{frame}
 
 
-
-\begin{frame}{Example}
+{ % all template changes are local to this group.
+    \setbeamercolor{background canvas}{bg=white}
+\begin{frame}{Example (single route)}
   Bus Route 274, Three Kings to Britomart
 
 
@@ -506,13 +546,13 @@ draw=black,fill=white]
 
     \onslide<2>
     \vspace{2em}
-    Particle Filter State Estimates and Transitions, 7~am trip
+    Particle Filter State Estimates and Transitions, 7am trip
     \centering
     \includegraphics[width=1\textwidth]{figs/r274/TRIP5/distance_traveled.jpg}
 
     \onslide<3>
     \vspace{2em}
-    ``Historical'' Data, 5:30~am, 6:00~am, 6.30~am, 6:50~am
+    ``Historical'' Data, 5:30am, 6:00am, 6.30am, 6:50am
     \centering
     \includegraphics[width=0.45\textwidth]{figs/r274/TRIP1/distance_traveled.jpg}
     \includegraphics[width=0.45\textwidth]{figs/r274/TRIP2/distance_traveled.jpg}\\
@@ -521,13 +561,15 @@ draw=black,fill=white]
 
     \onslide<4>
     \vspace{2em}
-    Arrival time prediction based on 4 previous trips
+    Arrival time prediction based on 4 previous trips (averaged)
     \centering
     \includegraphics[width=1\textwidth]{figs/r274/TRIP5/arrival_last_hist.jpg}
   \end{overprint}
 \end{frame}
+}
 
 
+\section{Making Predictions Accessible}
 
 \begin{frame}{Communicating Predictions}
   \onslide<+->
@@ -538,7 +580,7 @@ draw=black,fill=white]
     
   \item significant uncertainty in predictions
 
-  \item how to convey \emph{distribution of particles}?
+  \item how to convey \emph{distribution of particles}, uncertainty?
 
   \item \textbf{point estimates}:
     \begin{itemize}[<1->]
@@ -556,7 +598,6 @@ draw=black,fill=white]
     \end{itemize}
   \end{itemize}
 
-  \onslide<+->
 \end{frame}
 
 
@@ -603,9 +644,13 @@ draw=black,fill=white]
 
 \begin{frame}{References}
   \scriptsize
+  \begingroup
+  \renewcommand{\section}[2]{}%
   \bibliographystyle{./elsart-harv} % elsart-harv,plain,unsrt,alpha
   \bibliography{./myrefs}
+  \endgroup
 \end{frame}
+
 
 
 \begin{frame}[standout]
