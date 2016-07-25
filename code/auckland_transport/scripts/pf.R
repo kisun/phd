@@ -66,7 +66,7 @@ tripTimes
 #                           paste0(routeN, "%")))
 #tripN <- unique(gsub("-.+", "", tids[[1]]))[7]
 ## tripN <- gsub("-.+", "", tripTimes$trip_id)[11]
-tripN <- gsub("-.+", "", tripTimes$trip_id)[6]
+tripN <- gsub("-.+", "", tripTimes$trip_id)[1]
 
 #GOGOGO(tripN)
 
@@ -232,17 +232,17 @@ timeTS <- as.POSIXct(times[!is.zero], origin = "1970-01-01")
 hour <- as.numeric(format(timeTS, "%H")) + as.numeric(format(timeTS, "%M")) / 60 +
     as.numeric(format(timeTS, "%S")) / 60 / 60
 dow <- lubridate::wday(lubridate::ymd(format(timeTS, "%Y-%m-%d")), TRUE, FALSE)
-jpeg(paste0("figs/pf_singlebus/route_", routeN, "/distance_time.jpg"),
-     width = 1920, height = 1080)
-iNZightPlots::iNZightPlot(hour, mean.dist[!is.zero] / 1e3, colby = dow,
-                          main = "", xlab = "Time", ylab = "Distance Into Trip (km)",
-                          pch = 19, cex.pt = 0.2, plottype = "scatter")
-dev.off()
+## jpeg(paste0("figs/pf_singlebus/route_", routeN, "/distance_time.jpg"),
+##      width = 1920, height = 1080)
+## iNZightPlots::iNZightPlot(hour, mean.dist[!is.zero] / 1e3, colby = dow,
+##                           main = "", xlab = "Time", ylab = "Distance Into Trip (km)",
+##                           pch = 19, cex.pt = 0.2, plottype = "scatter")
+## dev.off()
 #
 dists <- mean.dist[!is.zero]
 secs <- times[!is.zero] - ts
 jpeg(paste0("figs/pf_singlebus/route_", routeN, "/delta_distance_time.jpg"),
-     width = 1920, height = 1080)
+     width = 1920, height = 1080, bg="transparent")
 pos <- diff(dists) > 0
 plot(diff(secs)[pos] / 60, diff(dists)[pos],
      xlab = expression(paste(Delta[t], " (min)")),
@@ -270,7 +270,7 @@ dev.off()
 ## lapply(time.hist, dim)
 ## time.hist[[4]][,,2]
 jpeg(paste0("figs/pf_singlebus/route_", routeN, "/distance_traveled.jpg"),
-     width = 1920, height = 1080, pointsize = 12*2)
+     width = 1920, height = 1080, pointsize = 12*2, bg="transparent")
 dev.hold()
 plot(NA, xlim = range(times, na.rm = TRUE), xaxt = "n",
      ylim = c(0, max(schedule$distance_into_shape)), yaxs = "i",
@@ -359,7 +359,7 @@ if (is.na(Ta.hat[1]))
 ## cumdwell
 #
 jpeg(paste0("figs/pf_singlebus/route_", routeN, "/distance_average.jpg"),
-     width = 1920, height = 1080, pointsize = 12*2)
+     width = 1920, height = 1080, pointsize = 12*2, bg="transparent")
 dev.hold()
 plot(NA, xlim = c(0, max(times) - t0)/60, xaxs = "i",
      ylim = c(0, max(schedule$distance_into_shape)), yaxs = "i",
@@ -381,7 +381,7 @@ dev.flush()
 dev.off()
 #
 jpeg(paste0("figs/pf_singlebus/route_", routeN, "/distance_speed.jpg"),
-     width = 1920, height = 1080, pointsize = 12*2)
+     width = 1920, height = 1080, pointsize = 12*2, bg="transparent")
 plot(state.hist[1,,], state.hist[2,,], pch = 19, col = "#00000040",
      xlab = "Distance (m)", ylab = "Speed (m/s)")
 dev.off()
@@ -519,7 +519,7 @@ for (j in 1:length(tx)) {
 }
 par(mar = c(5.1, 6.1, 4.1, 2.1))
 plot(NA, ylim = c(0, min(max(arrival.last, na.rm = TRUE),
-                         diff(range(time2sec(schedule$arrival_time))) + 90*60)),
+                         diff(range(time2sec(schedule$arrival_time))) + 30*60)),
      xlim = c(0, max(state.hist[1,,], na.rm = TRUE)),
      xlab = "Distance from Stop (m)", yaxt = "n", ylab = "")
 ETAmin <- pretty(par()$usr[1:2] / 60, n = 15)
@@ -668,4 +668,4 @@ hist.df <- data.frame(trip_id = tid, route_id = row$route_id,
 ENT <- paste(apply(hist.df, 1, paste, collapse = "','"), collapse = "'), ('")
 dbGetQuery(dbConnect(SQLite(), "db/hist.db"),
            sprintf("INSERT INTO travel_history (%s)
-       VALUES ('%s')", paste(colnames(hist.df), collapse = ", "), ENT))
+                         VALUES ('%s')", paste(colnames(hist.df), collapse = ", "), ENT))

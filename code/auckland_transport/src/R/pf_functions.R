@@ -150,7 +150,7 @@ ts2dt <- function(ts, to = c("datetime", "date", "time")) {
 timeDiff <- function(t1, t2) {
     diff(as.numeric(as.POSIXct(paste("2016-01-01", c(t1, t2)))))
 }
-pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
+pfilter <- function(X, row, shape, sched, gamma = 6, rerun = FALSE, gps = 5) {
     s <- sched$distance_into_shape
     if (all(X[1,] == max(s))) return(X)
     Xold <- X
@@ -167,7 +167,7 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
     stay <- rbinom(R, 1, ifelse(at.stop, 0.5,  ifelse(rerun, 0.5, 0.1)))
     tau <- ifelse(stay, rexp(R, 1 / dt), 0)
     ## sample new speed, and progress particles forward:
-    NEW[2,] <- msm::rtnorm(R, X[2,], ifelse(rerun, 4, 2), lower = 0, upper = 25)
+    NEW[2,] <- msm::rtnorm(R, X[2,], ifelse(rerun, 2, 1) * dt/20, lower = 0, upper = 25)
     NEW[1,] <- pmin(X[1,] + NEW[2,] * pmax(0, (dt - tau)), max(s))
     NEW[3,] <- X[3,]
     NEW[4,] <- X[4,]   # ifelse(is.na(X[5,]), X[4,], NA)
@@ -179,7 +179,7 @@ pfilter <- function(X, row, shape, sched, gamma = 10, rerun = FALSE, gps = 5) {
     TIMES <- array(NA, dim = c(3, ncol(NEW), 1))
     TIMES[,,1] <- NEW[3:5, ]
     while (any(w, na.rm=TRUE)) {
-        rtau <- rexp(sum(w, na.rm=TRUE), 1/20)
+        rtau <- rexp(sum(w, na.rm=TRUE), 1/10)
         rtau <- ifelse(rtau < gamma, 0, rtau)
         rt <- dt - rtau - (s[NEW[3,w]+1] - X[1,w]) / NEW[2,w]
         NEW[1,w] <- pmin(s[NEW[3,w]+1] + (rt > 0) * NEW[2,w] * rt, max(shape$distance_into_shape))
