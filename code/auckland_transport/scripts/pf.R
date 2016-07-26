@@ -227,7 +227,8 @@ for (i in seq_along(rowids)) {
                                   "inprogress" = "green2", "finished" = "blue"),
                        lwd = 3, cex = 0.4), pch = 3)
 }; close(pb); dev.off()
-#
+
+
 is.zero <- mean.dist == 0
 timeTS <- as.POSIXct(times[!is.zero], origin = "1970-01-01")
 hour <- as.numeric(format(timeTS, "%H")) + as.numeric(format(timeTS, "%M")) / 60 +
@@ -716,4 +717,11 @@ ENT <- paste(apply(hist.df, 1, paste, collapse = "','"), collapse = "'), ('")
 dbGetQuery(dbConnect(SQLite(), "db/hist.db"),
            sprintf("INSERT INTO travel_history (%s)
                          VALUES ('%s')", paste(colnames(hist.df), collapse = ", "), ENT))
+
+
+
+
+
+
+
 

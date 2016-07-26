@@ -232,3 +232,7 @@ lines(c(2, 2.5, 2.7, 2.8, 4, 6, 6.2, 6.3, 6.5, 7, 10),
 arrows(4.1, 70, 7.9, length = 0.15, code = 3, lwd = 2)
 text(6, 70, expression(tau[j]), pos = 3)
 dev.off()
+
+
+
+

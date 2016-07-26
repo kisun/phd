@@ -38,7 +38,7 @@ draw=black,fill=white]
 
 \title{Real time prediction of bus arrival}
 %\subtitle{}
-\date{SET THE DATE, 2016}
+\date{August 17, 2016}
 \author{Tom Elliott}
 \institute{Supervised by Professor Thomas Lumley\\[2em]
 \includegraphics[height=1.5cm]{stat-logo.png}}
@@ -559,17 +559,32 @@ draw=black,fill=white]
 
     \onslide<4>
     \vspace{2em}
-    Stop 20 arrival time prediction based on 4 previous trips (averaged)
+    Final stop arrival time prediction based on \textbf{current state}
     \centering
-    \includegraphics[width=1\textwidth]{figs/r274/TRIP5_arrival_20_hist.png}
+    \includegraphics[width=1\textwidth]{figs/r274/TRIP5_arrival_last_state.png}
 
     \onslide<5>
     \vspace{2em}
-     Final Stop arrival time prediction based on 4 previous trips (averaged)
+     Final stop arrival time prediction based on \textbf{4 previous trips} (averaged)
     \centering
     \includegraphics[width=1\textwidth]{figs/r274/TRIP5_arrival_last_hist.png}
   \end{overprint}
 \end{frame}
+
+
+\begin{frame}{Example (single route)}
+  So what went wrong?
+  
+  \onslide<2->
+  \begin{itemize}
+  \item 6:50am bus picks up all the passengers!
+  \item 7:00am bus has much shorter dwell times compared to previous ones
+  \end{itemize}
+
+  \centering
+  
+\end{frame}
+
 
 
 \section{Making Predictions Accessible}
