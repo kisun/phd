@@ -533,8 +533,6 @@ draw=black,fill=white]
 \end{frame}
 
 
-{ % all template changes are local to this group.
-    \setbeamercolor{background canvas}{bg=white}
 \begin{frame}{Example (single route)}
   Bus Route 274, Three Kings to Britomart
 
@@ -542,31 +540,36 @@ draw=black,fill=white]
   \begin{overprint}
     \onslide<1>
     \centering
-    \includegraphics[width=1\textwidth]{figs/r274/TRIP5/particle_map001.jpg}
+    \includegraphics[width=1\textwidth,trim={2mm 2mm 2mm 2mm},clip]{figs/r274/TRIP5_particle_map001.png}
 
     \onslide<2>
     \vspace{2em}
     Particle Filter State Estimates and Transitions, 7am trip
     \centering
-    \includegraphics[width=1\textwidth]{figs/r274/TRIP5/distance_traveled.jpg}
+    \includegraphics[width=1\textwidth]{figs/r274/TRIP5_distance_traveled.png}
 
     \onslide<3>
     \vspace{2em}
     ``Historical'' Data, 5:30am, 6:00am, 6.30am, 6:50am
     \centering
-    \includegraphics[width=0.45\textwidth]{figs/r274/TRIP1/distance_traveled.jpg}
-    \includegraphics[width=0.45\textwidth]{figs/r274/TRIP2/distance_traveled.jpg}\\
-    \includegraphics[width=0.45\textwidth]{figs/r274/TRIP3/distance_traveled.jpg}
-    \includegraphics[width=0.45\textwidth]{figs/r274/TRIP4/distance_traveled.jpg}
+    \includegraphics[width=0.45\textwidth]{figs/r274/TRIP1_distance_traveled.png}
+    \includegraphics[width=0.45\textwidth]{figs/r274/TRIP2_distance_traveled.png}\\
+    \includegraphics[width=0.45\textwidth]{figs/r274/TRIP3_distance_traveled.png}
+    \includegraphics[width=0.45\textwidth]{figs/r274/TRIP4_distance_traveled.png}
 
     \onslide<4>
     \vspace{2em}
-    Arrival time prediction based on 4 previous trips (averaged)
+    Stop 20 arrival time prediction based on 4 previous trips (averaged)
     \centering
-    \includegraphics[width=1\textwidth]{figs/r274/TRIP5/arrival_last_hist.jpg}
+    \includegraphics[width=1\textwidth]{figs/r274/TRIP5_arrival_20_hist.png}
+
+    \onslide<5>
+    \vspace{2em}
+     Final Stop arrival time prediction based on 4 previous trips (averaged)
+    \centering
+    \includegraphics[width=1\textwidth]{figs/r274/TRIP5_arrival_last_hist.png}
   \end{overprint}
 \end{frame}
-}
 
 
 \section{Making Predictions Accessible}
