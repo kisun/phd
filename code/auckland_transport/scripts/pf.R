@@ -520,6 +520,31 @@ for (j in 1:length(tx)) {
 abline(h = state.hist[4,,length(tx)] - min(times), col = "#aa000040", lty = 2)
 dev.off()
 #
+mypng(paste0("figs/pf_singlebus/route_", routeN, "/arrival_20_delay.jpg"),
+     width = 1920/2, height = 1080/2)
+otx <- times - min(times)
+arrival.last <- matrix(NA, length(tx), M)
+for (j in 1:length(tx)) {
+    arrival.last[j, ] <- arrivalTimeSched(state.hist[,,j], schedule, stop=20, draw = FALSE)
+}
+par(mar = c(5.1, 6.1, 4.1, 2.1))
+plot(NA, ylim = c(0, min(max(arrival.last, Ta[20, ] - min(times), na.rm = TRUE),
+                         diff(range(time2sec(schedule$arrival_time))) + 30*60)),
+     xlim = c(0, schedule$distance_into_shape[20]),
+     xlab = "Distance from Stop (m)", yaxt = "n", ylab = "")
+ETAmin <- pretty(par()$usr[1:2] / 60, n = 15)
+## ETAmin <- pretty(c(0, max(arrival.last, na.rm = TRUE)) / 60, n = 15)
+ETA <- as.POSIXct(time2sec(schedule$arrival_time[1]) + ETAmin * 60,
+                  origin = "1970-01-01", tz = "NZDT")
+axis(2, at = ETAmin * 60, labels = format(ETA, "%H:%M:%S"), las = 2)
+title(ylab = "ETA", line = 5)
+for (j in 1:length(tx)) {
+    points(schedule$distance_into_shape[20] - state.hist[1,,j], arrival.last[j, ],
+           pch = 19, col = "#44444430")
+}
+abline(h = Ta[20, ] - min(times), col = "#aa000040", lty = 2)
+dev.off()
+#
 ## ## Loop is causing issues >_< but shouldn't matter!
 ## jpeg(paste0("figs/pf_singlebus/route_", routeN, "/arrival2_last%03d.jpg"), width = 1920, height = 1080)
 ## for (j in 5:(length(tx) - 1)) {
@@ -609,10 +634,10 @@ arrivalTimeHist <- function(state, schedule, t = 0, route.id,
         ## travel time remaining
         tr <- (1 - (x[1] - ds[x[3]]) / (ds[x[3]+1] - ds[x[3]])) * ts[x[3]]
         if (x[3]+1 == stop) return(tr)
-        tr <- tr + sum(ts[-(1:x[3])])
+        tr <- tr + sum(ts[(x[3]+1):stop])
         ## dwell times
         Nr <- stop - x[3] - 1
-        #if (Nr == 0) return(tr)
+        if (Nr == 0) return(tr)
         p <- rbinom(Nr, 1, pr[x[3]:stopl])
         tau <- rexp(Nr, 1 / pmax(1, tau[x[3]:stopl]))
         tr <- tr + sum(p * (gamma + tau))
@@ -624,7 +649,7 @@ arrivalTimeHist <- function(state, schedule, t = 0, route.id,
 ##
 mypng(paste0("figs/pf_singlebus/route_", routeN, "/arrival_last_hist.jpg"),
      width = 1920/2, height = 1080/2)
-otx <- times - min(times)
+tx <- times - min(times)
 arrival.last <- matrix(NA, length(tx), M)
 for (j in 1:length(tx)) {
     if (any(is.na(state.hist[3,,j]))) next
@@ -649,7 +674,7 @@ abline(h = Ta[nrow(schedule),] - min(times), col = "#aa000040", lty = 2)
 dev.off()
 
 mypng(paste0("figs/pf_singlebus/route_", routeN, "/arrival_20_hist.jpg"))
-otx <- times - min(times)
+tx <- times - min(times)
 arrival.last <- matrix(NA, length(tx), M)
 for (j in 1:length(tx)) {
     if (any(is.na(state.hist[3,,j]))) next

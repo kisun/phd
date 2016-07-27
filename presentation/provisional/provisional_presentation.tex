@@ -29,6 +29,7 @@ draw=black,fill=white]
 \tikzstyle{line} = [thick]
 
 
+
 %% symbols
 \newcommand{\bX}{\mathbf{X}}
 \newcommand{\bY}{\mathbf{Y}}
@@ -65,6 +66,7 @@ draw=black,fill=white]
   \item AVL based prediction models not that good (at least in Auckland)
     \begin{itemize}
     \item Inputs: AVL, schedule, historical \ldots ?
+    \item Outputs: point estimates vs uncertainty
     \item Several problematic situations: major delays, cancellations, \textbf{loops}
     \end{itemize}
   \end{itemize}
@@ -544,7 +546,7 @@ draw=black,fill=white]
 
     \onslide<2>
     \vspace{2em}
-    Particle Filter State Estimates and Transitions, 7am trip
+    Particle Filter State Estimates and Transitions, 6:57am trip
     \centering
     \includegraphics[width=1\textwidth]{figs/r274/TRIP5_distance_traveled.png}
 
@@ -557,6 +559,7 @@ draw=black,fill=white]
     \includegraphics[width=0.45\textwidth]{figs/r274/TRIP3_distance_traveled.png}
     \includegraphics[width=0.45\textwidth]{figs/r274/TRIP4_distance_traveled.png}
 
+
     \onslide<4>
     \vspace{2em}
     Final stop arrival time prediction based on \textbf{current state}
@@ -565,23 +568,27 @@ draw=black,fill=white]
 
     \onslide<5>
     \vspace{2em}
-     Final stop arrival time prediction based on \textbf{4 previous trips} (averaged)
+    Stop no.~20 arrival time prediction based on \textbf{4 previous trips} (averaged)
     \centering
-    \includegraphics[width=1\textwidth]{figs/r274/TRIP5_arrival_last_hist.png}
+    \includegraphics[width=1\textwidth]{figs/r274/TRIP5_arrival_20_hist.png}
   \end{overprint}
 \end{frame}
 
 
-\begin{frame}{Example (single route)}
-  So what went wrong?
+% \begin{frame}{Example (single route)}
+%   So what went wrong?
   
-  \onslide<2->
-  6:50am bus picks up all the passengers??
-
-
-  \centering
-  \includegraphics[width=1\textwidth]{figs/r274/TRIP5_distance_traveled_comp.png}
-\end{frame}
+%   \onslide<2->
+%   6:50am bus picks up all the passengers??
+  
+%   {\vspace{-2em}
+%   \centering
+%   \includegraphics[width=1\textwidth]{figs/r274/TRIP5_distance_traveled_comp.png}
+%   }
+  
+%   \onslide<3->
+%   Driver error: 6:57am trip didn't exist until 3rd stop
+% \end{frame}
 
 
 
@@ -602,7 +609,9 @@ draw=black,fill=white]
     \begin{itemize}[<1->]
     \item good for displays that can only fit a single digit
     \item for commuters, they imply ``accuracy''
+    \item can change rapidly (count \emph{up}) if a lot of uncertainty
     \end{itemize}
+   
     
   \item \textbf{interval estimates}:
     \begin{itemize}[<1->]
