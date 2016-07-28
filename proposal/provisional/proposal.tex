@@ -112,14 +112,14 @@ Confirmed PhD registration is now sought.
 \label{sec:intro}
 
 Something about public transport being important to running of a city, transport, etc.
-In order to attact greater ridership, many agencies have deployed \glspl{atis}
+In order to attract greater ridership, many agencies have deployed \glspl{atis}
 to make public transport a more appealing option for commutes.
 One major component of \gls{atis} is provision of \gls{rti}, 
 in particular arrival time information, 
 which usually comes in the form of a countdown display at stops
 \citep{cn}.
-Several studies have shown that in the presense of real-time arrival information, 
-passengers percieve shorter waiting times (time passes more quickly), 
+Several studies have shown that in the presence of real-time arrival information, 
+passengers perceive shorter waiting times (time passes more quickly), 
 and are generally more accepting of having to wait at the bus stop
 \citep{tcrp:2003}.
 
@@ -147,13 +147,13 @@ such as the \emph{Track My Bus} app \citep{trackmybus},
 which is yet another form of \gls{atis}.
 One common way of providing data to developers is through an \gls{api},
 such as \gls{gtfs}, which is a globally use format for providing transit data,
-including real-time vehicle locations, to deveopers, 
+including real-time vehicle locations, to developers, 
 and is used by Auckland Transport.
 
 
 Somehow transition from \gls{avl} to modeling.
 Over the years, many models have been implemented that use a variety of \gls{avl} technologies
-targetting a range of different applications.
+targeting a range of different applications.
 Early works, such as those of \cite{wall-dailey:1999} and \cite{dailey:2001},
 used the \kf{}, which is ideal for real-time applications, including tracking and navigation,
 due to its speed and low computational requirements.
@@ -175,9 +175,6 @@ giving it the potential to overcome many of the problems affecting other transit
 Within the Auckland Transport system, there are several key issues we hope to overcome.
 The first of these is prediction inaccuracy, 
 which typically presents as sudden changes in \glspl{eta}.
-%We will attempt to improve the overall accuracy of the predictions,
-%and then investigate methods of communicating the remaining uncertainty to passengers,
-%such as with predictions intervals.
 Another issue is the underlying model estimating the actual position of transit vehicles,
 made most evident at loops, in which, given a coordinate, 
 a bus could be either heading into or out of the loop,
@@ -222,7 +219,8 @@ We will then explore ways of incorporating the real-time state of all other buse
 simultaneously to increase the accuracy and precision of arrival time estimates.
 Lastly, we will investigate several applications of our prediction model:
 the first will be to provide useful prediction intervals to passengers
-(who we cannot assume to have any understanding of the concept of ``confidence'' or ``credible'' interval),
+(who we cannot assume to have any understanding of the concept of a 
+``confidence'' or ``credible'' interval),
 and secondly a journey planning application which allows passengers to enter their destination
 and be provided with the ``best'' route to take home.
 
@@ -364,6 +362,39 @@ and be provided with the ``best'' route to take home.
 \section{Background}
 \label{sec:background}
 
+%Originally used for operational and management purposes,
+%today \gls{avl} is most notable for providing \gls{rti} to passengers,
+%most notably predictions of arrival time,
+%which are usually displayed as a countdown at stops.
+Ever since the first use of an \gls{avl} technology in 1964, in Hamburg, Germany,
+it has become an integral part of most transit systems around the world
+\citep{tcrp:1997,tcrp:2003}.
+The first \gls{avl} systems typically used \emph{signpost} technology,
+in which buses are fitted with a transponder that communicates with 
+sensors positioned along the route.
+Other techologies include \emph{odometers},
+which provide measurements of the distance traveled by a vehicle,
+and more commonly in recent years the \gls{gps}.
+
+
+In order to convert \gls{gps} coordinates into arrival time predictions,
+several steps need to be taken.
+The first of these is to estimate the \emph{actual state} of the bus,
+for example its speed and how far into the route it has traveled,
+referred to as \emph{distance into trip},
+which is often estimated directly from the \gls{gps} coordinates,
+although we need also account for \gls{gps} error.
+The second step requires using the estimated state
+to predict how long the bus will take to travel from its current position
+to a position farther along the route, usually a bus stop,
+referred to as \emph{travel time};
+given travel time and the current time, we can also infer \emph{arrival time} at that stop.
+
+
+Given the real-time nature of the data, and the necessity for computations to be efficient,
+Bayesian recursive filters are an obvious choice of model.
+In these, it is assumed that there is an underlying, unmeasurable \emph{Markov process}
+we wish to estimate, which has a state at time $k$ denoted $\bX_k$.
 
 
 % ====================================================================================================== % INFO
