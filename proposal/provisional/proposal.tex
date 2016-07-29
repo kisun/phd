@@ -391,11 +391,57 @@ referred to as \emph{travel time};
 given travel time and the current time, we can also infer \emph{arrival time} at that stop.
 
 
+
+\subsection{Kalman Filter}
+
 Given the real-time nature of the data, and the necessity for computations to be efficient,
 Bayesian recursive filters are an obvious choice of model.
-In these, it is assumed that there is an underlying, unmeasurable \emph{Markov process}
-we wish to estimate, which has a state at time $k$ denoted $\bX_k$.
+One popular filter that has been used in tracking and navigation,
+as well as several bus-prediction applications,
+is the \kf{} \citep{wall-dailey:1999,dailey:2001}.
+In this, as in all Bayesian recursive filters,
+it is assumed that there is an underlying, unmeasurable \emph{Markov process}
+which has a state at time $k$ denoted $\bX_k$.
+There is also an observable, dependent state for which we can obtain measurements $\bY_k$,
+which can be determined from the true state by a \emph{measurement function}, $h$,
+or in the case of the \kf{}, a measurement matrix $\mat{H}$
+\citep{cn} [cite KF].
 
+Modeling real-time data with any Bayesian recursive filter involves two steps:
+\emph{predict} and \emph{update}.
+In the predict step of the \kf{}, 
+the Markov process is modeled using a \emph{transition matrix} $\mat{A}$
+and Gaussian \emph{process noise} $\mat{w}_k \sim \mathcal{N}(0, \mat{G})$:
+\begin{equation}
+  \label{eq:brf-predict}
+  \hat\bX_k = \mat{A}_k \bX_{k-1} + \mat{w}_k.
+\end{equation}
+Next, in the update step, the state estimate is adjusted using the observation,
+measurement matrix, and a Gaussian measurement error, $\mat{e}_k \sim \mathcal{N}(0, \mat{R})$:
+\begin{equation}
+  \label{eq:brf-update}
+  \bY_k = h(\bX_k) + \mat{e}_k.
+\end{equation}
+The \kf{} algorithm involves estimation of the state's mean vector,
+as well as an associated covariance matrix,
+using simple matrix equations.
+This makes it a computationally efficient algorithm,
+and is therefore suited to modeling data in real-time.
+
+
+
+
+% While there are obvious advantages to using a fast algorithm, 
+% there are also disadvantages that are the result of many assumptions 
+% and simplifications made in order for it to be so.
+% In the case of the \kf{}, there are two main issues we are concerned with.
+% The first of these is the lack of flexibility in the transition and measurement functions,
+% which are restricted to matrices.
+% It is therefore difficult to model complicated behaviours (see \cref{sec:bus-behaviour}),
+% and also, in the case of observations from a \gls{gps} device,
+% the relationship between observation state and true state cannot be expressed in $\mat{H}$.
+% \cite{cathey-dailey:2003} proposed an algorithm which first estimated the distance into trip
+% of a bus before using the estimate as the observation for the \kf{}.
 
 % ====================================================================================================== % INFO
 
