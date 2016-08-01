@@ -1,4 +1,8 @@
 ## figs
+mypng <- function(file, height = 300, width = 350, ...)
+    png(gsub(".jpg", ".png", file), height = height, width = width,
+        bg = "transparent", ...)
+
 
 xy <- matrix(c(1.0, 0.0,
                1.5, 1.0,
@@ -9,7 +13,7 @@ xy <- matrix(c(1.0, 0.0,
                5.0, 3.5,
                6.0, 3.0,
                6.5, 3.5), nrow = 2)
-pdf("gps-dist1.jpg", width = 5, height = 4)
+mypng("gps-dist1.png")
 par(mar = c(3.1, 3.1, 2.1, 2.1))
 plot(t(xy), type = 'l', asp = 1, xaxt = "n", yaxt = "n", xlab = "", ylab = "")
 title(xlab = expression(paste("Longitude (", lambda, ")")), line = 1)
@@ -22,7 +26,7 @@ dev.off()
 d <- apply(rbind(xy[, -ncol(xy)], xy[, -1]), 2,
            function(x) sqrt(sum(c(x[3] - x[1], x[4] - x[2]))))
 dx <- sum(d[1:2]) + d[3]/2
-pdf("gps-dist2.jpg", width = 5, height = 4)
+mypng("gps-dist2.png")
 par(mar = c(3.1, 3.1, 2.1, 2.1))
 plot(c(0, sum(d)), c(0, 0), type = "l", xaxt = "n", yaxt = "n", xlab = "", ylab = "")
 title(xlab = "Distance into Trip", line = 1)
