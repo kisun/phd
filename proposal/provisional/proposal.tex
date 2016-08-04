@@ -114,12 +114,12 @@ Confirmed PhD registration is now sought.
 Something about public transport being important to running of a city, transport, etc.
 In order to attract greater ridership, many agencies have deployed \glspl{atis}
 to make public transport a more appealing option for commutes.
-One major component of \gls{atis} is provision of \gls{rti}, 
-in particular arrival time information, 
+One major component of \gls{atis} is provision of \gls{rti},
+in particular arrival time,
 which usually comes in the form of a countdown display at stops
 \citep{cn}.
-Several studies have shown that in the presence of real-time arrival information, 
-passengers perceive shorter waiting times (time passes more quickly), 
+Several studies have shown that in the presence of real-time arrival information,
+passengers perceive shorter waiting times (time passes more quickly),
 and are generally more accepting of having to wait at the bus stop
 \citep{tcrp:2003}.
 
@@ -133,7 +133,7 @@ so consulting \gls{rti} can help them in deciding which bus to catch.
 This all becomes especially useful when there are significant delays in the system.
 
 
-Of course, in order to provide \gls{rti}, 
+Of course, in order to provide \gls{rti},
 transit companies first need to deploy certain technologies to make it possible.
 The main technology responsible for \gls{rti} is \gls{avl},
 which allows tracking of transit vehicles in real-time.
@@ -146,26 +146,26 @@ Another use for \gls{avl} information is for developers of public transport apps
 such as the \emph{Track My Bus} app \citep{trackmybus},
 which is yet another form of \gls{atis}.
 One common way of providing data to developers is through an \gls{api},
-such as \gls{gtfs}, which is a globally use format for providing transit data,
-including real-time vehicle locations, to developers, 
+such as \gls{gtfs}, which is a globally used format for providing transit data,
+including real-time vehicle locations, to developers,
 and is used by Auckland Transport.
 
 
-Somehow transition from \gls{avl} to modeling.
+[[ Somehow transition from \gls{avl} to modeling. ]]
 Over the years, many models have been implemented that use a variety of \gls{avl} technologies
 targeting a range of different applications.
 Early works, such as those of \cite{wall-dailey:1999} and \cite{dailey:2001},
 used the \kf{}, which is ideal for real-time applications, including tracking and navigation,
 due to its speed and low computational requirements.
 Other research has focused on data-driven models,
-most notably \gls{ann} and \gls{svm}, 
-which were found to provide more accurate predictions for stops further ahead,
-compared to the \kf{} which is typically only able to predict a few stops ahead
+most notably \gls{ann} and \gls{svm},
+which were found to provide more accurate predictions for stops further ahead
+than the \kf{}, which was only able to accurately predict a few stops ahead
 \citep{cn}.
 
 
 Recently, the \pf{} has been used in transit applications \citep{cn},
-now more viable for real-time applications thanks to the advancement of 
+now more viable for real-time applications thanks to the advancement of
 computer processing power.
 The key benefits of the \pf{} are that it allows a more explicit specification of the model
 and makes far fewer assumptions than the \kf{},
@@ -173,17 +173,17 @@ giving it the potential to overcome many of the problems affecting other transit
 
 
 Within the Auckland Transport system, there are several key issues we hope to overcome.
-The first of these is prediction inaccuracy, 
+The first of these is prediction inaccuracy,
 which typically presents as sudden changes in \glspl{eta}.
-Another issue is the underlying model estimating the actual position of transit vehicles,
-made most evident at loops, in which, given a coordinate, 
+Another is the underlying model estimating the actual position of transit vehicles,
+made most evident at loops, in which, given a coordinate,
 a bus could be either heading into or out of the loop,
 as shown in \cref{fig:colwill-loop}.
 In this case, a passenger may believe they have missed their bus and head home until the next one.
-Finally, there is driver error, specifically when entering the wrong route number,
+[[ Finally, there is driver error, specifically when entering the wrong route number,
 and major delays, which,
 from our point of view, present the same,
-however they have different implications.
+however they have different implications. ]]\footnote{not clear}
 
 
 \begin{figure}[!b]
@@ -200,12 +200,12 @@ however they have different implications.
     \label{fig:colwill-loop-2}
   \end{subfigure}
   \caption{%
-    The scheduled arrival time at stop~5594 is 7:24~am, 
+    The scheduled arrival time at stop~5594 is 7:24~am,
     and the loop runs anti-clockwise.
-    The bus position was wrongly estimated in (a), 
-    implying to the passenger that they had missed their bus. 
-    Note that, even when the bus is positioned correctly on the route in (b), 
-    the status is still \emph{departed}, 
+    The bus position was wrongly estimated in (a),
+    implying to the passenger that they had missed their bus.
+    Note that, even when the bus is positioned correctly on the route in (b),
+    the status is still \emph{departed},
     which implies that the underlying model is unable to correct itself in this situation.\newline
     \footnotesize{[Screenshot taken from \emph{Track My Bus} \citep{trackmybus}].}}
   \label{fig:colwill-loop}
@@ -213,16 +213,16 @@ however they have different implications.
 
 
 Our primary goal is to implement a \pf{} to the \gls{avl} data provided by Auckland Transport
-that can accurately model buses in Auckland, 
-and also overcomes the issues mentioned above.
-We will then explore ways of incorporating the real-time state of all other buses in Auckland
-simultaneously to increase the accuracy and precision of arrival time estimates.
+that can accurately model buses in Auckland,
+while overcoming the issues mentioned above.
+[[ We will then explore ways of incorporating the real-time state of all other buses in Auckland
+simultaneously to increase the accuracy and precision of arrival time estimates.]]%
+\footnote{not clear}
 Lastly, we will investigate several applications of our prediction model:
 the first will be to provide useful prediction intervals to passengers
-(who we cannot assume to have any understanding of the concept of a 
-``confidence'' or ``credible'' interval),
+(who we assume to have no statistical knowledge),
 and secondly a journey planning application which allows passengers to enter their destination
-and be provided with the ``best'' route to take home.
+and be provided with the ``best'' route to take.
 
 % ====================================================================================================== % INFO
 
@@ -314,7 +314,7 @@ Ever since the first use of an \gls{avl} technology in 1964, in Hamburg, Germany
 it has become an integral part of most transit systems around the world
 \citep{tcrp:1997,tcrp:2003}.
 The first \gls{avl} systems typically used \emph{signpost} technology,
-in which buses are fitted with a transponder that communicates with 
+in which buses are fitted with a transponder that communicates with
 sensors positioned along the route.
 Other techologies include \emph{odometers},
 which provide measurements of the distance traveled by a vehicle,
@@ -351,14 +351,14 @@ with particular mention of the type of data available.
 \label{sec:history}
 
 There's definitely nothing novel about predicting the arrival time of a bus.
-Over the last two decades, 
+Over the last two decades,
 there has been an enormous advance in both the technology available and the models used
 to model buses in real-time and simultaneously make arrival-time predictions for the upcoming stops.
-Of particular interest to us are the recursive Bayesian filters, 
+Of particular interest to us are the recursive Bayesian filters,
 namely the Kalman Filter, which has been used in transit models since the late 1990's,
 and the particle filter, which has only recently shown up in the transit literature,
-but has promising results and is what we intend to use in our work.
-In addition to these filtering models, 
+but has promising results we wish to explore in our work.
+In addition to these filtering models,
 there has also been a lot of progress in the field from more data-oriented models,
 such as \gls{knn}, \gls{ann}, and \gls{svm}.
 We will briefly describe these, if only so we can make use of some of the problems
@@ -373,7 +373,7 @@ Given the real-time nature of the data, and the necessity for computations to be
 Bayesian recursive filters are an obvious choice of model.
 One popular filter that has been used in tracking and navigation,
 as well as several bus-prediction applications,
-is the \kf{} \citep{wall-dailey:1999,dailey:2001}.
+is the \kf{} \citep{wall-dailey:1999,dailey:2001,cn}.
 In this, as in all Bayesian recursive filters,
 it is assumed that there is an underlying, unmeasurable \emph{Markov process}
 which has a state at time $k$ denoted $\bX_k$.
@@ -384,20 +384,21 @@ or in the case of the \kf{}, a measurement matrix $\mat{H}$
 
 Modeling real-time data with any Bayesian recursive filter involves two steps:
 \emph{predict} and \emph{update}.
-In the predict step of the \kf{}, 
+In the predict step of the \kf{},
 the Markov process is modeled using a \emph{transition matrix} $\mat{A}$
 and Gaussian \emph{process noise} $\mat{w}_k \sim \mathcal{N}(0, \mat{G})$,
-where $\mat{G}$ is a covariane matrix specifying the process noise:
+where $\mat{G}$ is a covariance matrix describing system noise:
 \begin{equation}
   \label{eq:brf-predict}
   \hat\bX_k = \mat{A}_k \bX_{k-1} + \mat{w}_k.
 \end{equation}
-Next, in the update step, the state estimate is adjusted according to 
+Next, in the update step, the state estimate is adjusted according to
+the model equation
 \begin{equation}
   \label{eq:brf-update}
   \bY_k = h(\bX_k) + \mat{e}_k,
 \end{equation}
-where $\mat{e}_k \sim \mathcal{N}(0, \mat{R})$, 
+where $\mat{e}_k \sim \mathcal{N}(0, \mat{R})$,
 and $\mat{R}$ is the covariance matrix describing measurement error.
 The \kf{} algorithm involves estimation of the state's mean vector,
 as well as an associated covariance matrix,
@@ -406,26 +407,26 @@ This makes it a computationally efficient algorithm,
 and is therefore suited to modeling data in real-time.
 
 
-The \kf{} has been used in several bus prediction applications,
-most notably \cite{dailey:2001} and \cite{cathey-dailey:2003}.
-For the former, their \gls{avl} data was based on signposts and odometers,
-so their observations were distance traveled and time.
+The \kf{} has been used in several bus prediction applications
+\citep{cn,dailey:2001,cathey-dailey:2003}.
+\cite{dailey:2001} used \gls{avl} data obtained by signposts and odometers,
+obtaining observations of distance traveled and time.
 To avoid confusion, we will use $\mat{Z}$ for observations of distance,
-so in this case the observations are $\mat{Z}_k = \left[ \bar d_k\ t_k \right]^T$,
+so in this case they are $\mat{Z}_k = \left[ \bar d_k\ t_k \right]^T$,
 and let $\bY$ represent measurements from a \gls{gps}.
-The true state was composed of distance into trip, speed, and the travel time 
+The true state was composed of distance into trip, speed, and the travel time
 remaining to reach a given stop,
 $\bX_k = \left[ d_k\ v_k\ \bar t_k \right]^T$.
 Thus, assuming the odomoter is reset at the beginning of the trip,
 the measurement matrix was simply $\mat{H} = \left[ 1\ 0\ 0 \right]$.
-\cite{dailey:2001} used historical data to construct the
-transition matrix at each step, and therefore obtain a posterior
+They used historical data to construct the
+transition matrix at each step, and thus obtain a posterior
 estimate of the state, which included time until arrival.
 
 
 Unfortunately, the model implemented by \cite{dailey:2001} is not applicable
 when the observations come from a \gls{gps}.
-To overcome this, \cite{cathey-dailey:2003} came up with a general prescription
+To overcome this, \cite{cathey-dailey:2003} proposed a general prescription
 for making arrival time predictions from \gls{gps} data.
 The main difference here is that the first step, referred to as the tracker,
 required estimation of the distance into trip from the reported \gls{gps} location;
@@ -438,7 +439,7 @@ was then used to make arrival time predictions in several ways,
 and were demonstrated in Seattle and Orlando.
 
 
-The main caveat in their work was that \cite{cathey-dailey:2003} needed to first
+The prescription provided by \cite{cathey-dailey:2003} needed to first
 estimate $\mat{Z}_k$ from the observations,
 which inevitably introduces an additional source of error.
 As shown in \cref{fig:colwill-loop}, when this is incorrectly estimated,
@@ -457,45 +458,47 @@ Over the following decade, a range of modeling approaches were implemented, demo
 and deployed in transit systems around the world.
 These included \gls{knn}, in which real-time trips are matched to similar historical trips,
 and computer learning models, most notably \gls{ann} and \gls{svm},
-which use historical data sets to learn relationships between variables 
+which use historical data sets to learn relationships between variables
 which can then be used with real-time data to make predictions
 \citep{park-rilett:1999,jeong-rilett:2005,yu-etal:2006,yu-etal:2010,yu-etal:2011}.
 These, particularly \gls{svm}, were usually found to give more accurate arrival time
-predictions that were not limited only to a few stops ahead.
-More importantly to us, they allow models to include some complex features
+predictions that were not limited to only a few stops ahead.
+More importantly, they have allowed models to include more complex features
 unique to transit vehicles.
 
 
 Perhaps the most important feature recognised in transit models is \emph{dwell time}.
-This has several slightly different definitions, 
+This has several slightly different definitions,
 however we will define it specifically as the \emph{time lost due to stopping at a bus stop},
 which includes the deceleration and acceleration period of the bus.
 The technical details are given later in \cref{sec:bus-behaviour}.
 \cite{shalaby-farhan:2004} included dwell times in a \kf{} model,
-however this was based on the availability of \gls{apc} data,
-which provides estimates of the number of passengers boarding at each stop.
-This idea was developed by \cite{jeong-rilett:2005},
-who incorporated dwell times into an \gls{ann} model based on \gls{avl} data
-that provided arrival and dwell times for visited stops.
+although not explicitly,
+and relied on the availability of \glspl{apc},
+which provide estimates of the number of passengers boarding at each stop.
+\cite{jeong-rilett:2005}
+incorporated dwell times into an \gls{ann} model based on detailed \gls{avl} data
+that also provided arrival and dwell times for visited stops.
 
 
 Another feature of bus models is that, in many situations,
 there are multiple trips along the same route every day,
 and \cite{yu-etal:2006} developed an \gls{svm} model which used the travel time
 of the preceeding bus to increase the accuracy of arrival time predictions.
-In many situations, such as in urban areas, 
+In many situations, such as in urban areas,
 several routes may converge and use the same set of bus stops,
 in which case it would be useful to use the most recent bus from \emph{any} route,
 which is what \cite{yu-etal:2011} implemented.
-The implemented several models, including a \kf{}, \gls{knn}, \gls{ann},
-and \gls{svm}, of which the latter was found to provide the best results.
-However, their data was based on automatic toll readers on the highway, 
-rather than \gls{avl}.
+They implemented a \kf{}, \gls{knn}, \gls{ann}, and \gls{svm} models,
+of which the latter was found to provide the best results.
+However, their data was based on automatic toll readers on the highway,
+rather than \gls{avl},
+so the model was limited in its scalability.
 
 
-Throughout, it has been fairly clear that the important aspects to obtaining
+[[ Throughout, it has been fairly clear that the important aspects to obtaining
 accurate predictions of arrival time are as-near real-time traffic congestion information
-as possible, and the modeling of dwell times at stops \citep{cn}.
+as possible, and the modeling of dwell times at stops \citep{cn}. ]]\footnote{delete?}
 
 
 
@@ -506,18 +509,18 @@ Recently, there has been some use of a \pf{} in transit applications,
 which is another Bayesian recursive filter similar to the \kf{},
 but with fewer assumptions and more flexibility.
 Instead of modeling the entire state,
-the \pf{} uses a \emph{sample of particles} from the distribution,
+the \pf{}, originally proposed by \cite{gordon-etal:1993},
+uses a \emph{sample of particles} from the distribution,
 each with its own state $\bX_k^{(i)}$.
-In the predict step, 
-the transition function is then applied to each particle individually,
+[[ In the predict step,
+the transition function is applied to each particle individually,
 allowing it to include whichever features seem necessary,
-such as dwell times.
+such as dwell times. ]]\footnote{more explanation}
 Because each of the particles is modeled independently,
 there is no assumption of normality, or even of unimodality.
 In the update step, the likelihood is used to weight the particles,
-which are then resample with replacement (\gls{sir}) to obtain a 
-sample from the posterior distribution
-\citep{gordon-etal:1993}.
+which are then resampled with replacement (\gls{sir}) to obtain a
+sample from the posterior distribution.
 
 
 The likelihood for each particle is based on the distance between the particle
@@ -525,10 +528,11 @@ and the bus' reported \gls{gps} position.
 Since each particle has its own value for the state parameters,
 the distance into trip, $d_k^{(i)}$, can be transformed onto a geographic coordinate system,
 which is shown graphically in \cref{fig:gpsdist}.
-This enables us to avoid situations like that demonstrated in \cref{fig:colwill-loop},
+[[ This enables us to avoid situations like that demonstrated in \cref{fig:colwill-loop},
 as a subset of the particles will take each plausible situation
 (i.e., going into or out of the loop) and when  the next observation is made,
-the invalid subset is simply dropped and the remaining particles carry on.
+the invalid subset is simply dropped and the remaining particles carry on. ]]%
+\footnote{not clear}
 
 \begin{figure}[!b]
   \centering
@@ -555,28 +559,31 @@ Being able to avoid any unnecessary assumptions or estimations makes the
 \cite{chen-rakha:2014} used a \pf{} to model travel time in real-time,
 and used historical datasets to propose new trajectories for particles.
 \cite{hans-etal:2015} also implemented a \pf{} to help model a transit system
-in which they wished to devise strategies to solve a particular problem:
-to reduce the bunching behaviour of buses along the same route.
+in order to devise strategies
+to reduce the bunching behavior of buses along the same route.
 Their model included those features discussed in \cref{sec:data-models},
 namely dwell times and travel times of previous trips.
 
 
-To predict arrival time using a \pf{}, we can use a similar approach to the transition
+[[ To predict arrival time using a \pf{}, we can use a similar approach to the transition
 function, but instead apply a \emph{prediction function} to each individual particle.
 Perhaps the only downside of the \pf{} is the high computational demand,
 since we are applying functions to a sample of particles, rather than to
-a single state estimate.
+a single state estimate. ]]\footnote{not sure if this should be here? sec 3?}
+
+[[+ note that arrival pred PF based on only GPS not known to exist ]]
 
 
 
 \subsection{Particulars of Bus Behaviour}
 \label{sec:bus-behaviour}
 
-Many of the bus prediction models are based on generic tracking or traffic modeling;
-however, there are some features that are somewhat unique to transit vehicles.
-The two which we are interested in are dwell time and headway 
-(the time delay between consecutive buses of the same route),
-which have become a requirement in modern bus prediction methods.
+[[ Many of the bus prediction models are based on generic tracking or traffic models;
+however, there are some features that are somewhat unique to transit vehicles. ]]%
+\footnote{awkward?}
+The two which are of particular interest are dwell time and headway,
+which have become a requirement in modern bus prediction methods
+\citep{cn}.
 
 
 Dwell time is defined as \emph{the total time lost due to stopping at a bus stop}.
@@ -584,19 +591,20 @@ This is shown visually in \cref{fig:dwell-time},
 which shows the hypothetical paths of two vehicles, one of which stops while the other does not.
 Therefore, there are two components to consider:
 whether the bus stops, and if so, for how long.
-The former can be expressed as a Bernoulli random variable, $p_j \sim \mathrm{Bern}(\pi_j)$.
-How $\pi_j$ is modeled depends on the data available and the framework being used.
+The former can be expressed as a Bernoulli random variable, $p_j \sim \mathrm{Bern}(\pi_j)$;
+how $\pi_j$ is modeled depends on the data available and the framework being used.
 
 
-If a bus does stop, it must first decelerate, 
+If a bus does stop, it must first decelerate,
 and after servicing the bus stop it will take some time to accelerate back up to speed.
 Additionally, there is time taken to open and close the doors.
 These aspects are usually combined into a common affect, $\gamma$,
 as they apply to every bus and stop.
 Once a bus has stopped, it will then remain there while passengers board and disembark.
 Therefore, this is a random variable that is usually treated as exponentially distributed,
-$\tau'_j \sim \mathcal{E}(\mu_\tau)$.
-In several applications, the transit system includes \glspl{apc},  
+$\tau'_j \sim \mathcal{E}(\mu_\tau)$
+\citep{cn}.
+In several applications, the transit system includes \glspl{apc},
 which allow researchers to get estimates of how many passengers get on at each stop,
 and so a more complex model can be used.
 Either way, the total dwell time is $\tau_j = p_j(\gamma + \tau_j')$.
@@ -608,12 +616,16 @@ Either way, the total dwell time is $\tau_j = p_j(\gamma + \tau_j')$.
   \label{fig:dwell-time}
 \end{figure}
 
-The other important feature is headway, which can affect both travel times and dwell times.
-If two consecutive routes are close together, 
-then the travel times will be expected to be similar;
-however, since they are both servicing the same route, 
+The other important feature is headway,
+which is the \emph{time delay between consecutive buses},
+and can affect both travel times and dwell times.
+If two consecutive routes are close together,
+then the travel times are expected to be similar;
+however, since they are both servicing the same route,
 we expect the number of passengers waiting at a stop---and therefore
-the dwell time---to be inversely proportional to the headway.
+the dwell time---to be inversely proportional to the headway:
+[[ the more time between buses,
+the more passengers who will arrive at the stop. ]]\footnote{sense}
 
 
 
@@ -636,10 +648,10 @@ or in some cases the test data was collected manually
 
 In Auckland's transport system, the only publicly available data is provided
 by \gls{gps}, which is updated approximately every 30~seconds,
-so arrival times must be estimated as latency variables and, 
+so arrival times must be estimated as latency variables and,
 in a real-time deployment, will remain unknown.
 Another issue specifically with Auckland Tranport is that,
-over the next few years, 
+over the next few years,
 the public transport system is being completely redesigned,
 with new route structures being rolled out slowly across the city.
 This makes collection of data to train computer learning models unreliable.
@@ -670,7 +682,7 @@ This makes collection of data to train computer learning models unreliable.
 
 % Since as early as the 1960's, public transit agencies have been deploying \gls{avl} systems
 % in their fleets \citep{tcrp:1997}.
-% The purposes of these systems range from operational, such as planning and maintenance, 
+% The purposes of these systems range from operational, such as planning and maintenance,
 % to \glspl{atis}, most notably \gls{rti} and journey planning \citep{tcrp:2003}.
 % Most of the early \gls{avl} implementations used a signpost system,
 % in which signposts fitted with transmitters would be positioned along a route
@@ -686,26 +698,26 @@ This makes collection of data to train computer learning models unreliable.
 % Usually there is a fixed interval---for example, 30~seconds---between reports,
 % although actual frequency can fluctuate due to communication delays and signal interference,
 % which can also affect the accuracy of \gls{gps} measurements \citep{cn}.
-% If the agency has made it available, 
+% If the agency has made it available,
 % these locations can be accessed through public \glspl{api}
 % \citep{tcrp:2003}.
 % The particular family of \gls{api} we will be working with is \gls{gtfs}
 % (see section~\ref{sec:data}),
 % which is a globally standardised format for providing transit data to developers
 % \citep{gtfs}.
-% Having been fitted with an \gls{avl} system, 
+% Having been fitted with an \gls{avl} system,
 % \gls{atis}---which includes arrival time prediction---can be implemented.
 
 
 % \cite{dailey:2001} implemented a prediction algorithm in Seattle, Washington,
-% in which a \gls{kf} (see \cref{sec:kalman_filter}) was used to estimate the state of a bus, 
+% in which a \gls{kf} (see \cref{sec:kalman_filter}) was used to estimate the state of a bus,
 % which was then used in conjunction with historical data to predict arrival time,
 % using a signpost and odometer \gls{avl} system to record the distance travelled along a route.
 % \cite{cathey-dailey:2003} released a general prescription for arrival time prediction using
 % a \gls{gps}-based system consisting of three parts:
 % the first, the ``tracker'', involved converting GPS location to distance into trip measurements
 % based on static schedule and shape information;
-% the second involved estimating the \emph{true state} of the vehicle (distance into trip, speed, 
+% the second involved estimating the \emph{true state} of the vehicle (distance into trip, speed,
 % and acceleration) using a \gls{kf};
 % and the third presented some alternative arrival time prediction methods and example implementations
 % in Seattle and Portland.
@@ -716,7 +728,7 @@ This makes collection of data to train computer learning models unreliable.
 % many other prediction algorithms were proposed, compared, and implemented
 % to varying degrees over the next decade.
 % These included data-driven models such as \gls{knn} regression,
-% \gls{ann}, and \gls{svm} 
+% \gls{ann}, and \gls{svm}
 % \citep{chang-etal:2010,jeong-rilett:2005,yu-etal:2006,yu-etal:2010,yu-etal:2011} [!! add more].
 % In these, historical data was collected over a period of time using on-board or at-stop recording,
 % and then used in combination with
@@ -730,15 +742,15 @@ This makes collection of data to train computer learning models unreliable.
 % A more recent approach to modeling the state of transit vehicles is the \gls{pf},
 % which has been shown in several transportation studies to outperform the \gls{kf}
 % \citep{chen-rakha:2014,cn}.
-% \cite{chen-rakha:2014} used a \gls{pf} to predict travel times 
+% \cite{chen-rakha:2014} used a \gls{pf} to predict travel times
 % by proposing new particle trajectories from a historical database,
 % while \cite{hans-etal:2015} used a particle filter in an operations research setting,
 % in which their goal was to propose control strategies to reduce the ``bunching''
 % of consecutive buses along a common route.
 % In these models, the \gls{avl} data available included actual arrival times, and in their study,
-% \cite{hans-etal:2015} also had \gls{apc} and traffic light information, 
+% \cite{hans-etal:2015} also had \gls{apc} and traffic light information,
 % allowing them to construct complex models.
-% There does not appear to have been any large-scale implementations of 
+% There does not appear to have been any large-scale implementations of
 % real-time arrival time predictions using a \gls{pf} based solely on \gls{gtfs} real-time data.
 
 
@@ -750,7 +762,7 @@ This makes collection of data to train computer learning models unreliable.
 
 % Of the several approaches to modeling real-time bus positions discussed above,
 % our work will focus on recursive Bayesian filters, in particular the \gls{pf}.
-% Recursive Bayesian filters are a class of model which 
+% Recursive Bayesian filters are a class of model which
 % are specially suited to data that is observed and analysed in real-time,
 % such as navigation and tracking applications.
 % This makes it a suitable choice for bus tracking models.
@@ -764,9 +776,9 @@ This makes collection of data to train computer learning models unreliable.
 %   p(X_k | X_0, X_1, \ldots, X_{k-1}) = p(X_k | X_{k-1}).
 % \end{equation}
 % However, there is also a \emph{hidden Markov process}
-% with state $\bY_k$ that is dependent on $\bX_k$, 
+% with state $\bY_k$ that is dependent on $\bX_k$,
 % for which we can make observations.
-% In our case, the \emph{true state} is the distance into trip, $d_k$, 
+% In our case, the \emph{true state} is the distance into trip, $d_k$,
 % and speed, $v_k$, of the bus,
 % $\bX_k = [d_k\ v_k]^T$, which we cannot observe.
 % Instead, the bus reports its GPS position
@@ -778,9 +790,9 @@ This makes collection of data to train computer learning models unreliable.
 % but the two we will discuss are the \gls{kf} (\cref{sec:kalman_filter}),
 % which has been used in many arrival time prediction applications,
 % \citep{wall-dailey:1999,dailey:2001,cathey-dailey:2003},
-% and the \gls{pf} (\cref{sec:particle_filter}), 
+% and the \gls{pf} (\cref{sec:particle_filter}),
 % which is a generalised form and has recently
-% shown up in several transit applications 
+% shown up in several transit applications
 % \citep{chen-rakha:2014,hans-etal:2015,cn}.
 
 
@@ -788,7 +800,7 @@ This makes collection of data to train computer learning models unreliable.
 % \subsubsection{Kalman Filter}
 % \label{sec:kalman_filter}
 
-% The \gls{kf} has been predominant in 
+% The \gls{kf} has been predominant in
 % many real-time applications which, apart from its use in transit described here,
 % include missile guidance systems and the navigational systems of
 % the International Space Station \citep{cn}.
@@ -808,7 +820,7 @@ This makes collection of data to train computer learning models unreliable.
 
 % The \gls{kf} assumes a linear state transition specified by
 % a matrix $\mat{A}$, with Gaussian process noise $\mat{w}_k$.
-% That is, 
+% That is,
 % \begin{equation}
 %   \label{eq:kf_statetransition}
 %   \bX_k = \mat{A}\bX_{k-1} + \mat{w}_k.
@@ -823,13 +835,13 @@ This makes collection of data to train computer learning models unreliable.
 % \end{equation}
 % The limitation here is that the relationship between $\bX$ and $\bY$ needs to be a linear
 % combination of the state parameters that can be expressed in a matrix.
-% For example, if the observation is of the distance traveled (such as provided by an odometer), 
-% the measurement matrix would simply be $\mat{H} = \left[1\ 0\right]$, 
+% For example, if the observation is of the distance traveled (such as provided by an odometer),
+% the measurement matrix would simply be $\mat{H} = \left[1\ 0\right]$,
 % which extracts the distance from the state vector.
 
 
 % In the \gls{kf} implementation mentioned earlier,
-% \cite{cathey-dailey:2003} were required to first estimate the 
+% \cite{cathey-dailey:2003} were required to first estimate the
 % distance into the trip in their ``tracker'' step to make intermediate ``observations'',
 % denote $\bZ_k$, allowing them to use $\mat{H}$ as defined above.
 % These approximate observations were used in the update step of the \gls{kf}.
@@ -843,7 +855,7 @@ This makes collection of data to train computer learning models unreliable.
 % \subsubsection{Particle Filter}
 % \label{sec:particle_filter}
 
-% In response to the restrictive nature of the \gls{kf}, there have been many 
+% In response to the restrictive nature of the \gls{kf}, there have been many
 % alternatives described, such as the Extended Kalman Filter \citep{cn};
 % however, we will focus on the \gls{pf}.
 % This generalised filter allows the use of \emph{unrestricted functions} to define
@@ -851,9 +863,9 @@ This makes collection of data to train computer learning models unreliable.
 % and makes no unnecessary assumptions about the distributions involved.
 
 
-% Instead of modeling the state distribution entirely, 
-% the \gls{pf} uses a sample of $M$ independent state estimates called \emph{particles}, 
-% which can each be modeled individually, and then resampled (with replacement) 
+% Instead of modeling the state distribution entirely,
+% the \gls{pf} uses a sample of $M$ independent state estimates called \emph{particles},
+% which can each be modeled individually, and then resampled (with replacement)
 % using the likelihood of each particle to generate sampling weights.
 % In our case, we assume a bus has an unknown state $\bX_k = [d_k\ v_k]^T$,
 % so each individual particle is denoted $\bX_k^{(i)} = [d_k^{(i)}\ v_k^{(i)}]^T$,
@@ -870,11 +882,11 @@ This makes collection of data to train computer learning models unreliable.
 % \end{equation}
 
 
-% Since each particle has its own value of $d_k$, 
+% Since each particle has its own value of $d_k$,
 % we can use the shape information supplied by \gls{gtfs} to
 % find the coordinates of that particle (see \cref{fig:gps-dist}).
 % Now, instead of generating pseudo-observations of distance
-% as in the \gls{kf} approach, we do the reverse: map the unknown state into 
+% as in the \gls{kf} approach, we do the reverse: map the unknown state into
 % a space we can compare directly to the observations (i.e., \gls{gps} coordinates):
 % \begin{equation}
 %   \label{eq:pf_measurement}
@@ -887,28 +899,28 @@ This makes collection of data to train computer learning models unreliable.
 %   \label{eq:pf_likelihood}
 %   w_i = \frac{p(\bZ_k^{(i)} | \bY_k)}{\sum_{j=1}^M p(\bZ_k^{(j)} | \bY_k)}
 % \end{equation}
-% Note that the likelihood uses the distance between the particle and the 
+% Note that the likelihood uses the distance between the particle and the
 % reported \gls{gps} location.
-% These weights are used to resample with replacement, generating a posterior distribution 
+% These weights are used to resample with replacement, generating a posterior distribution
 % of particles approximating the new state.
 
 
-% The main advantage of the \gls{pf} is that we make no unnecessary 
-% assumptions about the error distributions, 
+% The main advantage of the \gls{pf} is that we make no unnecessary
+% assumptions about the error distributions,
 % and are no longer restricted to linear transitions between states;
 % instead, only by computational complexity.
 % One of the unique features of modeling bus movement
 % is \emph{dwell times},  discussed in \cref{sec:busbehavior},
 % which can introduce transitions between states which are conditional on
 % how long a bus spends at each stop (which can be zero).
-% Multimodality is also common around bus stops, particularly in the proposal distributions, 
-% which can be problematic for a \gls{kf} 
+% Multimodality is also common around bus stops, particularly in the proposal distributions,
+% which can be problematic for a \gls{kf}
 % which assumes unimodal distributions for all parameters.
 
 
 % Another advantage of the \gls{pf} is that it extends easily to the problem of arrival time prediction.
 % At any time $k$, we have a posterior distribution for the current state,
-% where each particle has its own value for distance and velocity. 
+% where each particle has its own value for distance and velocity.
 % These particles can be projected forward using state information and historical data
 % to obtain a sample of arrival times
 % based on a predictive model applied to each particle,
@@ -928,7 +940,7 @@ This makes collection of data to train computer learning models unreliable.
 % \label{sec:busbehavior}
 
 
-% One unique feature of modeling bus behaviour is that 
+% One unique feature of modeling bus behaviour is that
 % they can stop and wait at bus stops along the route
 % while passengers get on and off.
 % The time spent waiting at a stop is known as \emph{dwell time},
@@ -952,23 +964,23 @@ This makes collection of data to train computer learning models unreliable.
 
 
 
-% Other features somewhat unique to bus tracking, 
+% Other features somewhat unique to bus tracking,
 % in contrast to traditional tracking algorithms,
 % is that they follow known paths, at known times of the day \citep{cathey-dailey:2003}.
-% We have departure times, stop locations, 
-% and various other details which we can---and should---make use of 
+% We have departure times, stop locations,
+% and various other details which we can---and should---make use of
 % when formulating our models.
-% An example where route information is used is when multiple buses travel the same 
+% An example where route information is used is when multiple buses travel the same
 % route at various times of the day (known as trips).
 % Several implementations have used this concept in their models.
-% \cite{yu-etal:2011} took this idea further but noticing that some routes would 
+% \cite{yu-etal:2011} took this idea further but noticing that some routes would
 % travel past the same stops at the beginning or end of the route.
-% They proposed a model that used the travel time of between stops based on buses 
-% from multiple different routes, and showed that it improved the accuracy of 
+% They proposed a model that used the travel time of between stops based on buses
+% from multiple different routes, and showed that it improved the accuracy of
 % predictions compared to using just a single route.
 % However, this was limited to routes along a freeway,
 % and only looked at routes using the same stops.
-% There are some situations where buses will travel along the same road ways, 
+% There are some situations where buses will travel along the same road ways,
 % but not necessarily stop at the same stops.
 % These could, however, be useful for predicting arrival times of subsequent buses.
 
@@ -978,24 +990,24 @@ This makes collection of data to train computer learning models unreliable.
 % \label{sec:arrivaltimeprediction}
 
 % So far, we have been focussed on modeling the current state of a vehicle in real-time.
-% The next part involves using this estimated state to predict arrival times 
+% The next part involves using this estimated state to predict arrival times
 % at future stops along the route.
 % Arrival time prediction has been evolving since some of the first \gls{avl}
 % systems were installed in bus fleets.
 % Prediction methods range from schedule deviation \citep{cn},
 % to more complicated prediction functions involving historical data,
-% dwell times, and headway on routes with multiple buses 
+% dwell times, and headway on routes with multiple buses
 % \citep{cn}.
 
 
-% Some of the simpler, early models used either scheduled arrival times, 
-% or else data sets collected over a period of time which were then used to 
+% Some of the simpler, early models used either scheduled arrival times,
+% or else data sets collected over a period of time which were then used to
 % compute average speed or travel times between stops.
 % This was then used to predict future travel and arrival times;
 % however, they were typically only reliable for a few stops ahead \citep{cn}.
-% \cite{cathey-dailey:2003} used more complex predictive models, 
+% \cite{cathey-dailey:2003} used more complex predictive models,
 % which were capable of incorporating historical travel time
-% data---including, for example, weather effects---to predict 
+% data---including, for example, weather effects---to predict
 % future travel and arrival times.
 
 
@@ -1017,15 +1029,15 @@ This makes collection of data to train computer learning models unreliable.
 % They showed that this was more accurate than using just a single route;
 % [however, they used \gls{avl} technologies that recorded actual arrival times,
 % and therefore actual travel times between stops,
-% and it was restricted to routes that used the same sequence of stops 
+% and it was restricted to routes that used the same sequence of stops
 % (at least for part of a route).]
 % \footnote{???}
 
 
-% More recently, \cite{hans-etal:2015} used a \gls{pf} to predict arrival time, 
+% More recently, \cite{hans-etal:2015} used a \gls{pf} to predict arrival time,
 % for which headway was one of their predictors.
 % They also included models for dwell times and traffic signals.
-% A different approach to using historical data was proposed by \cite{chen-rakha:2014}, 
+% A different approach to using historical data was proposed by \cite{chen-rakha:2014},
 % who used historical trip trajectories to replace low-weighted particles.
 % Their results were promising, however only applied to travel times along a freeway,
 % and required several months of data.
@@ -1059,10 +1071,10 @@ primarly through the use of prediction intervals and journey planning applicatio
 Our initial focus will be on producing a particle filter to model the real-time state
 of buses in Auckland,
 with the \gls{avl} data provided via \gls{gtfs} (\cref{sec:data}).
-There will likely be many latent variables in the model, 
+There will likely be many latent variables in the model,
 such as arrival and dwell times at each stop,
 due to the low frequency of observations,
-so the particle filter should allow us to estimate these without 
+so the particle filter should allow us to estimate these without
 succumbing to dimensionality constraints.
 Additionally, it will allow us to develop complex bus behaviour models,
 including the aforementioned dwell times.
@@ -1086,16 +1098,16 @@ and any other patterns we can detect.
 
 \subsubsection*{Real-time Traffic State and Prediction}
 
-Much of the research points out that knowledge of the current state of traffic 
+Much of the research points out that knowledge of the current state of traffic
 is fundamental to making accurate predictions.
 Our goal will be to develop a method for combining the real-time data from
-all buses across Auckland, 
+all buses across Auckland,
 and producing a real-time ``map'' of the traffic conditions along bus routes.
 Unlike other works, such as that by \cite{yu-etal:2010},
 we will not be restricting outselves to pre-defined routes that share common paths.
 
 
-The details are yet unclear, 
+The details are yet unclear,
 however we will be basing it on the state estimates from the particle filters running
 on each bus.
 The hope is that, knowing the general traffic conditions in an area
@@ -1107,13 +1119,13 @@ This will in fact also help us to refine the particle filters' state estimates,
 since we will have more informative prior distributions on speed.
 
 
-Additionally, we will use dwell time models for subsequent stops along a route 
+Additionally, we will use dwell time models for subsequent stops along a route
 to further refine predictions.
 This will range from the simpler models that use historical averages,
 to more complex ones that can include interactions between routes.
-For example, in some areas of Auckland, 
+For example, in some areas of Auckland,
 there are several routes traveling down main roads heading into the city.
-If the headway between two buses is small, 
+If the headway between two buses is small,
 then we could expect dwell times to be small too---there has been less time for
 new passengers to arrive at the stop.
 
@@ -1125,7 +1137,7 @@ new passengers to arrive at the stop.
 Communicating the results of our prediction models is important if they are to be of any use to anyone.
 Unfortunately, the target audience is the general public,
 who we do not assume to have any understand of the technical terms we may be familiar with.
-Therefore we need to make intervals that are both useful, 
+Therefore we need to make intervals that are both useful,
 and meaningful to the passengers using them.
 
 
@@ -1137,10 +1149,10 @@ We intend to make these available as a simple web app.
 
 
 We will also work on a journey planning application,
-in which the all of the information we have is compiled to decide on the best 
+in which the all of the information we have is compiled to decide on the best
 routes for passegners to take.
-Three three main categories for decisions are 
-(i) arrive before a given time, (ii) leave after a certain time, 
+Three three main categories for decisions are
+(i) arrive before a given time, (ii) leave after a certain time,
 and (iii) the fasted trip.
 In all of these, the considerations are to reduce waiting time at the bus stop,
 and in (i) to reduce the time between actual arrival and desired arrival;
@@ -1150,7 +1162,7 @@ or being late.
 
 Another interesting component will be that, as Auckland Transport rolls out the new
 route structure, there will be more transfers required to get to your destination.
-It will therefore be of interest to decide which high-frequency local bus trip to catch 
+It will therefore be of interest to decide which high-frequency local bus trip to catch
 to link up with the lower-frequency bus traveling between areas.
 
 
@@ -1240,15 +1252,15 @@ to link up with the lower-frequency bus traveling between areas.
 
 
 % There are several situations we hope the \gls{pf} will be able to improve on.
-% The first is dwell times, which was mentioned in \cref{sec:busbehavior}, 
-% and was shown in several cases to be necessary in models \citep{cn}, 
+% The first is dwell times, which was mentioned in \cref{sec:busbehavior},
+% and was shown in several cases to be necessary in models \citep{cn},
 % and easily implemented using a \gls{kf} \citep{hans-etal:2015}.
 % Another is reliability at loops:
 % several routes in the \gls{at} network have \emph{loops},
 % in which, given a \gls{gps} coordinate, the bus could either be
 % at the beginning (heading into) the loop, or at the end of (heading out of) a loop.
-% In a \gls{kf} approach, we would need to make a best guess as to which situation 
-% the bus is in; 
+% In a \gls{kf} approach, we would need to make a best guess as to which situation
+% the bus is in;
 % in a \gls{pf}, however, we can just allow some of the particles to be in one state
 % and the rest in the other;
 % in fact, no extra conditions or logic are required.
@@ -1264,13 +1276,13 @@ to link up with the lower-frequency bus traveling between areas.
 
 % Improving bus arrival time prediction is the primary goal of this work.
 % As we will already have a posterior distribution for the current state of
-% each bus, 
+% each bus,
 % we will be able to use this---along with any other information we
 % have available---to predict arrival time.
 
 
 % We will be comparing various methods of prediction:
-% simple state prediction (that is, using only the current state of the 
+% simple state prediction (that is, using only the current state of the
 % bus to predict arrival time),
 % which could act as a ``back up'' if all other methods are unavailable,
 % historical based prediction,
@@ -1281,14 +1293,14 @@ to link up with the lower-frequency bus traveling between areas.
 
 % In the absense of historical data---for example, in a new system or when
 % routes are changed---many models will be unusable until data has been collected.
-% In this case, it's good to have a baseline prediction model that can use 
+% In this case, it's good to have a baseline prediction model that can use
 % only the current state, in combination with shedule information,
 % to predict arrival times.
 % This will be especially useful as the \gls{at} network undergoes
 % extensive modifications over the next several years.
 
 
-% More refined models can be built once data has been obtained, 
+% More refined models can be built once data has been obtained,
 % and then used to make predictions based on what happened previously.
 % ``Historical'' can refer to previous days or weeks,
 % but also to previous \emph{trips} on the same day.
@@ -1331,9 +1343,9 @@ to link up with the lower-frequency bus traveling between areas.
 
 We will be working the \gls{gtfs} real-time data provided through Auckland Transports
 \gls{api}, available from \url{https://dev-portal.at.govt.nz}.
-\gls{gtfs} is a specification developed by Google, 
+\gls{gtfs} is a specification developed by Google,
 and provided as a way for transit organisations to provide transit data to developers
-\citep{gtfs}. 
+\citep{gtfs}.
 It consists of two parts: the static component, which contains scedule information and route shapes,
 and the real-time component, which provides real-time \gls{gps} locations of vehicles,
 as well as other information that may (or may not) be of use,
@@ -1341,7 +1353,7 @@ such as bearing (which only seems to be available for some buses),
 and occupancy status, which is still in the testing stage (at time of writing).
 
 
-The \gls{gtfs} static feed is a set of files, available as a single ZIP archive, 
+The \gls{gtfs} static feed is a set of files, available as a single ZIP archive,
 that contains the latest schedule information, including trips, routes, shapes, stop times,
 and calendar timetables (for public holidays, etc).
 [[ more details ]]
@@ -1416,7 +1428,7 @@ Also, to make these predictions available, we'll need a web server.
 
 % Throughout our work, we will be working will publicly available (via API keys) \gls{gtfs}
 % (-realtime) data.
-% The specification itself is maintained by Google, 
+% The specification itself is maintained by Google,
 % while the feed we will be using is provided by Auckland Transport.
 % This is available at \url{https://dev-portal.at.govt.nz}.
 % \gls{gtfs} consists of two parts:
@@ -1426,11 +1438,11 @@ Also, to make these predictions available, we'll need a web server.
 
 
 % Additionally, we will need to store our own historical records of travel times and other
-% variables for use in our prediction models. 
+% variables for use in our prediction models.
 % This will likely be in a database, although the exact details of this are yet unknown.
 
 
-% Due to the computer intensive nature of our work, 
+% Due to the computer intensive nature of our work,
 % when we come to deploying a full-scale implementation,
 % we will require a dedicated server that can request vehicle positions,
 % run the \gls{pf} algorithm,
@@ -1504,19 +1516,19 @@ Also, to make these predictions available, we'll need a web server.
 % ====================================================================================================== %
 
 \begin{enumerate}
-\item 
+\item
   Implement a Particle Filter on a data set and make predictions that are on par with those currently available.
 
-\item 
+\item
   Investigate ways of using other live and historical data to improve the accuracy of estimates.
 
-\item 
+\item
   Look at different summary statistics for better point-estimates, and look into providing useful prediction intervals.
 
-\item 
+\item
   Implement a large-scale version of the model for a (subset of) the AT PTS, and see how well it runs.
 
-\item 
+\item
   Create a web/phone app to access the predictions.
 
 \item
@@ -1605,12 +1617,12 @@ dd/mm/2014
 25/02/2010
 
 \item
-\textit{Complete STATS 710 and STATS 769 at B+ or higher grade within the first 
+\textit{Complete STATS 710 and STATS 769 at B+ or higher grade within the first
 12~months\footnote{STATS 769 taught second semester, unable to complete within 12~months}
 of registration}
 
 \item
-\textit{Attendance of at least 10~Statistics departmental research seminars per annum, 
+\textit{Attendance of at least 10~Statistics departmental research seminars per annum,
 with forms fully filled in and handed in}:
 see Table~\ref{tab:seminars}
 
@@ -1810,5 +1822,3 @@ We're gunna make people happy.
 
 
 \end{document}
-
-
