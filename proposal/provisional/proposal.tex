@@ -29,6 +29,7 @@
 %\textwidth=450pt
 %\hoffset=-2cm
 
+
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \newcommand{\bu}{\boldsymbol{u}}
@@ -1523,22 +1524,31 @@ although we do not anticipate these to be too demanding.
 
 \begin{enumerate}
 \item
-  Implement a Particle Filter on a data set and make predictions that are on par with those currently available.
+  Implement a \pf{} on a small collection of routes in Auckland and explore predicton methods.
 
 \item
-  Investigate ways of using other live and historical data to improve the accuracy of estimates.
+  Use travel times of recent trips to predict arrival times,
+  and compare this to using solely historical data, as well as a combination of both.
+
+\item 
+  Find a collection of routes using the same paths and explore methods of using the speed information,
+  without requiring manual specification.
 
 \item
-  Look at different summary statistics for better point-estimates, and look into providing useful prediction intervals.
+  Compare different summary statistics and prediction intervals;
+  use ``simulations'' to determine actual versus predicted wait times.
 
 \item
-  Implement a large-scale version of the model for a (subset of) the AT PTS, and see how well it runs.
+  Use a large collection of routes to implement the model, and assess the performance of the model. 
+  If necessary, explore methods of optimisation.
 
 \item
-  Create a web/phone app to access the predictions.
-
+  Make a simple web application that allows users to easily get arrival time predictions for their bus.
+  
 \item
-  Package the system so that it is distributable to other feeds to remove its dependency on us.
+  Package the system so that it is distributable to other \gls{gtfs} feeds,
+  and so that it is not dependent on us.
+
 \end{enumerate}
 
 
@@ -1762,16 +1772,16 @@ Matrix analytic methods for analysing stochastic fluid models \\
 % what's new.
 
 
+The estimation of future arrival times is a difficult task,
+especially when we are unable to directly measure many of the 
+variables that contribute to delays in the system.
+We anticipate that the use of a \pf{} as a real-time model will
+help us to overcome many of the major sources of error in the system.
+Further, by combining the estimated states of all buses,
+we hope to get a real-time picture of the state of traffic along bus routes,
+allowing us the make more accurate---and precise---predictions.
 
-We're gunna make people happy.
-
-
-
-
-
-
-
-
+[[ more? less? ]]
 
 
 
