@@ -94,7 +94,6 @@ Supervisor: Professor~T.~Lumley
 % Department.}
 
 
-
 \begin{center}
 \today
 \end{center}
@@ -1060,7 +1059,7 @@ This makes collection of data to train computer learning models unreliable.
 The primary goal of our work will be to develop a more robust modelling
 and prediction framework to make improved predictions of bus arrival time.
 The key components of this will be a particle filter for the state estimation,
-and a real-time traffic state ``map'' based on states of all over buses in Auckland
+and a real-time traffic state ``map'' based on states of all buses in Auckland
 to improve prediction accuracy.
 We will then investigate methods of making our predictions available to commuters,
 primarly through the use of prediction intervals and journey planning applications.
@@ -1082,51 +1081,57 @@ including the aforementioned dwell times.
 
 In the particle filter model,
 each particle can be treated as an independent object with its own state.
-This state includes not only distance into trip and velocity (speed),
-but also arrival times and dwell times at stops along the route,
-yielding distributions at each stop which we can then
-use as prior distributions for subsequence trips.
-It is our hope that, over a course of a week,
-we can build up distributions of dwell times for bus stops,
+Along with distance into trip and velocity (speed),
+the state includes arrival times and dwell times at stops along the route,
+yielding distributions at each stop which can then be used
+as prior distributions for subsequent trips.
+Over the course of a week, 
+we can build up approximate distributions of dwell times for bus stops,
 which we can then model based on time of day, day of the week,
 and any other patterns we can detect.
 
 
-[[ something else ]]
+We hope that the use of a \pf{} will help to overcome some of the issues
+evident in the current system---most prominently behaviour as loops---%
+without too much additional effort.
+On the downside, the \pf{} is significantly more demanding with respect to processing, 
+so any models we do create will need to be computationally efficient
+so they can process the real-time data of up to 1000~buses simultaneously.
 
 
 
 \subsubsection*{Real-time Traffic State and Prediction}
 
 Much of the research points out that knowledge of the current state of traffic
-is fundamental to making accurate predictions.
-Our goal will be to develop a method for combining the real-time data from
-all buses across Auckland,
-and producing a real-time ``map'' of the traffic conditions along bus routes.
-Unlike other works, such as that by \cite{yu-etal:2010},
-we will not be restricting outselves to pre-defined routes that share common paths.
+is fundamental to making accurate predictions \citep{cn}.
+We aim to develop a method of combining the real-time data from
+all buses across Auckland
+to produce a real-time ``map'' of the traffic conditions along bus routes.
+Unlike previous examples,
+we will not be restricting this to pre-defined routes that share common paths
+\citep{yu-etal:2010}.
 
 
-The details are yet unclear,
-however we will be basing it on the state estimates from the particle filters running
-on each bus.
-The hope is that, knowing the general traffic conditions in an area
-will help to refine predictions.
-This will be particularly useful during times of extreme congestion,
-in which many road ways will be slower than usual,
-even if the routes do not overlap.
-This will in fact also help us to refine the particle filters' state estimates,
-since we will have more informative prior distributions on speed.
+We will be using the state estimates from the \pf{} running on each active bus to infer
+the general traffic conditions in the area.
+This will be particularly useful duirng times of extreme or unusual congestion,
+in which many road ways are likely to be affected,
+even if routes do not overlap.
+In turn, the information will also help to refine the estimates of speed in the \pf{}s,
+improving their accuracy,
+and improving decisions in some situations,
+such as when a bus could either travel fast and arrive early, 
+or travel slow and arrive late.
 
 
-Additionally, we will use dwell time models for subsequent stops along a route
+Additionally, we intend to develop dwell time models for subsequent stops along a route
 to further refine predictions.
 This will range from the simpler models that use historical averages,
 to more complex ones that can include interactions between routes.
 For example, in some areas of Auckland,
 there are several routes traveling down main roads heading into the city.
 If the headway between two buses is small,
-then we could expect dwell times to be small too---there has been less time for
+then we could expect dwell times to be small too, since there has been less time for
 new passengers to arrive at the stop.
 
 
@@ -1135,22 +1140,26 @@ new passengers to arrive at the stop.
 \subsubsection*{Prediction Intervals and Journey Planning}
 
 Communicating the results of our prediction models is important if they are to be of any use to anyone.
-Unfortunately, the target audience is the general public,
-who we do not assume to have any understand of the technical terms we may be familiar with.
-Therefore we need to make intervals that are both useful,
-and meaningful to the passengers using them.
+To makes things more interesting, the target audience is the general public,
+who we do not assume to have any understanding of the technical terms we may be familiar with.
+Therefore we need to provide intervals that are meaningful to the passengers using them.
 
 
 Since we will be using the particle filter to generate a prediction distribution,
-obtaining intervals is as straightforward as in any other \gls{mcmc} application
-by simply getting the quantiles.
-We intend to make these available as a simple web app.
-[[ something about intervals usefullness --- unknown ]]
+obtaining intervals is as straightforward as in any other \gls{mcmc} application.
+Therefore, we only need to focus on the quantiles uses to obtain a prediction interval.
+These need to be small, 
+but biased since, for a passenger, 
+arriving early to a bus stop is favourable to arriving late and missing the bus altogether.
+We intend to make the predictions available as a simple web app,
+ideally using users' GPS locations to find nearby stops and displaying the \glspl{eta} of 
+scheduled buses,
+optionally restricting this to desired routes or destinations.
 
 
-We will also work on a journey planning application,
-in which the all of the information we have is compiled to decide on the best
-routes for passegners to take.
+A journey planning application will also be explored,
+in which all of the information we have is compiled to assist passengers
+in deciding on which bus to catch.
 Three three main categories for decisions are
 (i) arrive before a given time, (ii) leave after a certain time,
 and (iii) the fasted trip.
@@ -1158,14 +1167,16 @@ In all of these, the considerations are to reduce waiting time at the bus stop,
 and in (i) to reduce the time between actual arrival and desired arrival;
 of course, we need to account for uncertainty and minimise the probability of missing a bus
 or being late.
+Since Auckland Transport will be simplying fare structures so that they are not dependent 
+on the route taken to get to your destination,
+a ``lowest cost'' option that is available in some journey applications is redundant.
 
 
-Another interesting component will be that, as Auckland Transport rolls out the new
-route structure, there will be more transfers required to get to your destination.
-It will therefore be of interest to decide which high-frequency local bus trip to catch
-to link up with the lower-frequency bus traveling between areas.
-
-
+Over the coming years, Auckland Transport will be rolling out their new route structure,
+which involve high-frequency local routes, 
+with lower-frequency routes to connect the local ones.
+As this happens, the journey planning application of our models will become more important,
+since it will be of interest to passengers to minimise time waiting between transfers as well.
 
 
 
@@ -1341,32 +1352,40 @@ to link up with the lower-frequency bus traveling between areas.
 \section{Data and Special Needs}
 \label{sec:data}
 
-We will be working the \gls{gtfs} real-time data provided through Auckland Transports
+We will be working with the \gls{gtfs} real-time data provided through Auckland Transports
 \gls{api}, available from \url{https://dev-portal.at.govt.nz}.
 \gls{gtfs} is a specification developed by Google,
 and provided as a way for transit organisations to provide transit data to developers
 \citep{gtfs}.
-It consists of two parts: the static component, which contains scedule information and route shapes,
+It consists of two parts: the static component, which contains schedule information and route shapes,
 and the real-time component, which provides real-time \gls{gps} locations of vehicles,
 as well as other information that may (or may not) be of use,
 such as bearing (which only seems to be available for some buses),
-and occupancy status, which is still in the testing stage (at time of writing).
+and occupancy status (which was still in the testing stage at time of writing).
 
 
 The \gls{gtfs} static feed is a set of files, available as a single ZIP archive,
 that contains the latest schedule information, including trips, routes, shapes, stop times,
 and calendar timetables (for public holidays, etc).
-[[ more details ]]
+A ``trip'' is a single journey at a specific time of day,
+with a set of stops with associated arrival and departure times.
+A ``route'' is a specified sequence of stops,
+and can have multiple trips per day.
+Each route has a ``shape'', which is a sequence of latitute and longitude coordinates.
+Other information, such as calendars, allow us to know ahead of time which trips
+are (and are not) scheduled on a particular day.
 
 
 The \gls{gtfs} real-time feed consists of \gls{gps} locations,
 which are updated usually every 30~seconds.
 Therefore, we need to re-run all of our computations and update predictions approximately
 every 30~seconds, which means we will require the computational power to do so.
-Since it is a real-time application, we will need a dedicated machine capable of
-retrieving the data, analysing it, and making predictions.
-Also, to make these predictions available, we'll need a web server.
-[[ more details ]]
+We will need a dedicated machine capable of
+retrieving the data, analysing it, and making predictions,
+as well as a web server to make these predictions available to passengers.
+The exact requirements will depended on the demands of the state and prediction models,
+although we do not anticipate these to be too demanding.
+
 
 % ====================================================================================================== % INFO
 
