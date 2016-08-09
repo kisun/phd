@@ -66,9 +66,41 @@
 \newcommand{\pf}{particle filter}
 
 
+\usepackage{tikz}
 
+%\definecolor{mDarkBrown}{HTML}{604c38}
+%\definecolor{mDarkTeal}{HTML}{23373b}
+%\definecolor{mLightBrown}{HTML}{EB811B}
+%\definecolor{mLightGreen}{HTML}{14B03D}
+% \definecolor{mDarkBrown}{HTML}{8A7B71}
+% \definecolor{mDarkTeal}{HTML}{EFECE1}
+% \definecolor{mLightBrown}{HTML}{DCB190}
+% \definecolor{mLightGreen}{HTML}{B8D38C}
+\definecolor{mDarkBrown}{HTML}{FFFFFF}
+\definecolor{mDarkTeal}{HTML}{FFFFFF}
+\definecolor{mLightBrown}{HTML}{FFFFFF}
+\definecolor{mLightGreen}{HTML}{FFFFFF}
+
+\usetikzlibrary{shapes.geometric, arrows}
+\tikzset{font=\scriptsize}
+\tikzstyle{startstop} = [rectangle, rounded corners, minimum width=2.7cm,%
+minimum height=0.6cm, text centered, draw=black, fill=mLightBrown!50]
+\tikzstyle{compute} = [rectangle, minimum width = 2.7cm, minimum height = 0.7cm,%
+text centered, draw=black, fill=mLightGreen!40]
+\tikzstyle{logic} = [diamond, minimum width = 1.2cm,%
+text centered, draw=black, fill=mDarkTeal]
+\tikzstyle{data} = [circle, minimum width=0.5cm,text centered,%
+draw=black,fill=white]
+\tikzstyle{arrow} = [thick,->,>=stealth]
+\tikzstyle{line} = [thick]
+
+
+
+
+\usepackage{varioref}
 \usepackage[hidelinks]{hyperref}
-\usepackage{cleveref}
+\usepackage[noabbrev]{cleveref}
+
 
 
 \begin{document}
@@ -105,11 +137,26 @@ one year of provisional PhD registration.
 Confirmed PhD registration is now sought.
 
 
+\vspace{2em}
+\noindent
+The primary goal of our work is to develop a more robust modelling
+and prediction framework to make improved predictions of bus arrival time.
+The key components of this will be a particle filter for the state estimation,
+and a real-time traffic state ``map'' based on the combined states of all buses in Auckland
+to improve prediction accuracy.
+We will also investigate the use of prediction intervals and journey planning applications
+to make our predictions accessible to commuters.
+%We will then investigate methods of making our predictions available to commuters,
+%primarily through prediction intervals and journey planning applications.
+
 
 
 % ----------------------------------------------------------------------
 \section{Introduction}
 \label{sec:intro}
+
+
+
 
 In order to attract greater ridership, many public transport agencies have deployed \glspl{atis}
 to make public transport a more appealing option for commutes.
@@ -153,20 +200,22 @@ and is used by Auckland Transport.
 
 Over the years, many statistical models have been implemented using a variety of \gls{avl} technologies
 targeting a range of different applications.
-Early works, such as those of \cite{cn}, \cite{wall-dailey:1999} and \cite{dailey:2001},
+Early works, such as those of \cite{wall-dailey:1999} and \cite{dailey:2001},
 used the \kf{}, which is ideal for real-time tracking and navigation applications,
 due to its speed and low computational requirements.
 Other research has focused on data-driven and machine-learning models,
 most notably \gls{ann} and \gls{svm},
 which were found to provide more accurate predictions for stops further ahead
 than the \kf{}, which was only able to accurately predict a few stops ahead
-\citep{cn}.
+\citep{chang-etal:2010}.
 
 
-Recently, the \pf{} has been used in transit applications \citep{cn,chen-rakha:2014,hans-etal:2015}.
+Recently, the \pf{} has been used in several transit operations research applications
+\citep{chen-rakha:2014,hans-etal:2015}.
 The key benefits of the \pf{} are that it allows a more explicit specification of the model
-and makes far fewer assumptions than the \kf{},
-giving it the potential to overcome many of the problems affecting other transit models,
+that requires far fewer assumptions than the \kf{},
+allowing it to sample a more complete range of plausible states and
+overcome many of the problems affecting other transit models,
 at the cost of heavier computational demands.
 
 
@@ -176,7 +225,7 @@ which typically presents as sudden changes in \glspl{eta}.
 The underlying model estimating the actual position of transit vehicles needs improvement,
 the inadequacies evident at loops, in which, given a coordinate,
 a bus could be either heading into or out of the loop,
-as shown in \cref{fig:colwill-loop}.
+as shown in \vref{fig:colwill-loop}.
 In this case, the first instance (left) is teh result of a poorly modeled vehicle position;
 leave the passenger to believe that they have missed their bus.
 Another problem is driver error, 
@@ -184,7 +233,7 @@ for example when entering the wrong route number or forgetting altogether,
 which has obvious implications to models that rely on this information.
 
 
-\begin{figure}[!b]
+\begin{figure}[bt]
   \centering
   \begin{subfigure}{0.4\textwidth}
     \includegraphics[width=\textwidth,trim={0 0 0 15cm},clip]{bus-loop-durp1.jpg}
@@ -215,7 +264,6 @@ that can accurately model buses in Auckland,
 while overcoming the issues mentioned above.
 We will explore ways of incorporating the real-time state of other buses in Auckland
 to provide traffic congestion information and increase the accuracy and precision of predictions.
-\footnote{not clear}
 Lastly, we will investigate several applications of our prediction model:
 the first will be to provide useful prediction intervals to passengers
 (who we assume to have no statistical knowledge),
@@ -406,9 +454,7 @@ This makes it a computationally efficient algorithm,
 and is therefore suited to modeling data in real-time.
 
 
-The \kf{} has been used in several bus prediction applications
-\citep{cn,dailey:2001,cathey-dailey:2003}.
-\cite{dailey:2001} used \gls{avl} data obtained by signposts and odometers,
+\cite{dailey:2001} formulated a \kf{} model using \gls{avl} data obtained by signposts and odometers,
 which provided observations of distance traveled and time.
 To avoid confusion, we will use $\mat{Z}$ for observations of \emph{distance},
 that is $\mat{Z}_k = \left[ \bar d_k\ t_k \right]^T$,
@@ -416,14 +462,14 @@ and let $\bY$ represent measurements from a \gls{gps} that we will use later.
 The true state was composed of distance into trip, speed, and the travel time
 remaining to reach a given stop,
 $\bX_k = \left[ d_k\ v_k\ \bar t_k \right]^T$.
-Thus, assuming the odomoter is reset at the beginning of the trip,
+Thus, assuming the odomoter is reset at the beginning of each trip,
 the measurement matrix was simply $\mat{H} = \left[ 1\ 0\ 0 \right]$.
 They used historical data to construct the
-transition matrix at each step, and thus obtain a posterior
-estimate of the state, which included time until arrival.
+transition matrix at each step, and thus obtained a posterior
+estimate of the new state, including time until arrival.
 
 
-Unfortunately, the model implemented by \cite{dailey:2001} was not applicable
+Unfortunately, the model implemented by \cite{dailey:2001} was not directly applicable
 when the observations come from a \gls{gps}.
 To overcome this, \cite{cathey-dailey:2003} proposed a general prescription
 for making arrival time predictions from \gls{gps} data.
@@ -441,7 +487,7 @@ and the full prescription demonstrated in Seattle and Orlando.
 The model used by \cite{cathey-dailey:2003} needed to first
 estimate $\mat{Z}_k$ from the observations,
 which inevitably introduces an additional source of error.
-As shown in \cref{fig:colwill-loop}, when this is incorrectly estimated,
+As shown in \vref{fig:colwill-loop}, when this is incorrectly estimated,
 the model can become invalid.
 Another related issue is that the \kf{} assumes multivariate normality
 in all states, so in the situation displayed in \cref{fig:colwill-loop},
@@ -505,15 +551,34 @@ Instead of modeling the entire state,
 the \pf{}, originally proposed by \cite{gordon-etal:1993},
 uses a \emph{sample of particles} from the distribution,
 each with its own state $\bX_k^{(i)}$.
-In the predict step, instead of a transition matrix,
-each particle is fed independently into a transition \emph{function},
+
+
+In the predict step,
+each particle is fed independently into a transition \emph{function}, $f$,
 which can be as simple or detailed as necessary,
-allowing the inclusion of any necessary features.
+allowing the inclusion of process noise, $\sigma_v^2$,
+as well as any other parameters for the necessary features (for example,
+distributions of dwell times):
+\begin{equation}
+  \label{eq:particle_transition}
+  \bX_k^{(i)} = f(\bX_{k-1}^{(i)}, \sigma_v^2, \cdots).
+\end{equation}
 Since each particle is modeled independently,
 there is no assumption made about the shape of the state distribution.
-In the update step, the particles are weighted according to their likelihood
-and resampled with replacement (\gls{sir}) to obtain a
-sample from the posterior distribution \citep{gordon-etal:1993}.
+In contrast, the \kf{} assumes a unimodel, multivariate normal state distribution.
+
+
+In the update step, each particle is assigned a weight, $w_i$, according to its likelihood
+(which depends only on the observations and measurement error, $\sigma_y^2$):
+\begin{equation}
+  \label{eq:particle_weights}
+  w_i = \frac{p(\bX_k^{(i)} | \bY_k, \sigma_y^2)}{\sum_{j=1}^M p(\bX_k^{(j)} | \bY_k \sigma_y^2)}.
+\end{equation}
+The particles are then resampled with replacement according to their weights,
+as in \gls{sir},
+to obtain a sample from the posterior distribution \citep{gordon-etal:1993}.
+Variations of (\ref{eq:particle_weights}) exist to increase the efficiency of the \pf{},
+which we will investigate when we begin large-scale implementations of our model.
 
 
 The likelihood for each particle is based on the distance between the particle
@@ -582,7 +647,7 @@ This is shown visually in \cref{fig:dwell-time},
 which shows the hypothetical paths of two vehicles, one of which stops while the other does not.
 Therefore, there are two components to consider:
 whether the bus stops, and if so, for how long.
-The former can be expressed as a Bernoulli random variable, $p_j \sim \mathrm{Bern}(\pi_j)$;
+The former can be expressed as a Bernoulli random variable, $p_j \sim \mathcal{B}(\pi_j)$;
 how $\pi_j$ is modeled depends on the data available and the framework being used.
 
 
@@ -640,8 +705,8 @@ Another issue specifically with Auckland Tranport is that,
 over the next few years,
 the route structure is being completely redesigned
 and rolled out slowly across the city.
-Therefore, focus will be on using real-time data to predict arrival times,
-rather than relying on historical data.
+Therefore, focus will be on using real-time and recent data to predict arrival times,
+rather than relying on historical data collected over months or years.
 
 
 
@@ -1067,8 +1132,65 @@ Additionally, it will allow us to develop complex bus behaviour models,
 including the aforementioned dwell times.
 
 
+An example of the logic inside one of our preliminary transition function is demonstrated in \cref{fig:pf_logic}.
+In the diagram, ``move forward'' can correspond to whichever transition is desired,
+for example Newton's Law's of Motion,
+but could also be based on real-time traffic conditions if these are available.
+``Pass stop?'' checks whether or not a particle passes a stop during its ``move forward'' phase;
+``Time left?'' box checks checks whether or not there will be any time remaining after the particle
+has dwelled at the stop, 
+i.e., if arrival time is $T_j$, then there is time remaining if $T_j + \tau_j < t_k$.
+This is especially important when there is a higher density of stops,
+for example along main roads,
+or when there is an unusually long time between observations.
+
+
+\begin{figure}[b!]
+  \centering
+  \begin{tikzpicture}[node distance=1.4cm]
+    \node (start) [startstop] {Previous state, $\bX_{k-1}$};
+    \node (move) [compute, below of=start,align=center] {Add noise, $\sigma_v$\\ Move forward};
+    \node (stateEst) [startstop, below of=move] {Estimated state, $\tilde\bX_k$};
+    \node (resample) [compute, below of=stateEst,align=center] %
+    {Compute likelihood, $\sigma_y$\\Weighted resample};
+    \node (end) [startstop, below of=resample] {Final state, $\bX_k$};
+
+    \node (data) [data, right of=resample, xshift=1cm] {$\bY_k$};
+
+    \node (passStop) [logic, right of=move, xshift=1.6cm] {\tiny Pass stop?};
+    \node (arrival) [compute, right of=passStop, xshift=1.5cm, align=center]%
+      {Record arrival time\\ Sample $p_j \sim \mathcal{B}(\pi_j)$\\%
+      Sample $\tau_j' \sim \mathcal{E}(\mu_\tau)$\\$\tau_j = p_j(\gamma + \tau_j)$};
+    \node (remaining) [logic, right of=arrival, xshift=1.5cm] {\tiny Time left?};
+    \node (moveForward) [compute, above of=arrival, align=center]%
+      {Record departure time\\Move forward};
+    \node (stopped) [compute, below of=arrival] {Position at stop};
+    
+    \draw [arrow] (start) -- (move);
+    \draw [arrow] (stateEst) -- (resample);
+    \draw [arrow] (data) -- (resample);
+    \draw [arrow] (resample) -- (end);
+    %\draw [arrow] (move) -- (stateEst);
+    \draw [arrow] (move) -- (passStop);
+
+    \draw [arrow] (passStop) -- node[anchor=south] {yes} (arrival);
+    \draw [arrow] (arrival) -- (remaining);
+    \draw [arrow] (remaining) |- node[anchor=west] {yes} (moveForward);
+    \draw [arrow] (moveForward) -| (passStop);
+    \draw [arrow] (remaining) |- node[anchor=west] {no} (stopped);
+    \draw [arrow] (stopped) -- coordinate[midway] (toEst) (stateEst);
+    \draw [line] (passStop) -- node[anchor=west] {no} (toEst);
+  \end{tikzpicture}
+  \caption{Diagram showing the logic included in the transition function (\vref{eq:particle_transition}) 
+    for the proposed particle filter model, 
+    using dwell time parameters defined in \cref{sec:bus-behaviour}.
+    Actual dwell time is computed as the difference between departure and arrival times.
+    $\mathcal{B}$ and $\mathcal{E}$ are the Bernoulli and Exponential distributions respectively.}
+  \label{fig:pf_logic}
+\end{figure}
+
 In the particle filter model,
-each particle can be treated as an independent object with its own state.
+each particle is treated as an independent object with its own state.
 Along with distance into trip and velocity (speed),
 the state includes arrival times and dwell times at stops along the route,
 yielding distributions at each stop which can then be used
@@ -1617,7 +1739,7 @@ satisfaction of the main supervisor}: Here?
 \item
 \textit{Presentation of the proposal and/or work in progress to an appropriate forum e.g.\ seminar,
 research group, conference, to the satisfaction of the supervisors}:
-YYYY-MM-DD.
+2016-08-17
 
 \item
 \textit{Attendance at one of the Doctoral Skills Programme
@@ -1626,7 +1748,7 @@ Induction Days}:
 
 \item
 \textit{Successful completion of the Academic Integrity Module}:
-dd/mm/2014
+completed with MSc, 2014
 
 \item
 \textit{Undertake Diagnostic English Language Needs Assessment (DELNA) online screening}:
@@ -1634,8 +1756,7 @@ dd/mm/2014
 
 \item
 \textit{Complete STATS 710 and STATS 769 at B+ or higher grade within the first
-12~months\footnote{STATS 769 taught second semester, unable to complete within 12~months}
-of registration}
+12~months of registration}
 
 \item
 \textit{Attendance of at least 10~Statistics departmental research seminars per annum,
@@ -1786,7 +1907,7 @@ allowing us the make more accurate---and precise---predictions.
 
 
 % ----------------------------------------------------------------------
-\section*{Appendix~A}
+% \section*{Appendix~A}
 
 % Delete or replace the contents of this section with any
 % appendices you may have.
