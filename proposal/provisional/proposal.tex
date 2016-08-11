@@ -226,7 +226,7 @@ particularly in how it handles loops, in which, given a coordinate,
 a bus could be either heading into or out of the loop,
 as shown in \vref{fig:colwill-loop}.
 In this case, the first instance (left) is the result of a poorly modeled vehicle position,
-allowing the passenger to believe that they have missed their bus.
+leading the passenger to believe that they have missed their bus.
 Another problem is driver error, 
 for example when entering the wrong route number or forgetting altogether,
 which has obvious implications to models that rely on this information---%
@@ -264,7 +264,7 @@ Our primary goal is to implement a \pf{} to the \gls{avl} data provided by Auckl
 that can accurately model buses in Auckland,
 while overcoming the issues mentioned above.
 We will next explore ways of combining the real-time state of other buses in Auckland
-to provide ``real-time''traffic congestion information 
+to provide ``real-time'' traffic congestion information 
 and increase the accuracy and precision of predictions.
 Lastly, we will investigate several applications of our prediction model:
 to provide useful prediction intervals to passengers
@@ -419,7 +419,7 @@ focusing on the transit-specific features that were incorporated into them.
 \label{sec:kalman-filter}
 
 Given the real-time nature of the data, and the necessity for computations to be efficient,
-Bayesian recursive filters are an obvious choice of model.
+recursive Bayesian filters are an obvious choice of model.
 One popular filter that has been used in tracking and navigation,
 as well as several bus-prediction applications,
 is the \kf{} \citep{wall-dailey:1999,dailey:2001,shalaby-farhan:2004}.
@@ -428,12 +428,12 @@ it assumes that there is an underlying, unmeasurable \emph{Markov process}
 which has a state at time $k$ denoted $\bX_k$,
 and an observable, dependent state for which we can obtain measurements $\bY_k$
 \citep{jazwinski:1970}.
-\emph{measurement matrix}, $\mat{H}$,
+A \emph{measurement matrix}, $\mat{H}$,
 or more generally a measurement function $h$,
 describes the relationship between $\bX$ and $\bY$.
 
 
-Modeling real-time data with any Bayesian recursive filter involves two steps:
+Modeling real-time data with any recursive Bayesian filter involves two steps:
 \emph{predict} and \emph{update}.
 In the predict step of the \kf{},
 the Markov process is modeled using a \emph{transition matrix} $\mat{A}$
@@ -539,7 +539,7 @@ of the preceding bus as one of the variables used to predict arrival time.
 In many situations, such as in urban areas,
 several routes may converge and use the same set of bus stops,
 in which case it would be useful to use the most recent bus from \emph{any} route.
-\cite{yu-etal:2011} implemented a \kf{}, \gls{knn}, \gls{ann}, and \gls{svm} models that did just that,
+\cite{yu-etal:2011} implemented \kf{}, \gls{knn}, \gls{ann}, and \gls{svm} models that did just that,
 of which the latter was found to provide the best results.
 However, their data was based on automatic toll readers on the highway,
 rather than \gls{avl},
@@ -554,7 +554,7 @@ Recently, there has been some use of a \pf{} in transit applications,
 which is another Bayesian recursive filter similar to the \kf{},
 but with fewer assumptions and more flexibility.
 Instead of modeling the entire state,
-the \pf{}, originally proposed by \cite{gordon-etal:1993},
+the \pf{}, originally named the ``bootstrap filter'' by  \cite{gordon-etal:1993},
 uses a \emph{sample of particles} from the distribution,
 each with its own state $\bX_k^{(i)}$.
 
@@ -577,13 +577,13 @@ In the update step, each particle is assigned a weight, $w_i$, according to its 
 (which depends only on the observations and measurement error, $\sigma_y^2$):
 \begin{equation}
   \label{eq:particle_weights}
-  w_i = \frac{p(\bX_k^{(i)} | \bY_k, \sigma_y^2)}{\sum_{j=1}^M p(\bX_k^{(j)} | \bY_k \sigma_y^2)}.
+  w_i = \frac{p(\bX_k^{(i)} | \bY_k, \sigma_y^2)}{\sum_{j=1}^M p(\bX_k^{(j)} | \bY_k, \sigma_y^2)}.
 \end{equation}
 The particles are then resampled with replacement according to their weights,
 as in \gls{sir},
 to obtain a sample from the posterior distribution \citep{gordon-etal:1993}.
 Variations of (\ref{eq:particle_weights}) exist to increase the efficiency of the \pf{},
-which we will likely need to consider when we being
+which we will likely need to consider when we begin
 large-scale implementations of our model.
 
 
@@ -598,7 +598,7 @@ The intermediate estimation of $\mat{Z}$ is no longer required,
 which can help in overcoming situations where there are multiple plausible states:
 in the loop example from earlier, some of the particles can be in one state
 (heading into the loop, travelling slower), 
-which the rest are in the other (heading out of the loop, travelling faster);
+while the rest are in the other (heading out of the loop, travelling faster);
 the posterior sample will be multimodal until a new observation is obtained to 
 determine which state was true.
 
@@ -907,13 +907,13 @@ displaying the \glspl{eta} of scheduled buses at a chosen stop.
 A journey planning application will also be explored,
 in which all of the information we have is compiled to assist passengers
 in deciding on which bus to catch.
-Three three main categories for decisions are
+The three main categories for decisions are
 (i) arrive before a given time, (ii) leave after a certain time,
 and (iii) the fastest trip.
 In all of these, the considerations are to reduce waiting time at the bus stop,
 and in (i) to reduce the time between actual arrival and desired arrival;
 of course, we need to account for uncertainty and minimise the probability of missing a bus
-or being late in (iii).
+or being late in (i).
 Since Auckland Transport will be simplifying fare structures so that they are not dependent 
 on the route taken to get to your destination,
 a ``lowest cost'' option that is available in some journey applications is redundant.
@@ -998,7 +998,7 @@ the real-time \gls{gps} locations of vehicles.
 
 The \gls{gtfs} static feed is a set of files, available as a single ZIP archive,
 that contains the latest schedule information, including trips, routes, shapes, stop times,
-and calendar timetables (for public holidays, etc).
+and calendar timetables.
 A ``trip'' is a single journey at a specific time of day,
 with a set of stops and the associated arrival and departure times at them.
 A ``route'' is a specified sequence of stops,
@@ -1228,11 +1228,11 @@ All EoI provisional goals:
 \item
 \textit{Approval of the full thesis proposal by the appropriate departmental/faculty postgraduate
 committee}:
-Here it is!
+In progress
 
 \item
 \textit{A substantial piece of written work, such as a literature review, completed to the
-satisfaction of the main supervisor}: Here?
+satisfaction of the main supervisor}: Section~2
 
 
 \item
@@ -1444,7 +1444,7 @@ which can then be made available to passengers.
 
 
 
-
+\vfill\pagebreak
 \addcontentsline{toc}{section}{References}
 \bibliographystyle{./elsart-harv} % elsart-harv,plain,unsrt,alpha
 \bibliography{./myrefs}
