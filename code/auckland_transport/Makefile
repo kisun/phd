@@ -44,6 +44,4 @@ getLatestOld:
 getLatest:
 		@echo Getting latest vehicle locations ... cancel with CTRL + C
 		@echo
-		bin/gtfsrdb/gtfsrdb.py -t https://api.at.govt.nz/v2/public/realtime/tripupdates -p https://api.at.govt.nz/v2/public/realtime --accept="application/x-protobuf" --key="$(shell cat apikey.txt)" -d sqlite:///db/gtfs-realtime.db -c -o  -w 10
-
-#--data-ascii "{body}"
+		bin/gtfsrdb/gtfsrdb.py -p https://api.at.govt.nz/v2/public/realtime --accept="application/x-protobuf" --key="$(shell cat apikey.txt)" -d sqlite:///db/gtfs-realtime.db -c -o -w 30
