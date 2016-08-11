@@ -180,11 +180,11 @@ st <- c(0, 1, 2, 5, 6, 6, 9, 10)
 
 pl <- function(file=NULL) {
     if (!is.null(file))
-	png(file, width = 600, height = 300, bg = "transparent")
+	pdf(gsub("png", "pdf", file), width = 8, height = 4)
     par(mar = c(2.1, 2.1, 2.1, 2.1))
     plot(st, sx, xaxt = "n", yaxt = "n", xlab = "", ylab = "", xaxs = "i", yaxs = "i",
          pch = 19, xlim = c(0, 12), ylim = c(0, 110))
-    title(xlab = "Time", ylab = "Distance into Trip", line = 1)
+    title(xlab = "Scheduled Arrival Time", ylab = "Distance into Trip", line = 1)
     lines(c(st, 12), c(sx, 120), lty = 3)
     abline(h = max(sx), lty = 2, col = "#666666")
 }
@@ -211,8 +211,10 @@ dev.off()
 ## fig 4:
 pl("figs/pred-sched-frame4.png")
 lines(c(0, Xt), c(X, X), lty = 2, col = "#990000")
-arrows(Xt, X + 1, y1 = max(sx) - 1, length = 0.1, code = 3, lwd = 2, col = "#000099")
-text(Xt, X + (max(sx) - X) / 2, "Scheduled Travel Time", pos = 2, cex = 0.8)
+lines(c(Xt, Xt), c(0, X), lty = 3, col = "#444444")
+lines(c(max(st), max(st)), c(0, max(sx)), lty = 3, col = "#444444")
+arrows(Xt + 0.05, X - 10, x1 = max(st) - 0.05, length = 0.1, code = 3, lwd = 2, col = "#000099")
+text(Xt + (max(st) - Xt) / 2, X - 10, "Scheduled Travel Time", cex = 0.8, pos = 3)
 dev.off()
 
 
@@ -236,3 +238,38 @@ dev.off()
 
 
 
+### ALL BUSES
+key <- scan("../../code/auckland_transport/apikey.txt", what=character())
+system(sprintf('curl -v -X GET "https://api.at.govt.nz/v2/public/realtime" -H "Ocp-Apim-Subscription-Key: %s" > realtime.json', key))
+
+library(jsonlite)
+rt <- fromJSON(readLines("realtime.json"))
+
+pos <- rt$response$entity$vehicle
+pos <- pos[!is.na(pos$position$latitude), ]
+library(iNZightMaps)
+mobj <- iNZightMap(~latitude, ~longitude, data = pos$position, name = "Auckland Bus Locations")
+
+pdf("figs/allbuses.pdf", width = 8, height = 5)
+plot(mobj, pch = 19, cex.pt = 0.2, col.pt = "#333333",
+     main = paste0(as.POSIXct(rt$response$header$timestamp, origin = "1970-01-01"),
+                  ", N = ", nrow(pos)))
+dev.off()
+
+lat <- "-36.857595"
+lon <- "174.764315"
+dist <- 20
+system(sprintf('curl -v -X GET "https://api.at.govt.nz/v2/gtfs/routes/geosearch?lat=%s&lng=%s&distance=%s" -H "Ocp-Apim-Subscription-Key: %s" > realtime-symonds.json', lat, lon, dist, key))
+
+symonds <- fromJSON(readLines("realtime-symonds.json"))
+routeids <- unique(symonds$response$route_id)
+
+pos.sym <- pos[pos$trip$route_id %in% routeids, ]
+
+mobj2 <- iNZightMap(~latitude, ~longitude, data = pos.sym$position, name = "Symonds Street Buses")
+
+pdf("figs/symondsbuses.pdf", width = 8, height = 5)
+plot(mobj2, pch = 4, cex.pt = 0.7, lwd.pt = 2, col.pt = "#4444cc", #fill.pt = "#cccccc",
+     main = paste0(as.POSIXct(rt$response$header$timestamp, origin = "1970-01-01"),
+                   ", N = ", nrow(pos.sym)))
+dev.off()

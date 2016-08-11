@@ -29,7 +29,6 @@ draw=black,fill=white]
 \tikzstyle{line} = [thick]
 
 
-
 %% symbols
 \newcommand{\bX}{\mathbf{X}}
 \newcommand{\bY}{\mathbf{Y}}
@@ -274,8 +273,6 @@ draw=black,fill=white]
       \end{equation*}
       
     \item no intermediate estimation of $\vec{z}_k$
-
-    \item New sample approximates \emph{posterior distribution} of $\bX_k$
   \end{itemize}
 \end{frame}
 
@@ -460,7 +457,7 @@ draw=black,fill=white]
 
   %\item<2-> three examples:
   \onslide<2->
-  \begin{exampleblock}{Three examples}
+  \begin{exampleblock}{Three approaches}
     \begin{enumerate}
     \item schedule
       
@@ -477,7 +474,7 @@ draw=black,fill=white]
   \onslide<+->
 
   \begin{itemize}[<+- | alert@+>]
-  \item each \emph{trip} has a \emph{schedule} with ``average'' arrival times
+  \item each trip has a sequence of stops with scheduled arrival times
   \item given a particle's distance into trip
   \item compare to scheduled ``arrival time'' at that ``distance''
   \item compute scheduled travel time to a stop
@@ -486,16 +483,16 @@ draw=black,fill=white]
   \begin{overprint}
     \onslide<2>
     \centering
-    \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame1.png}
+    \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame1.pdf}
     \onslide<3>
     \centering
-    \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame2.png}
+    \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame2.pdf}
     \onslide<4>
     \centering
-    \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame3.png}
+    \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame3.pdf}
     \onslide<5->
     \centering
-    \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame4.png}
+    \includegraphics[width=0.8\textwidth]{figs/pred-sched-frame4.pdf}
   \end{overprint}
 
   \onslide<+->
@@ -506,38 +503,49 @@ draw=black,fill=white]
   \onslide<+->
 
   \begin{itemize}
-  \item replace schedule times with \emph{historical times}
-  \item can build up models (monotone regression?)\\
-    covariates: day of the week, time of day, etc
-  \item requires a lot of data (KNN, ANN, SVM, \ldots)\\
+  \item replace scheduled times with \emph{historical times}
+    (i.e., from KF, PF, \ldots)
+  \item use models to detect patterns, fit curves, \ldots\\
+    using covariates: day of the week, time of day,\\
+    \alert{travel time of last bus}, etc
+  \item requires a lot of data (KNN, ANN, SVM, \ldots):\\
     \cite{mazloumi-etal:2011}: 6~months\\
     \cite{chen-rakha:2014}: 4~months \\
     \emph{For only a selection of test routes!}
-  \item relies on patterns
+  \item relies on patterns---restructuring? road works?
   \end{itemize}
 \end{frame}
 
 
 \begin{frame}{Predicting Arrival Times: Real-time Data}  
-  \begin{itemize}
+  \begin{itemize}[<+->]
   \item Real-time data for up to 1000+ Auckland buses available
-  \item Particle Filter model provides distribution of speed at coordinates, $v_k$
+  \item Particle Filter: estimated state includes speed, $v_k$
   \item \cite{yu-etal:2011}: bus stops with multiple routes\\
-    e.g., along Symonds St
+    e.g., 83 Symonds St
   
     \vspace{1em}
-  \item<2-> \textbf{Proposal}: combine travel times and speed estimates of \textbf{all} buses
-    \begin{itemize}
+  \item \textbf{Proposal}: combine travel times and speed estimates of \textbf{all} buses
+    \begin{itemize}[<1->]
     \item most up to date traffic/congestion data
     \item no extensive data collection, storage required
     \end{itemize}
   \end{itemize}
-\end{frame}
 
+  \vspace{-5em}
+  \begin{overprint}
+    \onslide<1-2>
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/allbuses.pdf}
+
+    \onslide<3>
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/symondsbuses.pdf}
+  \end{overprint}
+\end{frame}
 
 \begin{frame}{Example (single route)}
   Bus Route 274, Three Kings to Britomart
-
 
   \begin{overprint}
     \onslide<1>
