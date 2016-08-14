@@ -292,38 +292,53 @@ draw=black,fill=white]
 
 
 
-\begin{frame}{Recursive Bayesian Filtering: Particle Filter III}
-  A simple example using only one dimension (distance).
-
+\begin{frame}{Recursive Bayesian Filtering: Particle Filter Example}
   \onslide<+->
-  \begin{itemize}[<+- | alert@+>]
-    \item Start with previous state $\bX_{k-1}$
-    \item Use model (bus dynamics, dwell times, etc) to predict state $\tilde\bX_{k}$
-    \item Add process noise
-    \item Get observation $\bY_k$
-    \item Compute weights based on distance from observation
-    \item Weighted resample to get $\bX_k$
-  \end{itemize}
-  %\vspace{5cm}
+
+  \vspace{1em}
+  \begin{overprint}
+    \onslide<1>
+    Simple example using $M = 5$ particles
+    \onslide<2>
+    Start with previous state $\bX_{k-1}$
+    \onslide<3>
+    Use model (bus dynamics, dwell times, etc) and system noise 
+    to predict state $\tilde\bX_{k}$
+    \onslide<4> 
+    Convert particle states to coordinates using $h(\bX_k^{(i)})$
+    \onslide<5>
+    Get observation $\bY_k$
+    \onslide<6>
+    Compute particle weights using distance from observation
+    \onslide<7>
+    Weighted resample (with replacement) to get $\bX_k$
+    \onslide<8>
+    Final state, $\bX_k$
+  \end{overprint}
+  
+  \vspace{-1em}
   \begin{overprint}
     \onslide<2>
     \centering
-    \includegraphics[width=0.8\textwidth]{figs/pf1-frame1.png}
+    \includegraphics[width=0.7\textwidth]{figs/pf2-frame1.pdf}
     \onslide<3>
     \centering
-    \includegraphics[width=0.8\textwidth]{figs/pf1-frame2.png}
+    \includegraphics[width=0.7\textwidth]{figs/pf2-frame2.pdf}
     \onslide<4>
     \centering
-    \includegraphics[width=0.8\textwidth]{figs/pf1-frame3.png}
+    \includegraphics[width=0.7\textwidth]{figs/pf2-frame3.pdf}
     \onslide<5>
     \centering
-    \includegraphics[width=0.8\textwidth]{figs/pf1-frame4.png}
+    \includegraphics[width=0.7\textwidth]{figs/pf2-frame4.pdf}
     \onslide<6>
     \centering
-    \includegraphics[width=0.8\textwidth]{figs/pf1-frame5.png}
-    \onslide<7->
+    \includegraphics[width=0.7\textwidth]{figs/pf2-frame5.pdf}
+    \onslide<7>
     \centering
-    \includegraphics[width=0.8\textwidth]{figs/pf1-frame6.png}
+    \includegraphics[width=0.7\textwidth]{figs/pf2-frame6.pdf}
+    \onslide<8->
+    \centering
+    \includegraphics[width=0.7\textwidth]{figs/pf2-frame7.pdf}
   \end{overprint}
   \onslide<+->
 \end{frame}
@@ -508,11 +523,11 @@ draw=black,fill=white]
   \item use models to detect patterns, fit curves, \ldots\\
     using covariates: day of the week, time of day,\\
     \alert{travel time of last bus}, etc
-  \item requires a lot of data (KNN, ANN, SVM, \ldots):\\
+  \item<+-> requires a lot of data (KNN, ANN, SVM, \ldots):\\
     \cite{mazloumi-etal:2011}: 6~months\\
     \cite{chen-rakha:2014}: 4~months \\
     \emph{For only a selection of test routes!}
-  \item relies on patterns---restructuring? road works?
+  \item<+-> relies on patterns---restructuring? road works?
   \end{itemize}
 \end{frame}
 

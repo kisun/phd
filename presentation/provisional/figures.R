@@ -8,7 +8,7 @@ Y2 = 290
 
 newPl = function(file = NULL) {
 if (!is.null(file))
-	png(file, width = 600, height = 200, bg = "transparent")
+	pdf(gsub("png", "pdf", file), width = 6, height = 2, bg = "transparent")
 par(mar = c(5.1, 4.1, 0, 2.1))
 plot.new()
 plot.window(xlim = c(150, 350), ylim = c(0, 0.5))
@@ -173,6 +173,7 @@ dev.off()
 
 
 
+setwd("..")
 
 ## schedule times
 sx <- c(0, 10, 20, 40, 50, 55, 80, 100)
@@ -273,3 +274,115 @@ plot(mobj2, pch = 4, cex.pt = 0.7, lwd.pt = 2, col.pt = "#4444cc", #fill.pt = "#
      main = paste0(as.POSIXct(rt$response$header$timestamp, origin = "1970-01-01"),
                    ", N = ", nrow(pos.sym)))
 dev.off()
+
+
+
+
+
+
+
+
+
+##### GPS DISTANCE
+
+## route shape
+xy <- matrix(c(1.0, 0.0,
+               1.5, 1.0,
+               3.0, 2.0,
+               3.0, 3.0,
+               3.5, 4.0,
+               4.0, 3.9,
+               5.0, 3.5,
+               6.0, 3.0,
+               6.5, 3.5), nrow = 2)
+
+
+set.seed(15)
+d <- apply(rbind(xy[, -ncol(xy)], xy[, -1]), 2,
+           function(x) sqrt(sum(c(x[3] - x[1], x[4] - x[2]))))
+dd <- c(0, cumsum(d))
+##dx <- sum(d[1:2]) + d[3]/2
+dx <- dd[2] + rnorm(5, sd = 0.5)
+
+pl <- function(file = NULL) {
+    if (!is.null(file))
+        pdf(file, width = 6, height = 6, bg = "transparent")
+    par(mar = c(3.1, 3.1, 2.1, 2.1))
+    plot(c(0, sum(d)), c(0, 0), type = "l", xaxt = "n", yaxt = "n", xlab = "", ylab = "",
+         bty = "n")
+    title(xlab = "Distance into Trip", line = 1)
+}
+
+
+pl("figs/pf2-frame1.pdf")
+points(dx, rep(0, 5), pch = 19)
+dev.off()
+
+
+dx2 <- dx + rnorm(5, 3.5, 0.1)
+pl("figs/pf2-frame2.pdf")
+points(dx, rep(0, 5), col = "#00000050", pch = 19, cex = 0.8)
+points(dx2, rep(0, 5), pch = 19)
+dev.off()
+
+pl2 <- function(file = NULL) {
+    if (!is.null(file))
+        pdf(file, width = 6, height = 6, bg = "transparent")
+    par(mar = c(3.1, 3.1, 2.1, 2.1))
+    plot(t(xy), type = 'l', asp = 1, xaxt = "n", yaxt = "n", xlab = "", ylab = "",
+         bty = "n")
+    title(xlab = expression(paste("Longitude (", lambda, ")")), line = 1)
+    title(ylab = expression(paste("Latitude (", phi, ")")), line = 1)
+}
+
+
+w <- sapply(dx2, function(x) max(which(x > dd)))
+dr <- dx2 - dd[w]
+fr <- dr / d[w]
+dxy <- t(xy[, w]) + sweep(apply(xy, 1, diff)[w, ], 1, fr, "*")
+
+pl2("figs/pf2-frame3.pdf")
+points(dxy, pch = 19)
+dev.off()
+
+yy <- c(3.55, 3.9)
+pl2("figs/pf2-frame4.pdf")
+points(dxy, pch = 19, cex = 0.8)
+points(yy[1], yy[2], pch = 4, col = "#990000", lwd = 2, cex = 1.6)
+dev.off()
+
+
+dwt <- apply(dxy, 1, function(x) sqrt(sum((x - yy)^2)))
+wt <- max(dwt) - dwt / sum(dwt)
+pl2("figs/pf2-frame5.pdf")
+points(dxy, pch = 19, cex = 2.5 * sqrt(wt))
+points(yy[1], yy[2], pch = 4, col = "#990000", lwd = 2, cex = 1.6)
+dev.off()
+
+
+set.seed(10)
+dxy2 <- dxy[wii <- sample(5, 5, replace = TRUE, prob = wt), ]
+pl2("figs/pf2-frame6.pdf")
+points(dxy2, pch = 19)
+points(yy[1], yy[2], pch = 4, col = "#990000", lwd = 2, cex = 1.6)
+dev.off()
+
+pl("figs/pf2-frame7.pdf")
+points(dx2, rep(0, 5), pch = 19, col = "#00000050", cex = 0.8)
+points(dx2[wii], c(0.02, 0, 0.04, 0, 0), pch = 19)
+dev.off()
+
+
+
+
+
+
+
+
+par(mar = c(3.1, 3.1, 2.1, 2.1))
+plot(t(xy), type = 'l', asp = 1, xaxt = "n", yaxt = "n", xlab = "", ylab = "")
+title(xlab = expression(paste("Longitude (", lambda, ")")), line = 1)
+title(ylab = expression(paste("Latitude (", phi, ")")), line = 1)
+points(3, 2.5, pch = 19)
+text(3, 2.5, expression(paste("(", lambda[k]^(i), ", ", phi[k]^(i), ")")), pos=4)
+#dev.off()
