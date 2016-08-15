@@ -363,6 +363,7 @@ dev.off()
 set.seed(10)
 dxy2 <- dxy[wii <- sample(5, 5, replace = TRUE, prob = wt), ]
 pl2("figs/pf2-frame6.pdf")
+points(dxy, pch = 19, col = "#00000050", cex = 0.8)
 points(dxy2, pch = 19)
 points(yy[1], yy[2], pch = 4, col = "#990000", lwd = 2, cex = 1.6)
 dev.off()
