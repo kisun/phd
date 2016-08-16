@@ -41,7 +41,16 @@ getLatestOld:
 	@bin/gtfsrdb/gtfsrdb.py -p https://api.at.govt.nz/v1/public/realtime/vehiclelocations?api_key=$(shell cat apikey.txt) --accept="application/x-protobuf" -d sqlite:///db/gtfs-realtime.db -c -o -w 10
 
 
+
+
+setupWebDB:
+		cp db/gtfs-static.db ~/Sites/bus.app/database/database.sqlite
+
 getLatest:
 		@echo Getting latest vehicle locations ... cancel with CTRL + C
 		@echo
-		bin/gtfsrdb/gtfsrdb.py -p https://api.at.govt.nz/v2/public/realtime --accept="application/x-protobuf" --key="$(shell cat apikey.txt)" -d sqlite:////home/tell029/Sites/bus.app/database/database.sqlite -c -o -w 30
+		bin/gtfsrdb/gtfsrdb.py -p https://api.at.govt.nz/v2/public/realtime --accept="application/x-protobuf" --key="$(shell cat apikey.txt)" -d sqlite:////home/tell029/Sites/bus.app/database/database.sqlite -c -o -w 10
+
+
+saveProto:
+		@curl -v "https://api.at.govt.nz/v2/public/realtime" -H "Ocp-Apim-Subscription-Key: $(cat apikey.txt)" -H "Accept: application/x-protobuf" > ~/Sites/bus.app/storage/app/gtfsrealtime.proto
