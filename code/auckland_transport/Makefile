@@ -49,7 +49,7 @@ setupWebDB:
 getLatest:
 		@echo Getting latest vehicle locations ... cancel with CTRL + C
 		@echo
-		bin/gtfsrdb/gtfsrdb.py -p https://api.at.govt.nz/v2/public/realtime --accept="application/x-protobuf" --key="$(shell cat apikey.txt)" -d sqlite:////home/tell029/Sites/bus.app/database/database.sqlite -c -o -w 10
+		bin/gtfsrdb/gtfsrdb.py -p https://api.at.govt.nz/v2/public/realtime --accept="application/x-protobuf" --key="$(shell cat apikey.txt)" -d sqlite:////home/tell029/Sites/bus.app/database/database.sqlite -c -o -w 20
 
 
 saveProto:
