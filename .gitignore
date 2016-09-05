@@ -111,3 +111,10 @@ Thumbs.db
 ## others
 .sass-cache
 node_modules
+
+
+
+
+
+.vagrant
+vendor
