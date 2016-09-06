@@ -105,6 +105,7 @@ Thumbs.db
 **/gtfs-rt/*
 *.proto
 *.pb
+!staticgtfs
 
 **/cache/
 
