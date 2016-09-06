@@ -16,6 +16,10 @@ Route::get('/', function () {
 });
 
 Auth::routes();
+Route::get('/logout', function() {
+  Auth::logout();
+  return redirect('/')->with('status', 'We hope to see you soon!');
+});
 
 Route::get('/home', 'HomeController@index');
 

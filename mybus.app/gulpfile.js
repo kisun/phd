@@ -16,12 +16,10 @@ require('laravel-elixir-vue');
 elixir(mix => {
     mix.copy('node_modules/bootstrap-sass/assets/fonts/**', 'public/fonts')
        .sass('app.scss')
-       .scripts([
-          'app.js'
-       ]);
-      //  .webpack('app.js');
+       .webpack('app.js');
     mix.browserSync({
         notify: false,
-        proxy: 'mybus.app'
+        //proxy: 'mybus.app'
+        host: '192.168.2.7'
     });
 });

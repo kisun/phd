@@ -5766,4 +5766,30 @@ button.close {
   .hidden-print {
     display: none !important; } }
 
+#topNav {
+  height: 50px;
+  margin-bottom: 0; }
+  #topNav .icon {
+    height: 50px;
+    width: 25%;
+    display: inline-block;
+    margin-top: 1px;
+    line-height: 50px;
+    border-right: solid 1px #eeeeee;
+    text-align: center;
+    font-size: 24px; }
+
+.flash-message {
+  position: relative; }
+  .flash-message .alert {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    -webkit-transform: translateY(-100%);
+    transform: translateY(-100%); }
+    .flash-message .alert.show {
+      -webkit-transform: translateY(0);
+      transform: translateY(0); }
+
 /*# sourceMappingURL=app.css.map */

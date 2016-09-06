@@ -18,5 +18,8 @@ require('./bootstrap');
 // const app = new Vue({
 //     el: 'body'
 // });
+Vue.component('flashMessages', require('./components/FlashMessages.vue'));
 
-console.log("hello!");
+const alert = new Vue({
+    el: 'alert'
+});
