@@ -5787,7 +5787,9 @@ button.close {
     left: 0;
     right: 0;
     -webkit-transform: translateY(-100%);
-    transform: translateY(-100%); }
+    transform: translateY(-100%);
+    -webkit-transition: all 0.4s ease-in-out;
+    transition: all 0.4s ease-in-out; }
     .flash-message .alert.show {
       -webkit-transform: translateY(0);
       transform: translateY(0); }

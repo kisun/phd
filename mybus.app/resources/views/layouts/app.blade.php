@@ -23,9 +23,9 @@
 <body>
     @include('components.header')
 
-    {{-- @if (Session::has('status')) --}}
-      <alert></alert>
-    {{-- @endif --}}
+    @if (Session::has('status'))
+      <alert msg="{{ Session::get('status') }}"></alert>
+    @endif
 
     @yield('content')
 

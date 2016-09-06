@@ -1,22 +1,24 @@
 <nav class="navbar navbar-default navbar-static-top" id="topNav">
   <div class="col-xs-3 icon">
-    <a href="{{ url('/') }}" class="">
+    <a href="{{ url('/') }}">
       <span class="glyphicon glyphicon-home"></span>
     </a>
   </div>
   <div class="col-xs-3 icon">
-    <a href="" class="">
+    <a href="#">
       <span class="glyphicon glyphicon-search"></span>
     </a>
   </div>
   <div class="col-xs-3 icon">
-    <a href="" class="">
-
-    </a>
+    @if (Auth::guest())
+      <a href="#">
+        <span class="glyphicon glyphicon-user"></span>
+      </a>
+    @endif
   </div>
   <div class="col-xs-3 icon">
     @if (Auth::guest())
-      <a href="{{ url('/login') }}" class="">
+      <a href="{{ url('/login') }}">
         <span class="glyphicon glyphicon-log-in"></span>
       </a>
     @else
