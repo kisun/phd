@@ -12,7 +12,7 @@ keys:
     - ~/.ssh/id_rsa
 
 folders:
-    - map: "~/Documents/uni/phd"
+    - map: "~/Documents/uni/phd/mybus.app"
       to: "/home/vagrant/mybus.app"
 
 sites:
