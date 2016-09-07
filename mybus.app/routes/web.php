@@ -24,42 +24,5 @@ Route::get('/logout', function() {
 Route::get('/home', 'HomeController@index');
 
 
-
-Route::get('/test', function() {
-    require_once 'HTTP/Request2.php';
-
-    $request = new Http_Request2('https://api.at.govt.nz/v2/public/realtime/tripupdates');
-    $url = $request->getUrl();
-
-    $headers = array(
-        // Request headers
-        'Ocp-Apim-Subscription-Key' => env('AT_KEY'),
-        'Accept' => 'application/x-protobuf'
-    );
-
-    $request->setHeader($headers);
-
-    $parameters = array(
-        // Request parameters
-        // 'callback' => 'application/x-protobuf',
-        //'tripid' => '{string}',
-        //'vehicleid' => '{string}',
-    );
-
-    $url->setQueryVariables($parameters);
-
-    $request->setMethod(HTTP_Request2::METHOD_GET);
-
-    // Request body
-    //$request->setBody("{body}");
-
-    try
-    {
-        $response = $request->send();
-        dd($response->getBody());
-    }
-    catch (HttpException $ex)
-    {
-        echo $ex;
-    }
-});
+Route::get('/routes', 'RouteController@index');
+Route::get('/routes/{route}', 'RouteController@show');
