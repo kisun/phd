@@ -1,7 +1,6 @@
 #!/bin/bash
 
-~/Documents/uni/gtfsrdb/gtfsrdb.py \
+gtfsrdb.py \
   -p https://api.at.govt.nz/v2/public/realtime/vehiclelocations \
   --accept="application/x-protobuf" --key="1da1fb03bbed453ca7e429643e6abad1" \
-  -d postgresql://homestead:secret@localhost:54320/homestead -c -o -w 20
-  # -t https://api.at.govt.nz/v2/public/realtime/tripupdates \
+  -d postgresql://homestead:secret@localhost:5432/homestead -c -1 -o -w 20
