@@ -12,8 +12,10 @@ keys:
     - ~/.ssh/id_rsa
 
 folders:
-    - map: "~/Documents/uni/phd/mybus.app"
+    - map: "mybus.app"
       to: "/home/vagrant/mybus.app"
+    - map: "code/particle_filter"
+      to: "/home/vagrant/particle_filter"
 
 sites:
     - map: mybus.app
