@@ -4,6 +4,8 @@
 # add any commands you wish to this file and they will
 # be run after the Homestead machine is provisioned.
 
+apt-get -y update && apt-get -y install libpq-dev
+
 ## Install GTFSDB
 if [ ! -d "/home/vagrant/gtfsdb" ]; then
   apt-get -y update && apt-get -y install python-psycopg2
