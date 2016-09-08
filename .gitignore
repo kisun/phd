@@ -110,6 +110,7 @@ Thumbs.db
 **/cache/
 
 ## others
+*.css.map
 .sass-cache
 node_modules
 

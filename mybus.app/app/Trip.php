@@ -19,6 +19,7 @@ class Trip extends Model
         return $this->belongsTo('App\Route');
     }
 
+
     /**
      * Get the stop_times for the model.
      *
