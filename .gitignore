@@ -115,6 +115,9 @@ Thumbs.db
 node_modules
 
 
+code/particle_filter/build
+code/particle_filter/lib/*
+code/particle_filter/bin/*
 
 
 
