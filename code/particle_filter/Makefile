@@ -1,18 +1,22 @@
 CC := gcc
 SRCDIR := src
 BUILDDIR := build
-INCLUDE := -I $(shell pg_config --includedir)
+INCLUDE := -I $(shell pg_config --includedir) -I include
 LIBS := -lpq -lm
-TARGET := bin/shape_distance
 SOURCES := $(shell find $(SRCDIR) -type f -name *.c)
 OBJECTS := $(patsubst $(SRCDIR)/%, $(BUILDDIR)/%, $(SOURCES:.c=.o))
+EXEC = shape_distance stop_distance
 
-default: shape_distance
+default: $(EXEC)
 
-shape_distance: $(OBJECTS)
-	$(CC) $^ -o $(TARGET) $(LIBS)
+shape_distance: bin/shape_distance
 
-$(BUILDDIR)/%.o: $(SRCDIR)/%.c
+stop_distance: bin/stop_distance
+
+bin/%: build/%.o
+	$(CC) $^ -o $@ $(LIBS)
+
+$(BUILDDIR)/%.o: $(SRCDIR)/%.c include/*.h
 	mkdir -p $(BUILDDIR)
 	$(CC) $(INCLUDE) -c $< -o $@
 
@@ -20,4 +24,4 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.c
 
 clean:
 	-rm -r $(BUILDDIR)
-	-rm -f $(TARGET)
+	-rm -f bin/*

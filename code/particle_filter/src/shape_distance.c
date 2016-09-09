@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <libpq-fe.h>
 #include <math.h>
+#include <string.h>
+
+#include "distance.h"
 
 void do_exit(PGconn *conn) {
 
@@ -10,51 +13,8 @@ void do_exit(PGconn *conn) {
 
 }
 
-double deg2rad(double);
-double rad2deg(double);
-
 /**
- * Compute teh distance between two coordinates, in meters
- * @param  lat1 latitude value of the first point
- * @param  lon1 longitude value of the first point
- * @param  lat2 latitude value of the second point
- * @param  lon2 longitude value of the second point
- * @return      double, the distance, in meters, between the points
- */
-double distance(double lat1, double lon1, double lat2, double lon2) {
-  double theta, dist;
-  double R = 6371e3;
-
-  theta = lon1 - lon2;
-  dist = sin(deg2rad(lat1)) * sin(deg2rad(lat2)) +
-         cos(deg2rad(lat1)) * cos(deg2rad(lat2)) * cos(deg2rad(theta));
-  dist = acos(dist);
-  // dist = rad2deg(dist);
-  dist = dist * R;
-
-  return dist;
-}
-
-/**
- * Convert degrees to radians
- * @param  deg value in degrees
- * @return     double, value in radians
- */
-double deg2rad(double deg) {
-  return (deg * M_PI / 180);
-}
-
-/**
- * Convert radians to degrees
- * @param  deg value in radians
- * @return     double, value in degrees
- */
-double rad2deg(double rad) {
-  return (rad * 180 / M_PI);
-}
-
-/**
- * Get a single shape file from the database.
+ * Calculate cumulative distance into trip for a shapfile.
  * @param  conn a db connection
  * @param  id   shape id
  * @return      0
@@ -63,7 +23,7 @@ int GetShape(PGconn *conn, char *id) {
   const char *paramValues[1];
   paramValues[0] = id;
 
-  char *stm = "SELECT * FROM shapes WHERE shape_id=$1";
+  char *stm = "SELECT * FROM shapes WHERE shape_id=$1 ORDER BY shape_pt_sequence";
   PGresult *res = PQexecParams(conn, stm, 1, NULL, paramValues, NULL, NULL, 0);
 
   if (PQresultStatus(res) != PGRES_TUPLES_OK) {
@@ -74,35 +34,51 @@ int GetShape(PGconn *conn, char *id) {
 
   int len = PQntuples(res);
   double shapeDist = 0;
-  // double cumDist[len];
 
-  for (int j=0; j<len; j++) {
-    if (j > 0) {
-      shapeDist += distance(strtod(PQgetvalue(res, j-1, 0), NULL), strtod(PQgetvalue(res, j-1, 1), NULL),
-                            strtod(PQgetvalue(res, j, 0), NULL), strtod(PQgetvalue(res, j, 1), NULL));
+  int chunks = 1 + ((len - 1) / 1000);
+
+  for (int k=0; k<chunks; k++) {
+    int start = 1000 * k;
+    int stop = 1000 * (k + 1);
+    int Len = 1000;
+    if (k + 1 == chunks) {
+      stop = len;
+      Len = len - k * 1000;
     }
-    // cumDist[j] = shapeDist;
+    char cumDist[Len][10];
 
-    // Update the value in the database:
-    // char cumdist[50];
-    // char seq[5];
-    // sprintf(cumdist, "%lf", shapeDist);
-    // sprintf(seq, "%d", j - 1);
-    // char *upd = "UPDATE shapes SET shape_dist_traveled=$1 WHERE shape_id=$2 AND shape_pt_sequence=$3";
-    // const char *params[3] = {
-    //   cumdist, id, seq
-    // };
-    //
-    // PGresult *ures = PQexecParams(conn, upd, 3, NULL, params, NULL, NULL, 0);
-    // PQclear(ures);
+    for (int j=0; j<Len; j++) {
+      if (j > 0 || k > 0) {
+        shapeDist += distance(strtod(PQgetvalue(res, start+j-1, 0), NULL), strtod(PQgetvalue(res, start+j-1, 1), NULL),
+                              strtod(PQgetvalue(res, start+j, 0), NULL), strtod(PQgetvalue(res, start+j, 1), NULL));
+      }
+      sprintf(cumDist[j], "%05.3lf", shapeDist);
+    }
+
+    // length of the value items wil be 1 + 1 + len(id) + 1 + 1 + 4 + 1 + 9 +  1 + 1
+    //                                  (      'SHAPE_ID`     ,  SSEQ ,xxxxx.xx)   ,
+    int valLen = strlen(id) + 24;
+    int valuesLen = valLen * Len;
+    char values[valuesLen];
+
+    for (int j=0; j<Len; j++) {
+      if (j > 0) {
+        sprintf(values, "%s, ('%s',%d,%s)", values, id, start + j + 1, cumDist[j]);
+      } else {
+        sprintf(values, "('%s',%d,%s)", id, start + j + 1, cumDist[j]);
+      }
+    }
+
+    char *upd = "UPDATE shapes SET shape_dist_traveled = c.dist " // 47
+               "FROM (values %s) as c(id, seq, dist) " // 35
+               "WHERE c.id = shapes.shape_id AND c.seq = shapes.shape_pt_sequence"; // 65
+    char qry[valuesLen + 147];
+    sprintf(qry, upd, values);
+
+    PGresult *ures = PQexec(conn, qry);
+    PQclear(ures);
   }
 
-  // char values = "('1', '1', '0'), ('1', '2', '100')";
-  // char upd = sprintf("UPDATE shapes set shape_dist_traveled = c.dist
-  //                     FROM (values %s) as c(id, seq, dist)
-  //                     WHERE c.id = shapes.shape_id AND c.seq = shapes.shape_pt_sequence",
-  //                    values);
-  // printf("%s", upd);
   PQclear(res);
 
   return 0;
@@ -132,12 +108,12 @@ int main() {
   int rows = PQntuples(res);
   char *shapeid;
   for (int i=0; i<rows; i++) {
-    printf("Shapes %03d of %d ...\r", i+1, rows);
-    fflush(stdout);
+    printf("%03d of %d\r", i+1, rows);
     shapeid = PQgetvalue(res, i, 0);
     GetShape(conn, shapeid);
+    fflush(stdout);
   }
-  printf("\nDone\n");
+  printf("\n\nDone\n");
 
   PQclear(res);
   PQfinish(conn);
