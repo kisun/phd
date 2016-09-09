@@ -24,22 +24,25 @@ int CalcStopDist(PGconn *conn, char *id, char *sid) {
   paramValues[0] = id;
 
   // Get the stops for the trip:
-  char *stm = "SELECT st.stop_id, s.stop_lat, s.stop_lon FROM stop_times AS st, stops AS s WHERE trip_id=$1 AND st.stop_id=s.stop_id ORDER BY stop_sequence";
+  char *stm = "SELECT st.stop_id, s.stop_lat, s.stop_lon "
+              "FROM stop_times AS st, stops AS s "
+              "WHERE trip_id=$1 AND st.stop_id=s.stop_id ORDER BY stop_sequence";
   PGresult *res = PQexecParams(conn, stm, 1, NULL, paramValues, NULL, NULL, 0);
 
   if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-    printf("No data retrieved\n");
+    printf("No data retrieved (stops)\n");
     PQclear(res);
     return 1;
   }
 
   // Get the shape for the trip:
   paramValues[0] = sid;
-  char *stm2 = "SELECT shape_pt_lat, shape_pt_lon FROM shapes AS sh WHERE sh.shape_id=$1 ORDER BY shape_pt_sequence";
+  char *stm2 = "SELECT shape_pt_lat, shape_pt_lon, shape_dist_traveled "
+               "FROM shapes AS sh WHERE sh.shape_id=$1 ORDER BY shape_pt_sequence";
   PGresult *res2 = PQexecParams(conn, stm2, 1, NULL, paramValues, NULL, NULL, 0);
 
   if (PQresultStatus(res2) != PGRES_TUPLES_OK) {
-    printf("No data retrieved\n");
+    printf("No data retrieved (shape)\n");
     PQclear(res2);
     return 1;
   }
@@ -52,15 +55,10 @@ int CalcStopDist(PGconn *conn, char *id, char *sid) {
 
   for (int j=0; j<slen; j++) {
     if (j+1 < slen) {
-      lengths[j] = distance(strtod(PQgetvalue(res2, j, 0), NULL), strtod(PQgetvalue(res2, j, 1), NULL),
-                            strtod(PQgetvalue(res2, j+1, 0), NULL), strtod(PQgetvalue(res2, j+1, 1), NULL));
+      lengths[j] = strtod(PQgetvalue(res2, j+1, 2), NULL) - strtod(PQgetvalue(res2, j, 2), NULL);
       bearings[j] = bearing(strtod(PQgetvalue(res2, j, 0), NULL), strtod(PQgetvalue(res2, j, 1), NULL),
                             strtod(PQgetvalue(res2, j+1, 0), NULL), strtod(PQgetvalue(res2, j+1, 1), NULL));
-    }
-    if (j == 0) {
-      cumdist[j] = 0;
-    } else {
-      cumdist[j] = cumdist[j-1] + lengths[j-1];
+      cumdist[j] = strtod(PQgetvalue(res2, j, 2), NULL);
     }
   }
 
@@ -72,20 +70,24 @@ int CalcStopDist(PGconn *conn, char *id, char *sid) {
     lat = strtod(PQgetvalue(res, j, 1), NULL);
     lon = strtod(PQgetvalue(res, j, 2), NULL);
     printf("\n  STOP %d (%lf, %lf)\n", j, lat, lon);
-    for (int k=1; k<5; k++) {
+    for (int k=1; k<20; k++) {
       // Center the shape on the stop, points as [x, y]:
-      double q1[2] = {(strtod(PQgetvalue(res2, k-1, 1), NULL) - lat),
-                      (strtod(PQgetvalue(res2, k-1, 0), NULL) - lon) * cos(deg2rad(lat))};
-      double q2[2] = {(strtod(PQgetvalue(res2, k, 1), NULL) - lat),
-                      (strtod(PQgetvalue(res2, k, 0), NULL) - lon) * cos(deg2rad(lat))};
-      printf("    q1 = [%lf, %lf], q2 = [%lf, %lf]", q1[0], q1[1], q2[0], q2[1]);
+      double q1[2] = {(strtod(PQgetvalue(res2, k-1, 1), NULL) - lon) * cos(deg2rad(lat)),
+                      (strtod(PQgetvalue(res2, k-1, 0), NULL) - lat)};
+      double q2[2] = {(strtod(PQgetvalue(res2, k, 1), NULL) - lon) * cos(deg2rad(lat)),
+                      (strtod(PQgetvalue(res2, k, 0), NULL) - lat)};
+      printf("    q1 = (%lf, %lf) => [%lf, %lf], q2 = (%lf, %lf) => [%lf, %lf]",
+             strtod(PQgetvalue(res2, k-1, 0), NULL), strtod(PQgetvalue(res2, k-1, 1), NULL),
+             q1[0], q1[1],
+             strtod(PQgetvalue(res2, k, 0), NULL), strtod(PQgetvalue(res2, k, 1), NULL),
+             q2[0], q2[1]);
 
       // Reference point becomes (0, 0):
       double v[2] = {q2[0] - q1[0], q2[1] - q1[1]};  // q2 - q1
-      double w[2] = {0 - q1[0], 0 - q1[1]};         // p - q1
+      double w[2] = {0 - q1[0], 0 - q1[1]};          // p - q1
 
-      double wlen = sqrt(pow(w[0], 2) + pow(w[1], 2));
-      double vlen = sqrt(pow(v[0], 2) + pow(v[1], 2));
+      double wlen = 6371000 * sqrt(pow(deg2rad(w[0]), 2) + pow(deg2rad(w[1]), 2));
+      double vlen = 6371000 * sqrt(pow(deg2rad(v[0]), 2) + pow(deg2rad(v[1]), 2));
       printf(", |w| = %lf, |v| = %lf\n", wlen, vlen);
     }
   }
