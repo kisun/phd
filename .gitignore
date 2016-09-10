@@ -101,6 +101,8 @@ Thumbs.db
 
 *.dat
 
+_data
+
 **/gtfs/*
 **/gtfs-rt/*
 *.proto

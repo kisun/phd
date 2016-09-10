@@ -1,0 +1,13 @@
+.flash-message
+  position: relative
+
+  .alert
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    transform: translateY(-100%)
+    transition: all 0.4s ease-in-out
+
+    &.show
+      transform: translateY(0)
