@@ -6,25 +6,55 @@
    --}}
 
   <div class="page page-index">
-    <div id="userLocation">
-      {{-- Only display if GPS position unavailable --}}
-      <form action="{{ url('/search') }}" id="locationForm" method="post">
-          <input type="text" class="form-control" placeholder="Starting Location">
-      </form>
+    <div class="row text-center">
+      <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+      <div id="userLocation" class="text-center">
+        {{-- Only display if GPS position unavailable --}}
+        <form action="{{ url('/search') }}" id="locationForm" method="post">
+            <input type="text" class="form-control" placeholder="Starting Location">
+        </form>
+      </div>
+
+        <h1>Where do you want to go?</h1>
+        <form action="{{ url('/search') }}" method="post" id="searchForm">
+          <div class="input-group input-group-lg">
+            <input type="text" class="form-control" placeholder="Destination or Route #">
+            <span class="input-group-btn">
+              <button type="submit" class="btn btn-success">
+                <span class="glyphicon glyphicon-search"></span>
+              </button>
+            </span>
+          </div>
+        </form>
+      </div>
     </div>
 
-    <h1>Where do you want to go?</h1>
 
-    <form action="{{ url('/search') }}" method="post" id="searchForm">
-      <div class="input-group input-group-lg">
-        <input type="text" class="form-control" placeholder="Destination or Route #">
-        <span class="input-group-btn">
-          <button type="submit" class="btn btn-success">
-            <span class="glyphicon glyphicon-search"></span>
-          </button>
-        </span>
+    <div id="nearbyStops" class="row">
+      <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+        <h4>Your closest stops:</h4>
+
+        <table class="table table-striped table-hover">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Location</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr>
+              <td>43256</td>
+              <td>34 Symonds St</td>
+            </tr>
+            <tr>
+              <td>1234</td>
+              <td>38 Symonds St</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </form>
+    </div>
 
     <div id="backgroundMap"></div>
     <div id="backgroundMapOverlay"></div>
@@ -40,37 +70,41 @@
     }
 
     function initMap() {
+      var pos = {lat: -36.8485, lng: 174.7633};
+
+      var map = new google.maps.Map(document.getElementById('backgroundMap'), {
+        center: pos,
+        zoom: 15,
+        disableDefaultUI: true
+      });
+
       if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(function(position) {
-            var pos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            };
+        navigator.geolocation.getCurrentPosition(function(position) {
+          pos = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
 
-            var map = new google.maps.Map(document.getElementById('backgroundMap'), {
-              center: pos,
-              zoom: 15,
-              disableDefaultUI: true
-            });
+          map.setCenter(pos);
 
-            $(".app-content").addClass("opaque");
-
-            // $("#userLocation").html(pos['lat'] + ', ' + pos['lng']);
-            // $("#userLocation").addClass('visible');
-
-            // infoWindow.setPosition(pos);
-            // infoWindow.setContent('Location found.');
-            // map.setCenter(pos);
-          }, function() {
-            manualUserLocation();
-          });
-        } else {
-          // Browser doesn't support Geolocation
+        }, function() {
           manualUserLocation();
-        }
+        });
+      } else {
+        // Browser doesn't support Geolocation
+        manualUserLocation();
+      }
+
+      google.maps.event.addListenerOnce(map, 'tilesloaded', function(){
+        //loaded fully
+        $(".app-content").addClass("opaque");
+      });
+
     }
   </script>
   <script async defer
    src="https://maps.googleapis.com/maps/api/js?key={{ env('GOOGLE_API_KEY') }}&callback=initMap">
    </script>
+   <script src="{{ url('/js/geolocation-marker.js') }}"></script>
+
 @endsection

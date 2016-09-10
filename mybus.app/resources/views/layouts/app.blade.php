@@ -25,16 +25,16 @@
 </head>
 <body>
   <div class="container-fluid fullpage-app">
-    <div class="row">
+    <div class="row fullpage-row">
       {{-- @if (Session::has('status'))
         <alert msg="{{ Session::get('status') }}"></alert>
       @endif --}}
 
-      <div class="col-lg-4 app-nav app-nav-right">
+      <div class="col-lg-3 col-lg-push-9 app-nav app-nav-right">
         @include('components.navigation-right')
       </div>
 
-      <div class="col-lg-8 app-content">
+      <div class="col-lg-9 col-lg-pull-3 app-content">
         @yield('content')
       </div>
     </div>
