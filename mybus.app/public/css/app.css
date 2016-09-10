@@ -5867,4 +5867,8 @@ button.close {
   background: #eeeeee;
   z-index: -5; }
 
+#shapeMap {
+  height: 70%;
+  background: orangered; }
+
 /*# sourceMappingURL=app.css.map */

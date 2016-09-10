@@ -1,4 +1,5 @@
 CC := gcc
+CCFLAGS := -Wall
 SRCDIR := src
 BUILDDIR := build
 INCLUDE := -I $(shell pg_config --includedir) -I include
@@ -14,11 +15,11 @@ shape_distance: bin/shape_distance
 stop_distance: bin/stop_distance
 
 bin/%: build/%.o
-	$(CC) $^ -o $@ $(LIBS)
+	$(CC) $(CCFLAGS) $^ -o $@ $(LIBS)
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c include/*.h
 	mkdir -p $(BUILDDIR)
-	$(CC) $(INCLUDE) -c $< -o $@
+	$(CC) $(CCFLAGS) $(INCLUDE) -c $< -o $@
 
 .PHONY: clean
 

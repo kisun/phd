@@ -23,6 +23,8 @@ int CalcStopDist(PGconn *conn, char *id, char *sid) {
   const char *paramValues[1];
   paramValues[0] = id;
 
+  printf("\nSHAPEID = %s\n", sid);
+
   // Get the stops for the trip:
   char *stm = "SELECT st.stop_id, s.stop_lat, s.stop_lon "
               "FROM stop_times AS st, stops AS s "
@@ -64,32 +66,60 @@ int CalcStopDist(PGconn *conn, char *id, char *sid) {
 
   // For each stop, find the minimum distance to every segment ...
   int len = 1; //PQntuples(res);
-  double shapeDist = 0;
+  // int SEG = 1;
+  // double shapeDist = 0;
+
   for (int j=0; j<len; j++) {
     double lat, lon;
     lat = strtod(PQgetvalue(res, j, 1), NULL);
     lon = strtod(PQgetvalue(res, j, 2), NULL);
-    printf("\n  STOP %d (%lf, %lf)\n", j, lat, lon);
-    for (int k=1; k<20; k++) {
+
+    // int seg_N;
+    // double d_squared, r_squared;
+
+    for (int k=1; k<slen; k++) {
       // Center the shape on the stop, points as [x, y]:
       double q1[2] = {(strtod(PQgetvalue(res2, k-1, 1), NULL) - lon) * cos(deg2rad(lat)),
                       (strtod(PQgetvalue(res2, k-1, 0), NULL) - lat)};
       double q2[2] = {(strtod(PQgetvalue(res2, k, 1), NULL) - lon) * cos(deg2rad(lat)),
                       (strtod(PQgetvalue(res2, k, 0), NULL) - lat)};
-      printf("    q1 = (%lf, %lf) => [%lf, %lf], q2 = (%lf, %lf) => [%lf, %lf]",
-             strtod(PQgetvalue(res2, k-1, 0), NULL), strtod(PQgetvalue(res2, k-1, 1), NULL),
-             q1[0], q1[1],
-             strtod(PQgetvalue(res2, k, 0), NULL), strtod(PQgetvalue(res2, k, 1), NULL),
-             q2[0], q2[1]);
 
       // Reference point becomes (0, 0):
-      double v[2] = {q2[0] - q1[0], q2[1] - q1[1]};  // q2 - q1
-      double w[2] = {0 - q1[0], 0 - q1[1]};          // p - q1
+      double v[2] = {(q2[0] - q1[0]), (q2[1] - q1[1])};  // q2 - q1
+      double w[2] = {(q1[0]), (q1[1])};          // p - q1
+      // |w| and |v| - i.e., their lengths (in meters using Equirectangular approximation)
+      // double wlen = 6371000 * sqrt(pow(deg2rad(w[0]), 2) + pow(deg2rad(w[1]), 2));
+      // double vlen = 6371000 * sqrt(pow(deg2rad(v[0]), 2) + pow(deg2rad(v[1]), 2));
 
-      double wlen = 6371000 * sqrt(pow(deg2rad(w[0]), 2) + pow(deg2rad(w[1]), 2));
-      double vlen = 6371000 * sqrt(pow(deg2rad(v[0]), 2) + pow(deg2rad(v[1]), 2));
-      printf(", |w| = %lf, |v| = %lf\n", wlen, vlen);
+      double wv = w[0] * v[0] + w[1] * v[1];
+      double vv = pow(v[0], 2) + pow(v[1], 2);
+      double ww = pow(w[0], 2) + pow(w[1], 2);
+      double d, d2, r, r2;
+      if (wv < 0) {
+        // stop lies BEFORE this segment ... skip
+        d = 0;
+        r = sqrt(ww);
+        // j++;
+        // continue;
+      } else if (wv <= vv) {
+        printf("\n    segment %d: ", k);
+        printf("[2] | wv = %lf, vv = %lf, ww = %lf", wv, vv, ww);
+        // stop projects onto the segment ...
+        d2 = pow(wv, 2) / vv;
+        r2 = ww - d2;
+        d = 6371000 * sqrt(d2);
+        r = 6371000 * sqrt(r2);
+        printf(", d = %lf, r = %lf", d, r);
+      } else {
+        r2 = pow(w[0] - v[0], 2) + pow(w[1] - v[1], 2);
+        d = sqrt(vv);
+        r = sqrt(r2);
+      }
+
+
     }
+
+    // SEG = 0; // wherever we end up ...
   }
 
   return 0;

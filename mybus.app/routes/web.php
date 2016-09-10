@@ -26,3 +26,5 @@ Route::get('/home', 'HomeController@index');
 
 Route::get('/routes', 'RouteController@index');
 Route::get('/routes/{route}', 'RouteController@show');
+
+Route::get('/shapes/{id}', 'ShapeController@show');
