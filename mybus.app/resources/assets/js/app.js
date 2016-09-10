@@ -23,3 +23,21 @@ Vue.component('alert', require('./components/FlashMessage.vue'));
 const alert = new Vue({
     el: 'body'
 });
+
+
+$(document).ready(function() {
+  $(".nav-toggle").on('click', function(e) {
+    e.preventDefault();
+    $(this).toggleClass('toggled');
+    if ($(this).hasClass('toggled')) {
+      $(".app-nav").addClass('slideout');
+    } else {
+      $(".app-nav").removeClass('slideout');
+    }
+  });
+
+  $(".app-content").on('click', function() {
+    $(".nav-toggle").removeClass('toggled');
+    $(".app-nav").removeClass('slideout');
+  });
+});

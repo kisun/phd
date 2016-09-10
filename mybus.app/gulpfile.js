@@ -19,6 +19,7 @@ elixir(mix => {
        .webpack('app.js');
     mix.browserSync({
         notify: false,
-        proxy: 'mybus.app'
+        proxy: 'mybus.app',
+        // host: '192.168.10.10'
     });
 });

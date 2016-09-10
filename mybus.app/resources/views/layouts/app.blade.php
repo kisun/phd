@@ -3,7 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimal-ui">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="blue">
+
 
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -21,15 +24,25 @@
     </script>
 </head>
 <body>
-    @include('components.header')
+  <div class="container-fluid fullpage-app">
+    <div class="row">
+      {{-- @if (Session::has('status'))
+        <alert msg="{{ Session::get('status') }}"></alert>
+      @endif --}}
 
-    @if (Session::has('status'))
-      <alert msg="{{ Session::get('status') }}"></alert>
-    @endif
+      <div class="col-lg-4 app-nav app-nav-right">
+        @include('components.navigation-right')
+      </div>
 
-    @yield('content')
+      <div class="col-lg-8 app-content">
+        @yield('content')
+      </div>
+    </div>
+  </div>
 
     <!-- Scripts -->
     <script src="/js/app.js"></script>
+
+    @yield('endmatter')
 </body>
 </html>
