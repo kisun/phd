@@ -56,7 +56,8 @@ class Trip extends Model
      */
     public function shapes()
     {
-        return $this->hasMany('App\Shape', 'shape_id', 'shape_id');
+        return $this->hasMany('App\Shape', 'shape_id', 'shape_id')
+                ->orderBy('shape_pt_sequence');
     }
 
     /**
