@@ -1,5 +1,5 @@
 apikey.txt
-_*
+
 
 # Compiled source #
 ###################
@@ -38,7 +38,7 @@ _*
 *.blg
 *.syn*.tz
 *.syn*.gz
-_*
+
 *.csv
 *.backup
 .#*

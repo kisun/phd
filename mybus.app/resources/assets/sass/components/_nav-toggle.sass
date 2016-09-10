@@ -1,0 +1,41 @@
+$toggle-width: 3em
+$toggle-height: 2em
+
+.nav-toggle
+  display: inline-block
+  width: $toggle-width
+  height: $toggle-height
+  position: relative
+  cursor: pointer
+  opacity: 0.4
+  transition: all 200ms ease-in-out
+
+  &:hover
+    opacity: 0.8
+
+  .nav-toggle-bar
+    display: block
+    position: absolute
+    height: 3px
+    top: 50%
+    left: 20%
+    right: 20%
+    border-radius: 1px
+    background: #333333
+
+    transform: translateY(-50%)
+
+    &:first-child
+      top: 20%
+    &:last-child
+      top: 80%
+
+  &.toggled
+    .nav-toggle-bar
+      top: 50%
+      background: #cccccc
+
+      transform: translateY(-50%) rotate(40deg)
+
+      &:last-child
+        transform: translateY(-50%) rotate(-40deg)
