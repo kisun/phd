@@ -6,9 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Agency extends Model
 {
-    protected $primaryKey = 'agency_id';
+    protected $primaryKey = ['agency_id', 'version'];
     public $incrementing = false;
-    protected $table = 'agency';
 
     /**
      * Get the routes for the model.
