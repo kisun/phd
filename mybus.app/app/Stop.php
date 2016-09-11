@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Stop extends Model
 {
-    protected $primaryKey = 'stop_id';
     public $incrementing = false;
 
     /**

@@ -6,9 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Calendar extends Model
 {
-    protected $primaryKey = 'service_id';
     public $incrementing = false;
-    protected $table = 'calendar';
 
     /**
      * Get the trips for the model.

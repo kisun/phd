@@ -15,12 +15,12 @@ class CreateCalendarDatesTable extends Migration
     {
         Schema::create('calendar_dates', function (Blueprint $table) {
             $table->string('service_id');
-            $table->string('version');
             $table->date('date');
             $table->enum('exception_type', [1, 2]);
 
-            $table->foreign(['service_id', 'version'])
-                  ->references(['service_id', 'version'])->on('calendars');
+            $table->foreign('service_id')
+                  ->references('id')->on('calendars')
+                  ->onDelete('cascade');
         });
     }
 

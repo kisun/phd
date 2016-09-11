@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Trip extends Model
 {
-    protected $primaryKey = 'trip_id';
     public $incrementing = false;
 
     /**
@@ -30,10 +29,17 @@ class Trip extends Model
         return $this->hasMany('App\StopTime');
     }
 
+    /**
+     *  Get the start time of a trip
+     *
+     * @return \Carbon\Carbon time value.
+     */
     public function start_time() {
-        $firstStop = $this->stop_times()->where('stop_sequence', 1)->first();
+        $firstStop = $this->stop_times()
+                      ->where('stop_sequence', 1)->first();
         $time = \Carbon\Carbon::createFromFormat('H:i:s', $firstStop->departure_time);
-        return $time->format('h:i a');
+
+        return $time;
     }
 
 
@@ -56,8 +62,7 @@ class Trip extends Model
      */
     public function shapes()
     {
-        return $this->hasMany('App\Shape', 'shape_id', 'shape_id')
-                ->orderBy('shape_pt_sequence');
+        return $this->hasMany('App\Shape')->orderBy('shape_pt_sequence');
     }
 
     /**

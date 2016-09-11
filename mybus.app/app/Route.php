@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Route extends Model
 {
-    protected $primaryKey = 'route_id';
     public $incrementing = false;
 
     /**
@@ -28,5 +27,16 @@ class Route extends Model
     public function agency()
     {
         return $this->belongsTo('App\Agency');
+    }
+
+
+    /**
+     * Get the route type that owns the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function type()
+    {
+        return $this->belongsTo('App\RouteType', 'id', 'type_id');
     }
 }

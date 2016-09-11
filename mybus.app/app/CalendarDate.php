@@ -14,6 +14,6 @@ class CalendarDate extends Model
      */
     public function calendar()
     {
-        return $this->belongsTo('App\Calendar', 'service_id', 'service_id');
+        return $this->belongsTo('App\Calendar', 'service_id');
     }
 }

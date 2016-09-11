@@ -15,7 +15,6 @@ class CreateStopTimesTable extends Migration
     {
         Schema::create('stop_times', function (Blueprint $table) {
             $table->string('trip_id');
-            $table->string('version');
             $table->string('arrival_time');
             $table->string('departure_time');
             $table->string('stop_id');
@@ -25,8 +24,12 @@ class CreateStopTimesTable extends Migration
             $table->enum('drop_off_type', [0, 1, 2, 3])->nullable();
             $table->float('shape_dist_traveled')->nullable();
             $table->boolean('timepoint')->nullable();
+            $table->string('version');
 
-            $table->primary(['trip_id', 'version', 'stop_id']);
+            $table->primary(['trip_id', 'stop_id']);
+            $table->foreign('version')
+                  ->references('version')->on('gtfs_versions')
+                  ->onDelete('cascade');
         });
     }
 

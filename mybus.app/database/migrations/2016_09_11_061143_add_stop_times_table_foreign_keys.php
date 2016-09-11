@@ -14,8 +14,8 @@ class AddStopTimesTableForeignKeys extends Migration
     public function up()
     {
         Schema::table('stop_times', function (Blueprint $table) {
-            $table->foreign(['stop_id', 'version'])
-                  ->references(['stop_id', 'version'])->on('stops');
+            $table->foreign('stop_id')
+                  ->references('id')->on('stops');
         });
     }
 
@@ -27,7 +27,7 @@ class AddStopTimesTableForeignKeys extends Migration
     public function down()
     {
         Schema::table('stop_times', function (Blueprint $table) {
-            $table->dropForeign(['stop_id', 'version']);
+            $table->dropForeign(['stop_id']);
         });
     }
 }

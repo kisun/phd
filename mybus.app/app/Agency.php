@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Agency extends Model
 {
-    protected $primaryKey = ['agency_id', 'version'];
     public $incrementing = false;
 
     /**

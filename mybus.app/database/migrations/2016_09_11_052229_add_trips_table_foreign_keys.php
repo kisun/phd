@@ -14,10 +14,10 @@ class AddTripsTableForeignKeys extends Migration
     public function up()
     {
         Schema::table('trips', function (Blueprint $table) {
-            $table->foreign(['route_id', 'version'])
-                  ->references(['route_id', 'version'])->on('routes');
-            $table->foreign(['service_id', 'version'])
-                  ->references(['service_id', 'version'])->on('calendars');
+            $table->foreign('route_id')
+                  ->references('id')->on('routes');
+            $table->foreign('service_id')
+                  ->references('id')->on('calendars');
         });
     }
 
@@ -29,8 +29,8 @@ class AddTripsTableForeignKeys extends Migration
     public function down()
     {
         Schema::table('trips', function (Blueprint $table) {
-            $table->dropForeign(['route_id', 'version']);
-            $table->dropForeign(['service_id', 'version']);
+            $table->dropForeign(['route_id']);
+            $table->dropForeign(['service_id']);
         });
     }
 }

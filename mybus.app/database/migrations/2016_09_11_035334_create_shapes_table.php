@@ -14,14 +14,17 @@ class CreateShapesTable extends Migration
     public function up()
     {
         Schema::create('shapes', function (Blueprint $table) {
+            $table->string('id')->primary();
             $table->string('shape_id');
-            $table->string('version');
             $table->string('lat');
             $table->string('lon');
             $table->integer('pt_sequence')->unsigned();
             $table->float('dist_traveled')->nullable();
+            $table->string('version');
 
-            $table->index(['shape_id', 'version']);
+            $table->foreign('version')
+                  ->references('version')->on('gtfs_versions')
+                  ->onDelete('cascade');
         });
     }
 

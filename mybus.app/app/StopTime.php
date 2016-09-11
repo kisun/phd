@@ -14,7 +14,7 @@ class StopTime extends Model
    */
   public function trip()
   {
-      return $this->belongsTo('App\Trip', 'trip_id');
+      return $this->belongsTo('App\Trip');
   }
 
 
@@ -25,6 +25,6 @@ class StopTime extends Model
    */
   public function stop()
   {
-      return $this->belongsTo('App\Stop', 'stop_id', 'stop_id');
+      return $this->belongsTo('App\Stop');
   }
 }

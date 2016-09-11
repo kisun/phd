@@ -14,8 +14,8 @@ class CreateCalendarsTable extends Migration
     public function up()
     {
         Schema::create('calendars', function (Blueprint $table) {
+            $table->string('id')->primary();
             $table->string('service_id');
-            $table->string('version');
             $table->boolean('monday');
             $table->boolean('tuesday');
             $table->boolean('wednesday');
@@ -25,8 +25,11 @@ class CreateCalendarsTable extends Migration
             $table->boolean('sunday');
             $table->date('start_date');
             $table->date('end_date');
+            $table->string('version');
 
-            $table->primary(['service_id', 'version']);
+            $table->foreign('version')
+                  ->references('version')->on('gtfs_versions')
+                  ->onDelete('cascade');
         });
     }
 
