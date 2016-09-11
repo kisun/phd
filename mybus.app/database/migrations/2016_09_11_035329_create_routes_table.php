@@ -16,6 +16,7 @@ class CreateRoutesTable extends Migration
     public function up()
     {
         Schema::create('routes', function (Blueprint $table) {
+            $table->string('id')->primary();
             $table->string('route_id');
             $table->string('version');
             $table->string('agency_id')->nullable();
@@ -26,8 +27,6 @@ class CreateRoutesTable extends Migration
             $table->string('url')->nullable();
             $table->string('color', 6)->nullable();
             $table->string('text-color', 6)->nullable();
-
-            $table->primary(['route_id', 'version']);
         });
     }
 
