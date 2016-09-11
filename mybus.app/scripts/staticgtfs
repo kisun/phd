@@ -1,6 +1,7 @@
 #!/bin/bash
 
 wget gtfs.zip https://cdn01.at.govt.nz/data/gtfs.zip
+
 gtfsdb-load \
   --database_url postgresql://homestead:secret@localhost:5432/homestead \
   gtfs.zip

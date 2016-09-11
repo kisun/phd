@@ -12,7 +12,8 @@ class RouteController extends Controller
 {
     public function index()
     {
-        $routes = Route::orderBy('route_short_name')->get();
+        $routes = Route::where('route_id', 'LIKE', '%' . "20160907091452_v45.21")
+                    ->orderBy('route_short_name')->get();
 
         echo '<ul>';
         foreach ($routes as $route) {
