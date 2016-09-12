@@ -69,6 +69,8 @@ int GetShape(PGconn *conn, char *id) {
       }
     }
 
+    // puts(values);
+
     char *upd = "UPDATE shapes SET dist_traveled = c.dist " // 47
                "FROM (values %s) as c(id, seq, dist) " // 35
                "WHERE c.id = shapes.id AND c.seq = shapes.pt_sequence"; // 65
@@ -76,6 +78,7 @@ int GetShape(PGconn *conn, char *id) {
     sprintf(qry, upd, values);
 
     PGresult *ures = PQexec(conn, qry);
+    printf("Result: %s", PQresultStatus(ures));
     PQclear(ures);
   }
 
