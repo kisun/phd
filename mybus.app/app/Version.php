@@ -4,13 +4,15 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Agency extends Model
+class Version extends Model
 {
-    public $incrementing = false;
+    protected $table = "gtfs_versions";
     public $timestamps = false;
+    protected $primaryKey = 'version';
+    public $incrementing = false;
 
     /**
-     * Get the routes for the model.
+     * Get the routes for the current version.
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */

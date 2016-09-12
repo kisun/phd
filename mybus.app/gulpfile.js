@@ -15,12 +15,11 @@ require('laravel-elixir-vue');
 
 elixir(mix => {
     mix.copy('node_modules/bootstrap-sass/assets/fonts/**', 'public/fonts')
-      //  .copy('node_modules/geolocation-marker/geolocation-marker.js', 'public/js')
        .sass('app.scss')
        .webpack('app.js');
     mix.browserSync({
         notify: false,
         proxy: 'mybus.app',
-        host: '192.168.0.13'
+        // host: '192.168.0.13'
     });
 });

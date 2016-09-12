@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Trip extends Model
 {
     public $incrementing = false;
+    public $timestamps = false;
 
     /**
      * Get the route that owns the model.

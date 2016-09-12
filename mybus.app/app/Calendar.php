@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Calendar extends Model
 {
     public $incrementing = false;
+    public $timestamps = false;
 
     /**
      * Get the trips for the model.

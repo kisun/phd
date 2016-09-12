@@ -12,7 +12,7 @@ aliasesPath = "aliases"
 require File.expand_path(confDir + '/scripts/homestead.rb')
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-    config.vm.network :public_network
+    # config.vm.network :public_network
     if File.exists? aliasesPath then
         config.vm.provision "file", source: aliasesPath, destination: "~/.bash_aliases"
     end

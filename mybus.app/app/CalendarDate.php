@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class CalendarDate extends Model
 {
+    public $timestamps = false;
+    public $incrementing = false;
 
     /**
      * Get the calendar that owns the model.

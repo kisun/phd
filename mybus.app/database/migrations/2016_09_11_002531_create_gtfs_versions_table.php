@@ -15,8 +15,8 @@ class CreateGtfsVersionsTable extends Migration
     {
         Schema::create('gtfs_versions', function (Blueprint $table) {
             $table->string('version')->primary();
-            $table->timestamp('startdate');
-            $table->timestamp('enddate');
+            $table->date('startdate');
+            $table->date('enddate');
         });
     }
 

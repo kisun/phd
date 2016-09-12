@@ -25,7 +25,7 @@ class CreateRoutesTable extends Migration
             $table->enum('type_id', [0, 1, 2, 3, 4, 5, 6, 7]);
             $table->string('url')->nullable();
             $table->string('color', 6)->nullable();
-            $table->string('text-color', 6)->nullable();
+            $table->string('text_color', 6)->nullable();
             $table->string('version');
 
             $table->foreign('version')

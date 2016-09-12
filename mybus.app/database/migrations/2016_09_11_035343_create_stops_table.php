@@ -15,7 +15,6 @@ class CreateStopsTable extends Migration
     {
         Schema::create('stops', function (Blueprint $table) {
             $table->string('id')->primary();
-            $table->string('stop_id');
             $table->string('code')->nullable();
             $table->string('name');
             $table->string('desc')->nullable();
@@ -27,11 +26,6 @@ class CreateStopsTable extends Migration
             $table->string('parent_station')->nullable();
             $table->string('timezone')->nullable();
             $table->enum('wheelchair_boarding', [0, 1, 2])->nullable();
-            $table->string('version');
-
-            $table->foreign('version')
-                  ->references('version')->on('gtfs_versions')
-                  ->onDelete('cascade');
         });
     }
 

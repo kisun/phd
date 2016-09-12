@@ -6,12 +6,12 @@
 
 apt-get -y update && apt-get -y install libpq-dev
 
-## Install GTFSDB
-if [ ! -d "/home/vagrant/gtfsdb" ]; then
-  apt-get -y update && apt-get -y install python-psycopg2
-  git clone https://github.com/OpenTransitTools/gtfsdb.git /home/vagrant/gtfsdb
-  cd /home/vagrant/gtfsdb && easy_install zc.buildout && easy_install . && buildout install prod postgresql
-fi
+## Install GTFSDB - no longer needed.
+# if [ ! -d "/home/vagrant/gtfsdb" ]; then
+#   apt-get -y update && apt-get -y install python-psycopg2
+#   git clone https://github.com/OpenTransitTools/gtfsdb.git /home/vagrant/gtfsdb
+#   cd /home/vagrant/gtfsdb && easy_install zc.buildout && easy_install . && buildout install prod postgresql
+# fi
 
 ## Install GTFSRDB
 if [ ! -d "/home/vagrant/gtfsrdb" ]; then
