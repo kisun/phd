@@ -22,7 +22,7 @@ class CreateShapesTable extends Migration
             $table->float('dist_traveled')->nullable();
             $table->string('version');
 
-            $table->primary(['shape_id', 'pt_sequence']);
+            $table->primary(['id', 'pt_sequence']);
             $table->foreign('version')
                   ->references('version')->on('gtfs_versions')
                   ->onDelete('cascade');

@@ -23,7 +23,7 @@ int GetShape(PGconn *conn, char *id) {
   const char *paramValues[1];
   paramValues[0] = id;
 
-  char *stm = "SELECT * FROM shapes WHERE shape_id=$1 ORDER BY shape_pt_sequence";
+  char *stm = "SELECT lat, lon, pt_sequence FROM shapes WHERE id=$1 ORDER BY pt_sequence";
   PGresult *res = PQexecParams(conn, stm, 1, NULL, paramValues, NULL, NULL, 0);
 
   if (PQresultStatus(res) != PGRES_TUPLES_OK) {
@@ -69,9 +69,9 @@ int GetShape(PGconn *conn, char *id) {
       }
     }
 
-    char *upd = "UPDATE shapes SET shape_dist_traveled = c.dist " // 47
+    char *upd = "UPDATE shapes SET dist_traveled = c.dist " // 47
                "FROM (values %s) as c(id, seq, dist) " // 35
-               "WHERE c.id = shapes.shape_id AND c.seq = shapes.shape_pt_sequence"; // 65
+               "WHERE c.id = shapes.id AND c.seq = shapes.pt_sequence"; // 65
     char qry[valuesLen + 147];
     sprintf(qry, upd, values);
 
@@ -95,7 +95,7 @@ int main() {
 
   }
 
-  PGresult *res = PQexec(conn, "SELECT DISTINCT shape_id FROM shapes");
+  PGresult *res = PQexec(conn, "SELECT DISTINCT id FROM shapes");
 
   if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 
