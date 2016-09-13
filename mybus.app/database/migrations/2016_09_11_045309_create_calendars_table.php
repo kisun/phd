@@ -25,10 +25,13 @@ class CreateCalendarsTable extends Migration
             $table->boolean('sunday');
             $table->date('start_date');
             $table->date('end_date');
-            $table->string('version');
+            $table->integer('version_id');
 
-            $table->foreign('version')
-                  ->references('version')->on('gtfs_versions')
+            $table->foreign('id')
+                  ->references('service_id')->on('trips')
+                  ->onDelete('cascade');
+            $table->foreign('version_id')
+                  ->references('id')->on('gtfs_versions')
                   ->onDelete('cascade');
         });
     }

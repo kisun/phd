@@ -8,6 +8,7 @@ class Calendar extends Model
 {
     public $incrementing = false;
     public $timestamps = false;
+    protected $guarded = [];
 
     /**
      * Get the trips for the model.

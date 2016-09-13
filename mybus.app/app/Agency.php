@@ -8,6 +8,7 @@ class Agency extends Model
 {
     public $incrementing = false;
     public $timestamps = false;
+    protected $guarded = ['id'];
 
     /**
      * Get the routes for the model.

@@ -12,13 +12,13 @@ class RouteController extends Controller
 {
     public function index()
     {
-        $routes = Route::where('route_id', 'LIKE', '%' . "20160907091452_v45.21")
-                    ->orderBy('route_short_name')->get();
+        $latest = \App\Version::orderBy('startdate', 'desc')->first();
+        $routes = Route::where('version', $latest->version)->orderBy('short_name')->get();
 
         echo '<ul>';
         foreach ($routes as $route) {
           echo '<li><a href="' . url('/routes/' . $route->route_id) . '">' .
-               $route->route_short_name . ' - ' . $route->route_long_name . '</a></li>';
+               $route->short_name . ' - ' . $route->long_name . '</a></li>';
         }
         echo '</ul>';
     }

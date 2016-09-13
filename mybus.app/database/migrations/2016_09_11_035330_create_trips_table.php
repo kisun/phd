@@ -16,7 +16,7 @@ class CreateTripsTable extends Migration
         Schema::create('trips', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('route_id');
-            $table->string('service_id');
+            $table->string('service_id')->unique();
             $table->string('trip_id');
             $table->string('headsign')->nullable();
             $table->string('short_name')->nullable();
@@ -25,10 +25,13 @@ class CreateTripsTable extends Migration
             $table->string('shape_id')->nullable();
             $table->enum('wheelchair_accessible', [0, 1, 2])->nullable();
             $table->enum('bikes_allowed', [0, 1, 2])->nullable();
-            $table->string('version');
+            $table->integer('version_id');
 
-            $table->foreign('version')
-                  ->references('version')->on('gtfs_versions')
+            $table->foreign('route_id')
+                  ->references('id')->on('routes')
+                  ->onDelete('cascade');
+            $table->foreign('version_id')
+                  ->references('id')->on('gtfs_versions')
                   ->onDelete('cascade');
         });
     }

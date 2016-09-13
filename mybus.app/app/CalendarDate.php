@@ -8,6 +8,7 @@ class CalendarDate extends Model
 {
     public $timestamps = false;
     public $incrementing = false;
+    protected $guarded = [];
 
     /**
      * Get the calendar that owns the model.

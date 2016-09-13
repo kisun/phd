@@ -25,7 +25,11 @@ class CreateStopTimesTable extends Migration
             $table->float('shape_dist_traveled')->nullable();
             $table->boolean('timepoint')->nullable();
 
-            // $table->primary(['trip_id', 'stop_id']);
+            $table->foreign('trip_id')
+                  ->references('id')->on('trips')
+                  ->onDelete('cascade');
+            $table->foreign('stop_id')
+                  ->references('id')->on('stops');
         });
     }
 

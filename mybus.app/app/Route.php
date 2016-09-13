@@ -8,6 +8,7 @@ class Route extends Model
 {
     public $incrementing = false;
     public $timestamps = false;
+    protected $guarded = [];
 
     /**
      * Get the trips for the model.
@@ -39,5 +40,15 @@ class Route extends Model
     public function type()
     {
         return $this->belongsTo('App\RouteType', 'id', 'type_id');
+    }
+
+    /**
+     * Get the version that owns the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function v()
+    {
+        return $this->belongsTo('App\Version', 'version', 'version');
     }
 }

@@ -20,11 +20,11 @@ class CreateShapesTable extends Migration
             $table->string('lon');
             $table->integer('pt_sequence')->unsigned();
             $table->float('dist_traveled')->nullable();
-            $table->string('version');
+            $table->integer('version_id');
 
             $table->primary(['id', 'pt_sequence']);
-            $table->foreign('version')
-                  ->references('version')->on('gtfs_versions')
+            $table->foreign('version_id')
+                  ->references('id')->on('gtfs_versions')
                   ->onDelete('cascade');
         });
     }

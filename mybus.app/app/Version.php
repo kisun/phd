@@ -8,8 +8,7 @@ class Version extends Model
 {
     protected $table = "gtfs_versions";
     public $timestamps = false;
-    protected $primaryKey = 'version';
-    public $incrementing = false;
+    protected $guarded = ['id'];
 
     /**
      * Get the routes for the current version.

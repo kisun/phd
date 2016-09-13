@@ -167,7 +167,7 @@ return [
          * Package Service Providers...
          */
 
-        //
+        Chumper\Zipper\ZipperServiceProvider::class,
 
         /*
          * Application Service Providers...
@@ -178,7 +178,7 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
 
-        
+
 
     ],
 
@@ -227,6 +227,7 @@ return [
         'Validator' => Illuminate\Support\Facades\Validator::class,
         'View' => Illuminate\Support\Facades\View::class,
 
+        'Zipper' => Chumper\Zipper\Zipper::class,
     ],
 
 ];
