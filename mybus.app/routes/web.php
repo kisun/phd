@@ -29,3 +29,6 @@ Route::get('/routes/{route}', 'RouteController@show');
 
 Route::get('/trips/{trip}', 'TripController@show');
 Route::get('/shapes/{id}', 'ShapeController@show');
+
+
+Route::get('/search', 'SearchController@search');

@@ -10,10 +10,14 @@ use App\Trip;
 
 class TripController extends Controller
 {
-    public function show(Trip $trip)
+    public function show($trip_id)
     {
-        $shape = $trip->shapes;
+        $latest = \App\Version::orderBy('startdate', 'desc')->first();
+        $trip = Trip::where('trip_id', $trip_id)->where('version_id', $latest->id)->first();
+
+        $shape = $trip->getShape();
         return view('map', [
+          'trip' => $trip,
           'shape' => $shape
         ]);
     }

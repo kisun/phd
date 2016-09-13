@@ -62,18 +62,22 @@ class Trip extends Model
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
-    public function shapes()
+    public function getShape()
     {
-        return $this->hasMany('App\Shape')->orderBy('shape_pt_sequence');
+        $shape = \App\Shape::where('id', $this->shape_id)->orderBy('pt_sequence');
+        return $shape->get();
     }
 
     /**
-     * Get the shape for the model.
+     * The stops that belong to the model.
      *
-     * @return JSON shapefile
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
-    public function shape()
+    public function stops()
     {
-        return $this->shapes->toJson();
+        return $this->belongsToMany('App\Stop', 'stop_times')
+                    ->withPivot('arrival_time', 'departure_time', 'stop_sequence')
+                    ->orderBy('stop_sequence');
     }
+
 }

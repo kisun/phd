@@ -3,6 +3,10 @@
 
 @section('content')
   <div class="page">
+    <h3>
+      {{ $trip->route->short_name }}
+      <small>{{ $trip->route->long_name }}</small>
+    </h3>
     <div id="shapeMap"></div>
   </div>
 @endsection
@@ -17,35 +21,34 @@
 
       var data = [
         @foreach ($shape as $point)
-          { lat: {{ $point->shape_pt_lat }}, lng: {{ $point->shape_pt_lon }} },
+          { lat: {{ $point->lat }}, lng: {{ $point->lon }} },
         @endforeach
       ];
-      console.log(data);
 
       var pos = {
         lat: (
           @foreach($shape as $point)
-            {{ $point->shape_pt_lat }} +
+            {{ $point->lat }} +
           @endforeach
           + 0) / {{ count($shape) }},
         lng: (
           @foreach($shape as $point)
-            {{ $point->shape_pt_lon }} +
+            {{ $point->lon }} +
           @endforeach
           + 0) / {{ count($shape) }}
       };
 
       var map = new google.maps.Map(document.getElementById('shapeMap'), {
         center: pos,
-        zoom: 11,
-        disableDefaultUI: true
+        zoom: 12,
+        // disableDefaultUI: true
       });
       var shapePath = new google.maps.Polyline({
         path: data,
         geodesic: true,
-        strokeColor: '#000099',
+        strokeColor: '{{ ($trip->route->color) ? $trip->route->color : "#000099" }}',
         strokeOpacity: 1.0,
-        strokeWeight: 2
+        strokeWeight: 4
       });
 
       shapePath.setMap(map);

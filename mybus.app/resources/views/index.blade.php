@@ -16,9 +16,10 @@
       </div>
 
         <h1>Where do you want to go?</h1>
-        <form action="{{ url('/search') }}" method="post" id="searchForm">
+        {{-- <form action="{{ url('/search') }}" method="post" id="searchForm"> --}}
+        <form action="{{ url('/search') }}" method="get" id="searchForm">
           <div class="input-group input-group-lg">
-            <input type="text" class="form-control" placeholder="Destination or Route #">
+            <input name = "routenumber" type="text" class="form-control" placeholder="Destination or Route #">
             <span class="input-group-btn">
               <button type="submit" class="btn btn-success">
                 <span class="glyphicon glyphicon-search"></span>
