@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class Stop extends Model
 {
     public $incrementing = false;
+    public $timestamps = false;
+    protected $guarded = [];
 
     /**
      * Get the stop_times for the model.

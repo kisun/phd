@@ -17,7 +17,7 @@ class Calendar extends Model
      */
     public function trips()
     {
-        return $this->hasMany('App\Trip', 'service_id');
+        return $this->belongsTo('App\Trip', 'service_id');
     }
 
 

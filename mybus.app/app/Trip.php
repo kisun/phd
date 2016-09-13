@@ -53,7 +53,7 @@ class Trip extends Model
      */
     public function calendar()
     {
-        return $this->belongsTo('App\Calendar', 'service_id', 'service_id');
+        return $this->hasOne('App\Calendar', 'id', 'service_id');
     }
 
 
