@@ -35,29 +35,40 @@ int GetShape(PGconn *conn, char *id) {
   int len = PQntuples(res);
   double shapeDist = 0;
 
-  int chunks = 1 + ((len - 1) / 1000);
+  int chunks = 1 + ((len - 1) / 1000); // len mod 1000
+  // printf("=====================================\nShape %s: N = %d\n", id, len+1);
 
   for (int k=0; k<chunks; k++) {
     int start = 1000 * k;
-    int stop = 1000 * (k + 1);
+    // int stop = 1000 * (k + 1) - 1;
     int Len = 1000;
+
     if (k + 1 == chunks) {
-      stop = len;
+      // stop = len;
       Len = len - k * 1000;
     }
+
+    // printf("  Chunk %d of %d: %d-%d\n", k + 1, chunks, start+1, stop+1);
+
     char cumDist[Len][10];
 
     for (int j=0; j<Len; j++) {
       if (j > 0 || k > 0) {
+        // printf("(%lf,%lf) -> (%lf, %lf)  | ",
+              //  strtod(PQgetvalue(res, start+j-1, 0), NULL), strtod(PQgetvalue(res, start+j-1, 1), NULL),
+              //  strtod(PQgetvalue(res, start+j, 0), NULL), strtod(PQgetvalue(res, start+j, 1), NULL));
         shapeDist += distance(strtod(PQgetvalue(res, start+j-1, 0), NULL), strtod(PQgetvalue(res, start+j-1, 1), NULL),
                               strtod(PQgetvalue(res, start+j, 0), NULL), strtod(PQgetvalue(res, start+j, 1), NULL));
+        // printf("%05.03lf", distance(strtod(PQgetvalue(res, start+j-1, 0), NULL), strtod(PQgetvalue(res, start+j-1, 1), NULL),
+                              // strtod(PQgetvalue(res, start+j, 0), NULL), strtod(PQgetvalue(res, start+j, 1), NULL)));
       }
       sprintf(cumDist[j], "%05.3lf", shapeDist);
+      // printf(" | %05.3lf\n", shapeDist);
     }
 
     // length of the value items wil be 1 + 1 + len(id) + 1 + 1 + 4 + 1 + 9 +  1 + 1
     //                                  (      'SHAPE_ID`     ,  SSEQ ,xxxxx.xx)   ,
-    int valLen = strlen(id) + 24;
+    int valLen = 2 + strlen(id) + 1 + 4 + 1 + 9 + 1 + 2;
     int valuesLen = valLen * Len;
     char values[valuesLen];
 
@@ -69,16 +80,17 @@ int GetShape(PGconn *conn, char *id) {
       }
     }
 
-    // puts(values);
-
     char *upd = "UPDATE shapes SET dist_traveled = c.dist " // 47
-               "FROM (values %s) as c(id, seq, dist) " // 35
-               "WHERE c.id = shapes.id AND c.seq = shapes.pt_sequence"; // 65
-    char qry[valuesLen + 147];
+                "FROM (values %s) as c(id, seq, dist) " // 35
+                "WHERE c.id = shapes.id AND c.seq = shapes.pt_sequence"; // 65
+    char qry[valuesLen + strlen(upd)];
+
     sprintf(qry, upd, values);
 
+    // printf("shape %s: %lf\n", id, shapeDist);
+
     PGresult *ures = PQexec(conn, qry);
-    printf("Result: %s", PQresultStatus(ures));
+
     PQclear(ures);
   }
 

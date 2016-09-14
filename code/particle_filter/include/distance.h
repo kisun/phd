@@ -27,6 +27,10 @@ double rad2deg(double rad) {
  * @return      double, the distance, in meters, between the points
  */
 double distance(double lat1, double lon1, double lat2, double lon2) {
+  if (lat1 == lat2 && lon1 == lon2) {
+    return 0;
+  }
+  
   double theta, dist;
   // double R = 6371000;
 
