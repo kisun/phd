@@ -37,6 +37,8 @@ class RouteController extends Controller
 
         return view('routes.show', [
             'route' => $route,
+            'shape' => $route->trips[0]->getShape(),
+            'stops' => $route->trips[0]->stop_times()->with('stop')->get(),
             'dows' => ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         ]);
     }
