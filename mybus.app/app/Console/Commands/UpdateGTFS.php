@@ -207,7 +207,7 @@ class UpdateGTFS extends Command
                     "SELECT shape_id AS id, regexp_replace(shape_id, '-.+$', '') AS shape_id, " .
                     "shape_pt_lat AS lat, shape_pt_lon AS lon, shape_pt_sequence AS pt_sequence, " .
                     "shape_dist_traveled AS dist_traveled, $version->id AS version_id " .
-                    "FROM raw_shapes");
+                    "FROM raw_shapes WHERE shape_id LIKE '%$version->id'");
 
                 DB::statement('DROP TABLE raw_shapes');
                 echo "done.\n";

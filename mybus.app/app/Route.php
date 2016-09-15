@@ -51,4 +51,15 @@ class Route extends Model
     {
         return $this->belongsTo('App\Version', 'version', 'version');
     }
+
+
+    /**
+     * Get the vehicle_positions for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function vehicle_positions()
+    {
+        return $this->hasMany('App\VehiclePosition');
+    }
 }

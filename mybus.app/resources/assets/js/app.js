@@ -18,11 +18,12 @@ require('./bootstrap');
 // const app = new Vue({
 //     el: 'body'
 // });
-Vue.component('alert', require('./components/FlashMessage.vue'));
+// Vue.component('alert', require('./components/FlashMessage.vue'));
 
-const alert = new Vue({
-    el: 'body'
-});
+// const alert = new Vue({
+//     el: 'body'
+// });
+
 
 
 $(document).ready(function() {

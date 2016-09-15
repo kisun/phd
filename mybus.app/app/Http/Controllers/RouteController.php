@@ -27,14 +27,19 @@ class RouteController extends Controller
                     ->where('version_id', $latest->id)
                     ->with(['trips' => function($query) {
                         $query->join('stop_times', 'stop_times.trip_id', 'trips.id')
-                              ->select('trips.*', 'stop_times.stop_sequence', 'stop_times.departure_time')
+                              ->join('calendars', 'trips.service_id', 'calendars.id')
+                              ->select('trips.*', 'stop_times.stop_sequence', 'stop_times.departure_time',
+                                       'calendars.*')
                               ->where('stop_times.stop_sequence', '=', '1')
                               ->orderBy('stop_times.departure_time');
                     }, 'trips.calendar'])
                     ->first();
 
         return view('routes.show', [
-            'route' => $route
+            'route' => $route,
+            'shape' => $route->trips[0]->getShape(),
+            'stops' => $route->trips[0]->stop_times()->with('stop')->get(),
+            'dows' => ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         ]);
     }
 }
