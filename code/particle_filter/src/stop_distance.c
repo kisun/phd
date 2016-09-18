@@ -23,8 +23,6 @@ int CalcStopDist(PGconn *conn, char *id, char *sid) {
   const char *paramValues[1];
   paramValues[0] = id;
 
-  printf("\nSHAPEID = %s\n", sid);
-
   // Get the stops for the trip:
   char *stm = "SELECT st.stop_id, s.lat, s.lon "
               "FROM stop_times AS st, stops AS s "
@@ -36,6 +34,7 @@ int CalcStopDist(PGconn *conn, char *id, char *sid) {
     PQclear(res);
     return 1;
   }
+  // printf("%s\n", id);
 
   // Get the shape for the trip:
   paramValues[0] = sid;
@@ -51,43 +50,54 @@ int CalcStopDist(PGconn *conn, char *id, char *sid) {
 
   // compute segment lenths, bearings, and cumulative lengths:
   int slen = PQntuples(res2);
-  double cumdist[slen];
-
-  for (int j=0; j<slen; j++) {
-    if (j+1 < slen) {
-      cumdist[j] = strtod(PQgetvalue(res2, j, 2), NULL);
-    }
-  }
+  // char *cumdist[slen];
+  //
+  // for (int j=0; j<slen; j++) {
+  //   if (j+1 < slen) {
+  //     cumdist[j] = PQgetvalue(res2, j, 2);
+  //   }
+  // }
 
   // For each stop, find the minimum distance to every segment ...
   int len = PQntuples(res);
-  int SEG = 1;
+  int valLen = 2 + strlen(id) + 1 + 4 + 1 + 9 + 1 + 2;
+  int valuesLen = valLen * len;
+  char values[valuesLen];
 
+  int SEG = 0;
   for (int j=0; j<len; j++) {
     double lat, lon;
     lat = strtod(PQgetvalue(res, j, 1), NULL);
     lon = strtod(PQgetvalue(res, j, 2), NULL);
 
-    printf("\n*** Stop %d:\n", j+1);
-
     for (int k=SEG; k<slen; k++) {
       double d = distance(lat, lon, strtod(PQgetvalue(res2, k, 0), NULL), strtod(PQgetvalue(res2, k, 1), NULL));
       if (d < 0.1) {
-        printf("seg %d, %lf, %lf\n", k, d, cumdist[k-1]);
         SEG = k;
 
-        char *str = "UPDATE stop_times SET shape_dist_traveled='%05.03lf' WHERE trip_id='%s' AND stop_sequence='%d'";
-        char qry[strlen(str) + 9 + strlen(id) + 4];
-        sprintf(qry, str, cumdist[k-1], id, j+1);
-
-        printf("%s\n", qry);
-        PGresult *ures = PQexec(conn, "SELECT id, shape_id FROM trips LIMIT 1");
-        PQclear(ures);
+        if (j > 0) {
+          sprintf(values, "%s, ('%s',%d,%s)", values, id, j+1, PQgetvalue(res2, j, 2));
+        } else {
+          sprintf(values, "('%s',%d,%s)", id, j+1, PQgetvalue(res2, j, 2));
+        }
 
         break;
       }
     }
   }
+
+  char *upd = "UPDATE stop_times SET shape_dist_traveled = c.dist " // 51
+              "FROM (values %s) as c(id, seq, dist) " // 35
+              "WHERE c.id = stop_times.trip_id AND c.seq = stop_times.stop_sequence"; // 59
+  char qry[valuesLen + strlen(upd)];
+
+  sprintf(qry, upd, values);
+
+  // printf("%s", qry);
+
+  PGresult *ures = PQexec(conn, qry);
+
+  PQclear(ures);
 
   return 0;
 }
@@ -108,7 +118,7 @@ int main() {
 
   }
 
-  PGresult *res = PQexec(conn, "SELECT id, shape_id FROM trips LIMIT 1");
+  PGresult *res = PQexec(conn, "SELECT id, shape_id FROM trips");
 
   if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 
@@ -121,7 +131,7 @@ int main() {
   int rows = PQntuples(res);
   char *tripid, *shapeid;
   for (int i=0; i<rows; i++) {
-    // printf("%03d of %d\n", i+1, rows);
+    printf("%03d of %d\r", i+1, rows);
     tripid = PQgetvalue(res, i, 0);
     shapeid = PQgetvalue(res, i, 1);
     CalcStopDist(conn, tripid, shapeid);
