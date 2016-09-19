@@ -39,7 +39,7 @@ int CalcStopDist(PGconn *conn, char *id, char *sid) {
   // Get the shape for the trip:
   paramValues[0] = sid;
   char *stm2 = "SELECT lat, lon, dist_traveled "
-               "FROM shapes AS sh WHERE sh.id=$1 ORDER BY pt_sequence";
+               "FROM shapes AS sh WHERE sh.id=$1 AND dist_traveled is null ORDER BY pt_sequence";
   PGresult *res2 = PQexecParams(conn, stm2, 1, NULL, paramValues, NULL, NULL, 0);
 
   if (PQresultStatus(res2) != PGRES_TUPLES_OK) {
