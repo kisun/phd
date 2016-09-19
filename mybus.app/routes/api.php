@@ -19,6 +19,13 @@ Route::get('/user', function (Request $request) {
 
 
 Route::get('/vehicle_positions/{route}', function(App\Route $route) {
-
   return response()->json($route->vehicle_positions()->with('trip.stop_times')->get());
+});
+
+
+Route::get('/shape_schedule/{trip}', function(App\Trip $trip) {
+  return response()->json([
+    'shape' => $trip->getShape(),
+    'schedule' => $trip->stops
+  ]);
 });

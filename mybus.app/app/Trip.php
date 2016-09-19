@@ -76,7 +76,7 @@ class Trip extends Model
     public function stops()
     {
         return $this->belongsToMany('App\Stop', 'stop_times')
-                    ->withPivot('arrival_time', 'departure_time', 'stop_sequence')
+                    ->withPivot('arrival_time', 'departure_time', 'stop_sequence', 'shape_dist_traveled')
                     ->orderBy('stop_sequence');
     }
 
