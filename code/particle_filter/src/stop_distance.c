@@ -76,9 +76,9 @@ int CalcStopDist(PGconn *conn, char *id, char *sid) {
         SEG = k;
 
         if (j > 0) {
-          sprintf(values, "%s, ('%s',%d,%s)", values, id, j+1, PQgetvalue(res2, j, 2));
+          sprintf(values, "%s, ('%s',%d,%s)", values, id, j+1, PQgetvalue(res2, k, 2));
         } else {
-          sprintf(values, "('%s',%d,%s)", id, j+1, PQgetvalue(res2, j, 2));
+          sprintf(values, "('%s',%d,%s)", id, j+1, PQgetvalue(res2, k, 2));
         }
 
         break;
@@ -131,7 +131,7 @@ int main() {
   int rows = PQntuples(res);
   char *tripid, *shapeid;
   for (int i=0; i<rows; i++) {
-    printf("%03d of %d\r", i+1, rows);
+    printf("%05d of %d\r", i+1, rows);
     tripid = PQgetvalue(res, i, 0);
     shapeid = PQgetvalue(res, i, 1);
     CalcStopDist(conn, tripid, shapeid);
