@@ -27,5 +27,5 @@ Route::get('/shape_schedule/{trip}', function(App\Trip $trip) {
   return response()->json([
     'shape' => $trip->getShape(),
     'schedule' => $trip->stops
-  ]);
+  ], 200, [], JSON_NUMERIC_CHECK);
 });

@@ -15,11 +15,10 @@ pf <- function(con, vid, N = 500) {
     vp <- vp[1, ]
 
     ## Get vehicle's shape and schedule:
-    info <- fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", vp$trip_id))
-    shape <- flatten(info$shape)
+    info <- fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", vp$trip_id), flatten = TRUE)
     schedule <- flatten(info$schedule)
     colnames(schedule) <- gsub("pivot.", "", colnames(schedule))
-
+    shape <- info$shape
 
     particles <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE vehicle_id='%s'", vid))
 
@@ -28,10 +27,11 @@ pf <- function(con, vid, N = 500) {
         
         particles <- data.frame(vehicle_id = rep(vid, N),
                                 distance_into_trip = runif(N, 0, max(shape$dist_traveled)),
-                                velocity = rep(NA, N),
-                                segment = rep(NA, N))
+                                velocity = runif(N, 0, 30))
+        particles$segment <- sapply(particles$distance_into_trip,
+                                    function(x) which(schedule$shape_dist_traveled > x)[1] - 1)
     } else {
-        ## do the things
+        if (particles$timestamp[1] == vp$timestamp) return()
     }
 
     particles

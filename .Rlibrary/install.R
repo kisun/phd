@@ -9,8 +9,11 @@ packages = c(
     "abind",
     "knitr", "xtable",
     "msm",
-    "colorspace", "dichromat"
+    "colorspace", "dichromat",
+    "RPostgreSQL", "jsonlite"
 )
+
+packages = packages[! packages %in% installed.packages(lib = lib)[, 'Package']]
 
 options(repos = "http://cran.stat.auckland.ac.nz")
 

@@ -93,7 +93,7 @@ int CalcStopDist(PGconn *conn, char *id, char *sid) {
 
   sprintf(qry, upd, values);
 
-  // printf("%s", qry);
+  // printf("%s", values);
 
   PGresult *ures = PQexec(conn, qry);
 
@@ -131,7 +131,7 @@ int main() {
   int rows = PQntuples(res);
   char *tripid, *shapeid;
   for (int i=0; i<rows; i++) {
-    printf("%05d of %d\r", i+1, rows);
+    // printf("%05d of %d\r", i+1, rows);
     tripid = PQgetvalue(res, i, 0);
     shapeid = PQgetvalue(res, i, 1);
     CalcStopDist(conn, tripid, shapeid);
