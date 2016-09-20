@@ -3,6 +3,7 @@ setwd("../")
 
 library(RPostgreSQL)
 library(jsonlite)
+library(iNZightPlots)
 library(iNZightMaps)
 library(mvtnorm)
 source("src/pf.R")
@@ -14,7 +15,7 @@ con = dbConnect(drv, dbname = "homestead", host = "localhost",
                 user = "homestead", port = "54320", password = "secret")
 
 vs <- dbGetQuery(con, "SELECT vehicle_id FROM vehicle_positions")$vehicle_id
-vid <- vs[500]
+vid <- vs[400]
 
 print(pf(con, vid, sig.gps = 5, draw = TRUE))
 

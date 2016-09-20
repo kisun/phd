@@ -57,7 +57,7 @@ pf <- function(con, vid, N = 500,
 
         ## add process noise to speeds:
         particles$velocity <-
-            pmin(30, pmax(0, particles$velocity + rnorm(nrow(particles),0, sd = sqrt(delta / 10))))
+            pmin(30, pmax(0, particles$velocity + rnorm(nrow(particles),0, sd = sqrt(delta / 20))))
 
         ## move each particle
         for (i in 1L:nrow(particles)) {
@@ -66,7 +66,7 @@ pf <- function(con, vid, N = 500,
     }
 
     if (draw) {
-        wi <- which(dist < 2000)
+        wi <- which(dist < 1000)
         sh.near <- shape[min(wi):max(wi), ]
         mobj <- iNZightMap(~lat, ~lon, data = shape)
         e <- environment()
