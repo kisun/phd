@@ -9,13 +9,14 @@ packages = c(
     "abind",
     "knitr", "xtable",
     "msm",
-    "colorspace", "dichromat",
-    "RPostgreSQL", "jsonlite"
+    "colorspace", "dichromat", "viridis",
+    "RPostgreSQL", "jsonlite",
+    "iNZightRegression", "iNZightMR", "iNZightPlots", "iNZightMaps"
 )
 
 packages = packages[! packages %in% installed.packages(lib = lib)[, 'Package']]
 
-options(repos = "http://cran.stat.auckland.ac.nz")
+options(repos = c("http://r.docker.stat.auckland.ac.nz", "https://cran.stat.auckland.ac.nz"))
 
 install.packages(packages,
                  lib = lib,
@@ -23,8 +24,8 @@ install.packages(packages,
 
 
 ## Packages to install from GitHub:
-.libPaths(lib)
-devtools::install_github("iNZightVIT/iNZightRegression")
-devtools::install_github("iNZightVIT/iNZightMR")
-devtools::install_github("iNZightVIT/iNZightPlots")
-devtools::install_github("iNZightVIT/iNZightMaps")
+# .libPaths(lib)
+# devtools::install_github("iNZightVIT/iNZightRegression")
+# devtools::install_github("iNZightVIT/iNZightMR")
+# devtools::install_github("iNZightVIT/iNZightPlots")
+# devtools::install_github("iNZightVIT/iNZightMaps")
