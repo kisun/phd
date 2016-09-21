@@ -154,6 +154,8 @@
         // if (position.age) {
         //   html += '<p class="small">Last position reported ' + position.age + '</p>';
         // }
+        html += '<p><a class="btn btn-primary" href="{{ url("/trips") }}/' + vehicle.trip.trip_id
+             + '">View More</a>';
         return html;
       }
 

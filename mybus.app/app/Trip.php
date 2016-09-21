@@ -80,4 +80,15 @@ class Trip extends Model
                     ->orderBy('stop_sequence');
     }
 
+
+    /**
+     * Get the vehicle record associated with the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne
+     */
+    public function vehicle_position()
+    {
+        return $this->hasOne('App\VehiclePosition');
+    }
+
 }

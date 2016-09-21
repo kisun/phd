@@ -26,4 +26,15 @@ class VehiclePosition extends Model
         return $this->belongsTo('App\Route');
     }
 
+
+    /**
+     * Get the particles for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function particles()
+    {
+        return $this->hasMany('App\Particle', 'vehicle_id', 'vehicle_id');
+    }
+
 }

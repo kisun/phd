@@ -15,6 +15,7 @@ require('laravel-elixir-vue');
 
 elixir(mix => {
     mix.copy('node_modules/bootstrap-sass/assets/fonts/**', 'public/fonts')
+       .copy('resources/assets/img/**', 'public/img')
        .sass('app.scss')
        .webpack('app.js');
     mix.browserSync({

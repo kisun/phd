@@ -24,6 +24,8 @@ pf <- function(con, vid, N = 500,
     if (nrow(vp) > 1) warning("Multiple instances for vehicle found. Using the first one.")
     vp <- vp[1, ]
 
+    print(vp$trip_id)
+
     ## Get vehicle's shape and schedule:
     info <- fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", vp$trip_id), flatten = TRUE)
     schedule <- flatten(info$schedule)
@@ -48,6 +50,9 @@ pf <- function(con, vid, N = 500,
                                 distance_into_trip = runif(N, min(sh.near$dist_traveled),
                                                            max(sh.near$dist_traveled)),
                                 velocity = runif(N, 0, 30))
+        ## determine which segment of the route each particle is on
+        particles$segment <- sapply(particles$distance_into_trip,
+                                    function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
     } else {  ## else if ( trip_is_the_same ) { ... } else {
         delta <- vp$timestamp - particles$timestamp[1L]
         
@@ -57,13 +62,16 @@ pf <- function(con, vid, N = 500,
 
         ## add process noise to speeds:
         particles$velocity <-
-            pmin(30, pmax(0, particles$velocity + rnorm(nrow(particles),0, sd = sqrt(delta / 20))))
-
+            pmin(30, pmax(0, particles$velocity + rnorm(nrow(particles),0, sd = sqrt(delta))))
+        particles$segment <- sapply(particles$distance_into_trip,
+                                    function(x) which(schedule$shape_dist_traveled > x)[1L] - 1L)
         ## move each particle
         for (i in 1L:nrow(particles)) {
             particles[i, ] <- transition(particles[i, ])
         }
     }
+
+    print(head(schedule))
 
     if (draw) {
         wi <- which(dist < 1000)
@@ -71,15 +79,11 @@ pf <- function(con, vid, N = 500,
         mobj <- iNZightMap(~lat, ~lon, data = shape)
         e <- environment()
         plot(mobj, join = TRUE, pch = NA, lwd = 2, col.line = "#333333",
-             xlim = range(sh.near$lon), ylim = range(sh.near$lat))
+             xlim = range(sh.near$lon), ylim = range(sh.near$lat), env = e)
         with(vp, addPoints(position_latitude, position_longitude, pch = 19,
                            gpar = list(col = "#cc3333", cex = 0.3)))
     }
 
-    ## determine which segment of the route each particle is on
-    particles$segment <- sapply(particles$distance_into_trip,
-                                function(x) which(schedule$shape_dist_traveled > x)[1L] - 1L)
-    
     ## resampling step
     sig.xy <- sig.gps / R
 
@@ -125,9 +129,10 @@ pf <- function(con, vid, N = 500,
     }
 
     qry <- paste0(
-        "INSERT INTO particles (vehicle_id, distance_into_trip, velocity, segment, timestamp) VALUES ",
+        "INSERT INTO particles (vehicle_id, distance_into_trip, velocity, segment, lat, lon, timestamp) VALUES ",
         with(particles, paste0("('", vehicle_id, "',", round(distance_into_trip, 2L),
-                               ",", round(velocity, 3L), ",", segment, ",", vp$timestamp, ")",
+                               ",", round(velocity, 3L), ",", segment,
+                               ",", pts[1L, wi], ",", pts[2L, wi], ",", vp$timestamp, ")",
                                collapse = ", ")))
     dbGetQuery(con, qry)
     
@@ -150,6 +155,8 @@ distance <- function(x) sqrt(x[, 1L]^2 + x[, 2L]^2) * R
 ##' @return a moved particle
 ##' @author Tom Elliott
 transition <- function(p, e = parent.frame()) {
+    cat("=====================================================\n")
+    print(p)
     ## the amount of time we have to play with:
     tr <- e$delta
     
@@ -160,26 +167,35 @@ transition <- function(p, e = parent.frame()) {
 
     d <- p$distance_into_trip[1L]
     v <- p$velocity[1L]
-    p$distance_into_trip <- d + tr * v
+#    p$distance_into_trip <- d + tr * v
+    print(p)
 
     ## ## OK so that's done --- now lets move!
-    ## while (tr > 0) {
-    ##     d <- p$distance_into_trip[1L]
-    ##     v <- p$velocity[1L]  ## this will later depend on the segment we are in
-    ##     if (v <= 0) return(p)
+    while (tr > 0) {
+        print(tr)
 
-    ##     ## distance of the next stop, and how long it'll take to get there:
-    ##     ds <- e$schedule[p$segment[1L] + 1, "shape_dist_traveled"]
-    ##     eta <- (ds - d) / v
-    ##     tr <- tr - eta
+        d <- p$distance_into_trip[1L]
+        v <- p$velocity[1L]  ## this will later depend on the segment we are in
+        if (v <= 0) return(p)
+
+        ## distance of the next stop, and how long it'll take to get there:
+        ds <- e$schedule[p$segment[1L] + 1, "shape_dist_traveled"]
+        eta <- (ds - d) / v
+        tr <- tr - eta
+        print(c(ds, d, v, eta))
+        print(tr)
         
-    ##     if (tr > 0) {
-    ##         ## bus reaches stop: compute dwell time
-    ##         Ta <- p$timestamp + eta
-    ##         tau <- rbinom(1L, 1L, e$pi) * (e$gamma + rexp(1L, 1 / e$mu.tau))
+        if (tr > 0) {
+            ## bus reaches stop: compute dwell time
+            Ta <- p$timestamp + eta
+            tau <- rbinom(1L, 1L, e$pi) * (e$gamma + rexp(1L, 1 / e$mu.tau))
 
-    ##         tr <- tr - tau
-    ##         p$distance_into_trip <- ds
+            tr <- tr - tau
+            p$distance_into_trip <- ds
+
+            
+            print(tr)
+            tr <- 0
     ##         if (tr > 0) {
     ##             Td <- Ta - tau
     ##             p$segment <- p$segment + 1
@@ -189,7 +205,7 @@ transition <- function(p, e = parent.frame()) {
     ##         ## bus doesn't reach stop: compute distance it'll travel
     ##         p$distance_into_trip <- d + tr * v
     ##     }
-    ## }
+    }
 
     p
 }

@@ -13,12 +13,16 @@ class TripController extends Controller
     public function show($trip_id)
     {
         $latest = \App\Version::orderBy('startdate', 'desc')->first();
-        $trip = Trip::where('trip_id', $trip_id)->where('version_id', $latest->id)->first();
+        $trip = Trip::where('trip_id', $trip_id)
+                    ->where('version_id', $latest->id)
+                    ->with('vehicle_position.particles')
+                    ->first();
 
         $shape = $trip->getShape();
-        return view('map', [
+        return view('trips.show', [
           'trip' => $trip,
-          'shape' => $shape
+          'shape' => $shape,
+          'stops' => $trip->stop_times()->with('stop')->get()
         ]);
     }
 }

@@ -19,7 +19,11 @@ Route::get('/user', function (Request $request) {
 
 
 Route::get('/vehicle_positions/{route}', function(App\Route $route) {
-  return response()->json($route->vehicle_positions()->with('trip.stop_times')->get());
+  return response()->json($route->vehicle_positions()->with('trip.stop_times')->get(),
+                          200, [], JSON_NUMERIC_CHECK);
+});
+Route::get('/vehicle_position/{trip}', function(App\Trip $trip) {
+  return response()->json($trip->vehicle_position()->with('particles')->first(), 200, [], JSON_NUMERIC_CHECK);
 });
 
 
