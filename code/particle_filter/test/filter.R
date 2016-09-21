@@ -20,7 +20,7 @@ print(pf(con, vs[100], 50, sig.gps = 5, draw=TRUE))
 
 
 ###
-vid <- "5919"
+vid <- "3AA1"
 
 ret <- 0
 while(ret <= 0) {

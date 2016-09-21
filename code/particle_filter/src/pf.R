@@ -36,14 +36,14 @@ pf <- function(con, vid, N = 500,
     sy <- deg2rad(shape$lat) - deg2rad(vp$position_latitude)
     dist <- distance(cbind(sx, sy))
     particles <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE vehicle_id='%s'", vid))
-    
+
 
 
     NEW <- FALSE
     if (nrow(particles) == 0L) {
         cat("Vehicle not yet instantiated ... doing that now ...\n")
         NEW <- TRUE
-        
+
         ## initial proposal
         sh.near <- shape[which(dist < 200), ]
         particles <- data.frame(vehicle_id = rep(vid, N),
@@ -55,7 +55,7 @@ pf <- function(con, vid, N = 500,
                                     function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
     } else {  ## else if ( trip_is_the_same ) { ... } else {
         delta <- vp$timestamp - particles$timestamp[1L]
-        
+
         if (delta <= 0) return(invisible(-1))
         ## movement step
         cat("The bus has moved ...\n")
@@ -95,7 +95,7 @@ pf <- function(con, vid, N = 500,
     ##     #addLines(rad2deg(yy) + vp$position_latitude,
     ##     #         rad2deg(xx) / cos(deg2rad(vp$position_latitude)) + vp$position_longitude)
     ## }
-    
+
     pts <- h(particles$distance_into_trip, shape)
     px <- (deg2rad(pts[2L, ]) - deg2rad(vp$position_longitude)) * cos(deg2rad(vp$position_latitude))
     py <- deg2rad(pts[1L, ]) - deg2rad(vp$position_latitude)
@@ -104,7 +104,7 @@ pf <- function(con, vid, N = 500,
         addPoints(pts[1L,], pts[2L,], pch = 19,
                   gpar = list(col = "lightblue", alpha = 0.8, cex = 0.9))
     }
-    
+
     theta <- seq(0, 2 * pi, length.out = 101L)
     xx <- sig.xy * cos(theta)
     yy <- sig.xy * sin(theta)
@@ -115,7 +115,7 @@ pf <- function(con, vid, N = 500,
 
     wi <- sample(nrow(particles), replace = TRUE, prob = wt)
     particles <- particles[wi, ]
-    
+
     if (draw) {
         addPoints(pts[1L, wi], pts[2L, wi], pch = 19,
                   gpar = list(col = "#333333", alpha = 0.8, cex = 0.5))
@@ -135,7 +135,7 @@ pf <- function(con, vid, N = 500,
                                ",", pts[1L, wi], ",", pts[2L, wi], ",", vp$timestamp, ")",
                                collapse = ", ")))
     dbGetQuery(con, qry)
-    
+
     return(invisible(0))
 }
 
@@ -159,8 +159,8 @@ transition <- function(p, e = parent.frame()) {
     print(p)
     ## the amount of time we have to play with:
     tr <- e$delta
-    
-    ## first off, the bus might be stuck at lights ... 
+
+    ## first off, the bus might be stuck at lights ...
     wait <- rbinom(1L, 1L, e$rho) * rexp(1L, 1 / e$mu.nu)
     tr <- tr - wait
     if (tr <= 0) return(p)
@@ -184,7 +184,7 @@ transition <- function(p, e = parent.frame()) {
         tr <- tr - eta
         print(c(ds, d, v, eta))
         print(tr)
-        
+
         if (tr > 0) {
             ## bus reaches stop: compute dwell time
             Ta <- p$timestamp + eta
@@ -193,7 +193,7 @@ transition <- function(p, e = parent.frame()) {
             tr <- tr - tau
             p$distance_into_trip <- ds
 
-            
+
             print(tr)
             tr <- 0
     ##         if (tr > 0) {
@@ -204,7 +204,7 @@ transition <- function(p, e = parent.frame()) {
     ##     } else {
     ##         ## bus doesn't reach stop: compute distance it'll travel
     ##         p$distance_into_trip <- d + tr * v
-    ##     }
+        }
     }
 
     p
