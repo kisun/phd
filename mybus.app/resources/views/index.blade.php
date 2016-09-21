@@ -66,6 +66,8 @@
 
 @section('endmatter')
   <script>
+    var map;
+
     function manualUserLocation() {
       $('#userLocation').addClass('visible');
     }
@@ -73,7 +75,7 @@
     function initMap() {
       var pos = {lat: -36.8485, lng: 174.7633};
 
-      var map = new google.maps.Map(document.getElementById('backgroundMap'), {
+      map = new google.maps.Map(document.getElementById('backgroundMap'), {
         center: pos,
         zoom: 15,
         disableDefaultUI: true
@@ -101,11 +103,25 @@
         $(".app-content").addClass("opaque");
       });
 
+      $("#locationForm").on('submit', function(e) {
+        e.preventDefault();
+        var location = $("#locationForm input").val();
+        location = location.replace(/ /g, "+");
+        $.get({
+          url: "https://maps.googleapis.com/maps/api/geocode/json?address=" +
+               location + "&region=nz&key={{ env('GOOGLE_API_KEY') }}",
+          success: function(data) {
+            var pos = data.results[0].geometry.location;
+            var coord = new google.maps.LatLng(pos.lat, pos.lng);
+            map.panTo(coord);
+          }
+        });
+      });
     }
+
   </script>
   <script async defer
    src="https://maps.googleapis.com/maps/api/js?key={{ env('GOOGLE_API_KEY') }}&callback=initMap">
    </script>
-   <script src="{{ url('/js/geolocation-marker.js') }}"></script>
 
 @endsection
