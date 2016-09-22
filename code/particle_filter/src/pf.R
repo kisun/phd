@@ -167,13 +167,9 @@ transition <- function(p, e = parent.frame()) {
 
     d <- p$distance_into_trip[1L]
     v <- p$velocity[1L]
-#    p$distance_into_trip <- d + tr * v
-    print(p)
 
     ## ## OK so that's done --- now lets move!
     while (tr > 0) {
-        print(tr)
-
         d <- p$distance_into_trip[1L]
         v <- p$velocity[1L]  ## this will later depend on the segment we are in
         if (v <= 0) return(p)
@@ -182,8 +178,6 @@ transition <- function(p, e = parent.frame()) {
         ds <- e$schedule[p$segment[1L] + 1, "shape_dist_traveled"]
         eta <- (ds - d) / v
         tr <- tr - eta
-        print(c(ds, d, v, eta))
-        print(tr)
 
         if (tr > 0) {
             ## bus reaches stop: compute dwell time
@@ -192,20 +186,14 @@ transition <- function(p, e = parent.frame()) {
 
             tr <- tr - tau
             p$distance_into_trip <- ds
+            p$segment <- p$segment + 1
 
-
-            print(tr)
-            tr <- 0
-    ##         if (tr > 0) {
-    ##             Td <- Ta - tau
-    ##             p$segment <- p$segment + 1
-    ##             if (p$segment >= nrow(e$schedule)) tr <- 0
-    ##         }
-    ##     } else {
-    ##         ## bus doesn't reach stop: compute distance it'll travel
-    ##         p$distance_into_trip <- d + tr * v
+            if (p$segment >= nrow(e$schedule)) tr <- 0
+        } else {
+            ## bus doesn't reach stop: compute distance it'll travel
+            p$distance_into_trip <- d + tr * v
         }
     }
-
+    
     p
 }
