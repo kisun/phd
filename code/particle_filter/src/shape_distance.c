@@ -110,7 +110,7 @@ int main() {
 
   }
 
-  PGresult *res = PQexec(conn, "SELECT DISTINCT id FROM shapes");
+  PGresult *res = PQexec(conn, "SELECT DISTINCT id FROM shapes WHERE dist_traveled IS NULL");
 
   if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 

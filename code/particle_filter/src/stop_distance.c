@@ -26,7 +26,7 @@ int CalcStopDist(PGconn *conn, char *id, char *sid) {
   // Get the stops for the trip:
   char *stm = "SELECT st.stop_id, s.lat, s.lon "
               "FROM stop_times AS st, stops AS s "
-              "WHERE trip_id=$1 AND st.stop_id=s.id AND shape_dist_traveled is not null "
+              "WHERE trip_id=$1 AND st.stop_id=s.id "
               "ORDER BY stop_sequence";
   PGresult *res = PQexecParams(conn, stm, 1, NULL, paramValues, NULL, NULL, 0);
 
@@ -115,7 +115,7 @@ int main() {
 
   }
 
-  PGresult *res = PQexec(conn, "SELECT id, shape_id FROM trips");
+  PGresult *res = PQexec(conn, "SELECT t.id, t.shape_id FROM trips as t, stop_times as st WHERE t.id=st.trip_id AND st.stop_sequence=1 AND st.shape_dist_traveled IS NULL");
 
   if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 
