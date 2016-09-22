@@ -96,14 +96,17 @@ class UpdateGTFS extends Command
 
                 foreach ($table as $a) {
                     $a = (object) $a;
-                    $agency = App\Agency::where('agency_id', $a->agency_id)->firstOrCreate([
-                        'agency_id' => $a->agency_id,
-                        'name' => $a->agency_name,
-                        'url' => $a->agency_url,
-                        'timezone' => $a->agency_timezone,
-                        'lang' => $a->agency_lang,
-                        'phone' => $a->agency_phone
-                    ]);
+                    $agency = App\Agency::where('agency_id', $a->agency_id)->first();
+                    if (is_null($agency)) {
+                      $agency = App\Agency::create([
+                          'agency_id' => $a->agency_id,
+                          'name' => $a->agency_name,
+                          'url' => $a->agency_url,
+                          'timezone' => $a->agency_timezone,
+                          'lang' => $a->agency_lang,
+                          'phone' => $a->agency_phone
+                      ]);
+                    }
                 }
                 echo "done.\n";
 
@@ -213,7 +216,7 @@ class UpdateGTFS extends Command
                 echo "done.\n";
 
 
-                // -- SHAPES
+                // -- STOPS
                 echo "* Adding stops ... ";
                 $table = Zipper::make(storage_path() . '/gtfs.zip')->getFileContent('stops.txt');
                 $table = array_map("str_getcsv", explode("\r\n", $table));
@@ -227,26 +230,30 @@ class UpdateGTFS extends Command
 
                 foreach ($table as $t) {
                     $t = (object) $t;
-                    $stop = App\Stop::firstOrCreate([
-                        'id' => $t->stop_id,
-                        'code' => !empty($t->stop_code) ? $t->stop_code : null,
-                        'name' => $t->stop_name,
-                        'desc' => !empty($t->stop_desc) ? $t->stop_desc : null,
-                        'lat' => $t->stop_lat,
-                        'lon' => $t->stop_lon,
-                        'zone_id' => !empty($t->zone_id) ? $t->zone_id : null,
-                        'url' => !empty($t->url) ? $t->url : null,
-                        'location_type' => !empty($t->location_type) ? $t->location_type : null,
-                        'parent_station' => !empty($t->parent_station) ? $t->parent_station : null,
-                        'timezone' => !empty($t->timezone) ? $t->timezone : null,
-                        'wheelchair_boarding' =>
-                            !empty($t->wheelchair_boarding) ? $t->wheelchair_boarding : null,
-                    ]);
+                    $stop = App\Stop::find($t->stop_id);
+
+                    if (is_null($stop)) {
+                        $stop = App\Stop::create([
+                            'id' => $t->stop_id,
+                            'code' => !empty($t->stop_code) ? $t->stop_code : null,
+                            'name' => $t->stop_name,
+                            'desc' => !empty($t->stop_desc) ? $t->stop_desc : null,
+                            'lat' => $t->stop_lat,
+                            'lon' => $t->stop_lon,
+                            'zone_id' => !empty($t->zone_id) ? $t->zone_id : null,
+                            'url' => !empty($t->url) ? $t->url : null,
+                            'location_type' => !empty($t->location_type) ? $t->location_type : null,
+                            'parent_station' => !empty($t->parent_station) ? $t->parent_station : null,
+                            'timezone' => !empty($t->timezone) ? $t->timezone : null,
+                            'wheelchair_boarding' =>
+                                !empty($t->wheelchair_boarding) ? $t->wheelchair_boarding : null,
+                        ]);
+                    }
                 }
                 echo "done.\n";
 
 
-                echo "Adding stop times ... csv ";
+                echo "* Adding stop times ... csv ";
                 // more difficult, because the file is large -- do it in chunks
                 $stop_times = fopen(storage_path() . '/stop_times.csv', "w");
                 fwrite($stop_times, Zipper::make(storage_path() . '/gtfs.zip')
