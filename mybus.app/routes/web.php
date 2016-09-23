@@ -32,3 +32,7 @@ Route::get('/shapes/{id}', 'ShapeController@show');
 
 
 Route::get('/search', 'SearchController@search');
+
+Route::get('/d3', function() {
+  return view('d3');
+});

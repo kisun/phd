@@ -5874,6 +5874,9 @@ button.close {
   background: #eeeeee;
   z-index: -5; }
 
+.page-test .bar rect {
+  fill: orangered; }
+
 #shapeMap {
   height: 70%;
   background: orangered; }
