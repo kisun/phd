@@ -21,6 +21,7 @@ print(pf(con, vs[200], 50, sig.gps = 5, draw=TRUE))
 
 ###
 vid <- "3AA1"
+print(pf(con, vid, sig.gps = 50))
 
 ret <- 0
 while(ret <= 0) {

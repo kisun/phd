@@ -5,7 +5,22 @@
     <h3>{{ $trip->route->short_name }} <small>{{ $trip->route->long_name }}</small></h3>
 
     <hr>
-    <div id="map" style="height:70vh"></div>
+    <div class="row">
+      <div class="col-md-8">
+        <div id="map" style="height:70vh"></div>
+      </div>
+
+      <div class="col-md-4">
+        <h5>Particle Information</h5>
+
+        <p>
+          <strong>Average Speed</strong>
+          {{ $meanSpeed = round($trip->vehicle_position->particles()->avg('velocity'), 2) }}m/s
+          (&plusmn; {{ round($trip->vehicle_position->particles()
+                              ->select(DB::raw('stddev(velocity) as sd'))->first()->sd, 2) }})
+        </p>
+      </div>
+    </div>
     <hr>
 
   </div>

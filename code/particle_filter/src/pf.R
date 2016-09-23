@@ -24,8 +24,6 @@ pf <- function(con, vid, N = 500,
     if (nrow(vp) > 1) warning("Multiple instances for vehicle found. Using the first one.")
     vp <- vp[1, ]
 
-    print(vp$trip_id)
-
     ## Get vehicle's shape and schedule:
     info <- fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", vp$trip_id), flatten = TRUE)
     schedule <- flatten(info$schedule)
@@ -61,8 +59,8 @@ pf <- function(con, vid, N = 500,
         cat("The bus has moved ...\n")
 
         ## add process noise to speeds:
-        particles$velocity <-
-            pmin(30, pmax(0, particles$velocity + rnorm(nrow(particles),0, sd = sqrt(delta))))
+        particles$velocity <- msm::rtnorm(nrow(particles), particles$velocity, sd = sqrt(delta), lower = 0, upper = 30)
+           # pmin(30, pmax(0, particles$velocity + rnorm(nrow(particles),0, sd = sqrt(delta))))
         particles$segment <- sapply(particles$distance_into_trip,
                                     function(x) which(schedule$shape_dist_traveled > x)[1L] - 1L)
         ## move each particle
@@ -70,8 +68,6 @@ pf <- function(con, vid, N = 500,
             particles[i, ] <- transition(particles[i, ])
         }
     }
-
-    print(head(schedule))
 
     if (draw) {
         wi <- which(dist < 1000)
@@ -113,7 +109,7 @@ pf <- function(con, vid, N = 500,
     wt[is.na(wt)] <- 0
     if (sum(wt) == 0) return(2)
 
-    wi <- sample(nrow(particles), replace = TRUE, prob = wt)
+    wi <- sample(nrow(particles), N, replace = TRUE, prob = wt)
     particles <- particles[wi, ]
 
     if (draw) {
@@ -155,8 +151,6 @@ distance <- function(x) sqrt(x[, 1L]^2 + x[, 2L]^2) * R
 ##' @return a moved particle
 ##' @author Tom Elliott
 transition <- function(p, e = parent.frame()) {
-    cat("=====================================================\n")
-    print(p)
     ## the amount of time we have to play with:
     tr <- e$delta
 
