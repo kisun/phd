@@ -210,7 +210,7 @@ class UpdateGTFS extends Command
                     "SELECT shape_id AS id, regexp_replace(shape_id, '-.+$', '') AS shape_id, " .
                     "shape_pt_lat AS lat, shape_pt_lon AS lon, shape_pt_sequence AS pt_sequence, " .
                     "shape_dist_traveled AS dist_traveled, $version->id AS version_id " .
-                    "FROM raw_shapes WHERE shape_id LIKE '%$version->id'");
+                    "FROM raw_shapes WHERE shape_id LIKE '%-$version->version'");
 
                 DB::statement('DROP TABLE raw_shapes');
                 echo "done.\n";
@@ -320,28 +320,28 @@ class UpdateGTFS extends Command
 
                 // -- CALENDAR DATES
                 echo "* Adding calendar dates ... ";
-                $table = Zipper::make(storage_path() . '/gtfs.zip')->getFileContent('calendar_dates.txt');
-                $table = array_map("str_getcsv", explode("\r\n", $table));
-                if (count(end($table)) == 1) {
-                    unset($table[count($table)-1]);
-                }
-                array_walk($table, function(&$a) use ($table) {
-                    $a = array_combine($table[0], $a);
-                });
-                array_shift($table);
+                $stop_times = fopen(storage_path() . '/calendar_dates.csv', "w");
+                fwrite($stop_times, Zipper::make(storage_path() . '/gtfs.zip')
+                                      ->getFileContent('calendar_dates.txt'));
+                fclose($stop_times);
 
-                foreach ($table as $cd) {
-                    $cd = (object) $cd;
-                    if (str_contains($cd->service_id, $version->version)) {
-                        $calendar_date = App\CalendarDate::firstOrCreate([
-                            'service_id' => $cd->service_id,
-                            'date' => $cd->date,
-                            'exception_type' => $cd->exception_type
-                        ]);
-                    }
-                }
+                DB::statement('CREATE TABLE tmp ( service_id VARCHAR(255), ' .
+                              'date DATE, exception_type VARCHAR(1) )');
+
+                echo "-> table ";
+                DB::statement("COPY tmp FROM '" . storage_path() . "/calendar_dates.csv' CSV HEADER;");
+                unlink(storage_path() . '/calendar_dates.csv');
+
+                echo "-> stop_times ... ";
+                DB::statement(
+                    "INSERT INTO calendar_dates (service_id, date, exception_type) " .
+                    "SELECT * FROM tmp WHERE service_id LIKE '%-$version->version'");
+
+                DB::statement('DROP TABLE tmp');
                 echo "done.\n";
             }
         }
+
+        unlink(storage_path() . '/gtfs.zip');
     }
 }
