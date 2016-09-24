@@ -5874,8 +5874,10 @@ button.close {
   background: #eeeeee;
   z-index: -5; }
 
-.page-test .bar rect {
-  fill: orangered; }
+.page-test .line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1.5px; }
 
 #shapeMap {
   height: 70%;
