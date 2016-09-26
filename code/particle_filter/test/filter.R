@@ -15,7 +15,8 @@ con = dbConnect(drv, dbname = "homestead", host = "localhost",
                 user = "homestead", port = "54320", password = "secret")
 
 vs <- dbGetQuery(con, "SELECT vehicle_id FROM vehicle_positions")$vehicle_id
-print(pf(con, vs[200], 50, sig.gps = 5, draw=TRUE))
+vid <- vs[240]
+print(pf(con, vid, 500, sig.gps = 5, draw=TRUE))
 
 
 
@@ -26,7 +27,7 @@ print(pf(con, vid, sig.gps = 50))
 ret <- 0
 while(ret <= 0) {
     cat(".")
-    ret <- pf(con, vid, sig.gps = 5)
+    ret <- pf(con, vid, sig.gps = 5, draw=TRUE)
     Sys.sleep(0.5)
 }
 

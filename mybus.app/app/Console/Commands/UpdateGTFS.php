@@ -62,8 +62,7 @@ class UpdateGTFS extends Command
 
 
         foreach ($new_versions as $new_version) {
-
-            $version = App\Version::firstOrNew($new_version);
+            $version = App\Version::where('version', $new_version['version'])->firstOrNew($new_version);
             if (is_null($version->id)) {
                 echo "*** Adding version $version->version\n\n";
 

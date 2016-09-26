@@ -8,6 +8,7 @@
 ##' @param draw logical, if \code{TRUE} a map will be drawn
 ##' @return integer; 0 = success; -1 = nothing to do (no new observations;
 ##'         1 = no such vehicle; 2 = error in particle distribution ... run again?
+##'         3 = bus not near route - not yet started?
 ##'
 ##' @author tell029
 pf <- function(con, vid, N = 500,
@@ -27,6 +28,7 @@ pf <- function(con, vid, N = 500,
     ## Get vehicle's shape and schedule:
     info <- fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", vp$trip_id), flatten = TRUE)
     schedule <- flatten(info$schedule)
+
     colnames(schedule) <- gsub("pivot.", "", colnames(schedule))
     shape <- info$shape
 
@@ -44,6 +46,9 @@ pf <- function(con, vid, N = 500,
 
         ## initial proposal
         sh.near <- shape[which(dist < 200), ]
+        if (nrow(sh.near) == 0) {
+            return(3)
+        }
         particles <- data.frame(vehicle_id = rep(vid, N),
                                 distance_into_trip = runif(N, min(sh.near$dist_traveled),
                                                            max(sh.near$dist_traveled)),
@@ -51,6 +56,7 @@ pf <- function(con, vid, N = 500,
         ## determine which segment of the route each particle is on
         particles$segment <- sapply(particles$distance_into_trip,
                                     function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
+        particles$arrival_time <- particles$departure_time <- NA
     } else {  ## else if ( trip_is_the_same ) { ... } else {
         delta <- vp$timestamp - particles$timestamp[1L]
 
@@ -62,7 +68,7 @@ pf <- function(con, vid, N = 500,
         particles$velocity <- msm::rtnorm(nrow(particles), particles$velocity, sd = sqrt(delta), lower = 0, upper = 30)
            # pmin(30, pmax(0, particles$velocity + rnorm(nrow(particles),0, sd = sqrt(delta))))
         particles$segment <- sapply(particles$distance_into_trip,
-                                    function(x) which(schedule$shape_dist_traveled > x)[1L] - 1L)
+                                    function(x) which(schedule$shape_dist_traveled >= x)[1L] - 1L)
         ## move each particle
         for (i in 1L:nrow(particles)) {
             particles[i, ] <- transition(particles[i, ])
@@ -71,11 +77,16 @@ pf <- function(con, vid, N = 500,
 
     if (draw) {
         wi <- which(dist < 1000)
+        if (length(wi) == 0) {
+            warning("No points close to the bus ...")
+            wi <- 1:length(dist)
+        }
         sh.near <- shape[min(wi):max(wi), ]
         mobj <- iNZightMap(~lat, ~lon, data = shape)
         e <- environment()
         plot(mobj, join = TRUE, pch = NA, lwd = 2, col.line = "#333333",
              xlim = range(sh.near$lon), ylim = range(sh.near$lat), env = e)
+        with(schedule, addPoints(lat, lon, gpar = list(col = "#333333", cex = 0.5), pch = 19))
         with(vp, addPoints(position_latitude, position_longitude, pch = 19,
                            gpar = list(col = "#cc3333", cex = 0.3)))
     }
@@ -98,7 +109,7 @@ pf <- function(con, vid, N = 500,
 
     if (draw) {
         addPoints(pts[1L,], pts[2L,], pch = 19,
-                  gpar = list(col = "lightblue", alpha = 0.8, cex = 0.9))
+                  gpar = list(col = "lightblue", alpha = 0.9, cex = 0.1))
     }
 
     theta <- seq(0, 2 * pi, length.out = 101L)
@@ -114,9 +125,9 @@ pf <- function(con, vid, N = 500,
 
     if (draw) {
         addPoints(pts[1L, wi], pts[2L, wi], pch = 19,
-                  gpar = list(col = "#333333", alpha = 0.8, cex = 0.5))
+                  gpar = list(col = "orangered", alpha = 0.8, cex = 0.5))
         with(vp, addPoints(position_latitude, position_longitude, pch = 19,
-                           gpar = list(col = "#cc3333", cex = 0.3)))
+                           gpar = list(col = "green", cex = 0.3)))
     }
 
     if (!NEW) {
@@ -125,9 +136,12 @@ pf <- function(con, vid, N = 500,
     }
 
     qry <- paste0(
-        "INSERT INTO particles (vehicle_id, distance_into_trip, velocity, segment, lat, lon, timestamp) VALUES ",
+        "INSERT INTO particles (vehicle_id, distance_into_trip, velocity, segment, arrival_time, ",
+        "departure_time, lat, lon, timestamp) VALUES ",
         with(particles, paste0("('", vehicle_id, "',", round(distance_into_trip, 2L),
-                               ",", round(velocity, 3L), ",", segment,
+                               ",", round(velocity, 3L), ",", segment, ",",
+                               ifelse(is.na(arrival_time), 'NULL', round(arrival_time)), ",",
+                               ifelse(is.na(departure_time), 'NULL', round(departure_time)),
                                ",", pts[1L, wi], ",", pts[2L, wi], ",", vp$timestamp, ")",
                                collapse = ", ")))
     dbGetQuery(con, qry)
@@ -154,10 +168,22 @@ transition <- function(p, e = parent.frame()) {
     ## the amount of time we have to play with:
     tr <- e$delta
 
-    ## first off, the bus might be stuck at lights ...
-    wait <- rbinom(1L, 1L, e$rho) * rexp(1L, 1 / e$mu.nu)
-    tr <- tr - wait
-    if (tr <= 0) return(p)
+    ## first off, the bus might be stuck at lights or at a stop
+    if (is.na(p$departure_time) && !is.na(p$arrival_time)) {
+        ## there is a MINIMUM wait time of `gamma`
+        wait <- 0
+        if (p$timestamp - p$arrival_time < e$gamma) {
+            wait <- wait + e$gamma - p$timestamp + p$arrival_time
+        }
+        wait <- wait + rexp(1L, 1 / e$mu.tau)
+        tr <- tr - wait
+        if (tr <= 0) return(p)
+        p$departure_time <- p$arrival_time + wait
+    } else {
+        wait <- rbinom(1L, 1L, e$rho) * rexp(1L, 1 / e$mu.nu)
+        tr <- tr - wait
+        if (tr <= 0) return(p)
+    }
 
     d <- p$distance_into_trip[1L]
     v <- p$velocity[1L]
@@ -169,23 +195,29 @@ transition <- function(p, e = parent.frame()) {
         if (v <= 0) return(p)
 
         ## distance of the next stop, and how long it'll take to get there:
-        ds <- e$schedule[p$segment[1L] + 1, "shape_dist_traveled"]
+        ds <- e$schedule[p$segment[1L] + 1L, "shape_dist_traveled"]
         eta <- (ds - d) / v
         tr <- tr - eta
 
         if (tr > 0) {
             ## bus reaches stop: compute dwell time
-            Ta <- p$timestamp + eta
+            p$segment <- p$segment + 1
+            p$arrival_time <- p$timestamp + eta
+            p$departure_time <- NA
+            
             tau <- rbinom(1L, 1L, e$pi) * (e$gamma + rexp(1L, 1 / e$mu.tau))
-
             tr <- tr - tau
             p$distance_into_trip <- ds
-            p$segment <- p$segment + 1
 
-            if (p$segment >= nrow(e$schedule)) tr <- 0
+            if (p$segment + 1 >= nrow(e$schedule)) tr <- 0
+
+            if (tr > 0) {
+                ## bus leaves!
+                p$departure_time <- p$arrival_time + tau
+            }
         } else {
             ## bus doesn't reach stop: compute distance it'll travel
-            p$distance_into_trip <- d + tr * v
+            p$distance_into_trip <- ds - tr * v
         }
     }
     
