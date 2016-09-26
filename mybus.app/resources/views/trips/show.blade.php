@@ -15,9 +15,10 @@
 
         <p>
           <strong>Average Speed</strong>
-          {{ $meanSpeed = round($trip->vehicle_position->particles()->avg('velocity'), 2) }}m/s
+          <span id="particleSpeeds"></span>
+          {{-- {{ $meanSpeed = round($trip->vehicle_position->particles()->avg('velocity'), 2) }}m/s
           (&plusmn; {{ round($trip->vehicle_position->particles()
-                              ->select(DB::raw('stddev(velocity) as sd'))->first()->sd, 2) }})
+                              ->select(DB::raw('stddev(velocity) as sd'))->first()->sd, 2) }}) --}}
         </p>
       </div>
     </div>
@@ -111,7 +112,7 @@
         // if (position.age) {
         //   html += '<p class="small">Last position reported ' + position.age + '</p>';
         // }
-        html += '<p class="small">Vehicle ID: ' + vehicle.vehicle_id + '</p>';
+        html += '<p class="small">Vehicle ID: ' + vehicle.vehicle_id.replace(/\"/g, "") + '</p>';
         return html;
       }
 
@@ -139,6 +140,7 @@
 
             // add the particles ... if they exist!
             if (vehicle.particles.length > 0) {
+              $("#particleSpeeds").html(vehicle.speed);
               if (vehicle.particles[1].timestamp > particleTime) {
                 if (particles.length > 0) {
                   for (var i = 0; i < particles.length; i++) {

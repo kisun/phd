@@ -12,7 +12,10 @@ class RouteController extends Controller
 {
     public function index()
     {
-        $latest = \App\Version::orderBy('startdate', 'desc')->first();
+        $today = \Carbon\Carbon::now()->toDateString();
+        $latest = \App\Version::where('startdate', '<=', $today)
+                    ->where('enddate', '>=', $today)
+                    ->orderBy('startdate', 'desc')->first();
         $routes = Route::where('version_id', $latest->id)->orderBy('short_name')->get();
 
         return view('routes.index', [
@@ -22,7 +25,10 @@ class RouteController extends Controller
 
     public function show($route_id)
     {
-        $latest = \App\Version::orderBy('startdate', 'desc')->first();
+        $today = \Carbon\Carbon::now()->toDateString();
+        $latest = \App\Version::where('startdate', '<=', $today)
+                    ->where('enddate', '>=', $today)
+                    ->orderBy('startdate', 'desc')->first();
         $route = Route::where('route_id', $route_id)
                     ->where('version_id', $latest->id)
                     ->with(['trips' => function($query) {

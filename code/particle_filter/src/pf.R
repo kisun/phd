@@ -15,7 +15,7 @@ pf <- function(con, vid, N = 500,
                sig.gps = 20,
                pi = 0.5,        ## probability particle stops due to bus stop
                gamma = 6,       ## deceleration/open-doors/close-doors/acceleration time
-               mu.tau = 10,     ## average time a bus is stopped at a stop for
+               mu.tau = 5,     ## average time a bus is stopped at a stop for
                rho = 0.1,       ## probability particle stops !due to bus stop,
                mu.nu = 20,      ## average time a bus is stopped at "lights"
                draw = FALSE) {
@@ -65,7 +65,7 @@ pf <- function(con, vid, N = 500,
         cat("The bus has moved ...\n")
 
         ## add process noise to speeds:
-        particles$velocity <- msm::rtnorm(nrow(particles), particles$velocity, sd = sqrt(delta), lower = 0, upper = 30)
+        particles$velocity <- msm::rtnorm(nrow(particles), particles$velocity, sd = 3, lower = 0, upper = 16)
            # pmin(30, pmax(0, particles$velocity + rnorm(nrow(particles),0, sd = sqrt(delta))))
         particles$segment <- sapply(particles$distance_into_trip,
                                     function(x) which(schedule$shape_dist_traveled >= x)[1L] - 1L)
@@ -74,6 +74,8 @@ pf <- function(con, vid, N = 500,
             particles[i, ] <- transition(particles[i, ])
         }
     }
+
+    #hist(particles$velocity, 50, xlim = c(0, 30))
 
     if (draw) {
         wi <- which(dist < 1000)
@@ -217,7 +219,7 @@ transition <- function(p, e = parent.frame()) {
             }
         } else {
             ## bus doesn't reach stop: compute distance it'll travel
-            p$distance_into_trip <- ds - tr * v
+            p$distance_into_trip <- d + (tr + eta) * v
         }
     }
     

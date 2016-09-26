@@ -21,13 +21,13 @@ print(pf(con, vid, 500, sig.gps = 5, draw=TRUE))
 
 
 ###
-vid <- "3AA1"
+vid <- "3A99"
 print(pf(con, vid, sig.gps = 50))
 
 ret <- 0
 while(ret <= 0) {
     cat(".")
-    ret <- pf(con, vid, sig.gps = 5, draw=TRUE)
+    ret <- pf(con, vid, 1000, sig.gps = 5, draw=TRUE)
     Sys.sleep(0.5)
 }
 
