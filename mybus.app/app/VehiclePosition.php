@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class VehiclePosition extends Model
 {
+    public $timestamps = false;
+    protected $primaryKey = 'oid';
+
     /**
      * Get the trip that owns the model.
      *
@@ -25,6 +28,25 @@ class VehiclePosition extends Model
     {
         return $this->belongsTo('App\Route');
     }
+
+
+    /**
+     * Get the trip_update record associated with the vehicle, if it exists.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne
+     */
+    public function getTripUpdate()
+    {
+        if (count($this->trip->trip_update)) {
+            return $this->trip->trip_update()
+                    ->with(['stop_time_updates' => function($query) {
+                        $query->orderBy('stop_sequence', 'desc');
+                    }])->first();
+        } else {
+            return null;
+        }
+    }
+
 
 
     /**

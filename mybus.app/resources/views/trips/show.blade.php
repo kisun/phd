@@ -11,6 +11,11 @@
       </div>
 
       <div class="col-md-4">
+        <h5>Schedule Delay</h5>
+
+        <div id="scheduleDelay"></div>
+
+        <hr>
         <h5>Particle Information</h5>
 
         <p>
@@ -92,23 +97,27 @@
       function getContent(vehicle) {
         var html = '';
         html += '<h4>{{ $trip->route->short_name }}: {{ $trip->route->long_name }}</h4>';
-        html += '<p>Departs {{ $trip->start_time()->format('g:i a') }}</p>';
+        //html += '<p>Departs {{ $trip->start_time()->format('g:i a') }}</p>';
         // html += '<strong><a href="/route/' + position.route.short_name + '">Route #'
         //      + position.route.short_name + '</a> - ' + position.direction_id + '</strong>';
         // html += '<p>' + position.route_long_name + '</p>';
-        // var delay = position.trip_update.stop_time_updates.arrival_delay ||
-        //             position.trip_update.stop_time_updates.departure_delay || '';
-        // if (delay.length > 0) {
-        //   var delayTxt;
-        //   if (delay == 0) {
-        //     delayTxt = 'On schedule';
-        //   } else if (delay > 0) {
-        //     delayTxt = secondsToTime(delay) + ' seconds ahead of schedule';
-        //   } else {
-        //     delayTxt = secondsToTime(-delay) + ' seconds behind schedule';
-        //   }
-        //   html += '<p>' + delayTxt + ' (' + (position.arrival_delay ? 'arrival' : 'departure') +')</p>';
-        // }
+        var tu = vehicle.trip_update;
+        // console.log(tu);
+        if (!$.isEmptyObject(tu)) {
+          stu = tu.stop_time_updates;
+          if (!$.isEmptyObject(stu)) {
+            var delay = stu[0].arrival_delay + stu[0].departure_delay;
+            var delayTxt;
+            if (delay == 0) {
+              delayTxt = 'On schedule';
+            } else if (delay > 0) {
+              delayTxt = delay + ' seconds ahead of schedule';
+            } else {
+              delayTxt = -delay + ' seconds behind schedule';
+            }
+            html += '<p>' + delayTxt + '</p>';
+          }
+        }
         // if (position.age) {
         //   html += '<p class="small">Last position reported ' + position.age + '</p>';
         // }
@@ -137,6 +146,24 @@
               map.panTo(pos);
             }
             time = vehicle.timestamp;
+
+            var tu = vehicle.trip_update;
+            // console.log(tu);
+            if (!$.isEmptyObject(tu)) {
+              stu = tu.stop_time_updates;
+              if (!$.isEmptyObject(stu)) {
+                var delay = stu[0].arrival_delay + stu[0].departure_delay;
+                var delayTxt = moment.duration(Math.abs(delay), 'seconds').humanize();
+                if (delay == 0) {
+                  delayTxt = 'On schedule';
+                } else if (delay > 0) {
+                  delayTxt += ' ahead of schedule';
+                } else {
+                  delayTxt += ' behind schedule';
+                }
+                $("#scheduleDelay").html('<p>' + delayTxt + '</p>');
+              }
+            }
 
             // add the particles ... if they exist!
             if (vehicle.particles.length > 0) {
@@ -167,7 +194,7 @@
               }
             }
 
-            google.maps.event.addListener(marker, 'click', infopanel);
+            // google.maps.event.addListener(marker, 'click', infopanel);
             //google.maps.event.addListener(markers[i], 'mouseover', lastStop);
             //google.maps.event.addListener(markers[i], 'mouseout', clearStop);
             //bounds.extend(pos);

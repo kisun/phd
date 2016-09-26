@@ -91,4 +91,15 @@ class Trip extends Model
         return $this->hasOne('App\VehiclePosition');
     }
 
+
+    /**
+     * Get the trip_update record associated with the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne
+     */
+    public function trip_update()
+    {
+        return $this->hasOne('App\TripUpdate');
+    }
+
 }

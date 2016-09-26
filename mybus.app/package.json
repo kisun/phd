@@ -17,6 +17,7 @@
     "vue-resource": "^0.9.3"
   },
   "dependencies": {
-    "geolocation-marker": "^2.0.4"
+    "geolocation-marker": "^2.0.4",
+    "moment": "^2.15.1"
   }
 }

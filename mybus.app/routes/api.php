@@ -24,12 +24,14 @@ Route::get('/vehicle_positions/{route}', function(App\Route $route) {
 });
 Route::get('/vehicle_position/{trip}', function(App\Trip $trip) {
   $obj = $trip->vehicle_position()->with('particles')->first();
+  $obj->trip_update = $obj->getTripUpdate();
   $obj->vehicle_id = '"' . $obj->vehicle_id . '"';
   $obj->vehicle_label = '"' . $obj->vehicle_label . '"';
 
   $speed = $trip->vehicle_position->particles()
             ->select(DB::raw('avg(velocity) as mean, stddev(velocity) as sd'))->first();
   $obj->speed = round($speed->mean, 2) . "m/s (&plusmn; " . round($speed->sd, 2) . ")";
+
   return response()->json($obj, 200, [], JSON_NUMERIC_CHECK | JSON_UNESCAPED_SLASHES);
 });
 
