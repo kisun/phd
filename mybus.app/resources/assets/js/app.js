@@ -7,6 +7,7 @@
 
 require('./bootstrap');
 window.moment = require('moment');
+require("moment-duration-format");
 
 
 /**

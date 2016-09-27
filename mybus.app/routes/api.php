@@ -42,3 +42,15 @@ Route::get('/shape_schedule/{trip}', function(App\Trip $trip) {
     'schedule' => $trip->stops
   ], 200, [], JSON_NUMERIC_CHECK);
 });
+
+
+
+Route::get('/delays', function() {
+    return response()->json(
+        \App\StopTimeUpdate::select(DB::raw('ROUND(AVG(arrival_delay + departure_delay), 2) AS delay'))
+            ->join('stops', 'stops.id', 'stop_time_updates.stop_id')
+            ->addSelect('stops.*')
+            ->groupBy('stops.id')
+            ->get()
+    , 200, [], JSON_NUMERIC_CHECK);
+});

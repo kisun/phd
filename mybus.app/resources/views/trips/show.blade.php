@@ -88,42 +88,42 @@
           particleTime = 0,
           infowindow = new google.maps.InfoWindow();
 
-      function infopanel() {
-        infowindow.close();
-        infowindow.setContent(getContent(this.info));
-        infowindow.open(map, this);
-      }
+      // function infopanel() {
+      //   infowindow.close();
+      //   infowindow.setContent(getContent(this.info));
+      //   infowindow.open(map, this);
+      // }
 
-      function getContent(vehicle) {
-        var html = '';
-        html += '<h4>{{ $trip->route->short_name }}: {{ $trip->route->long_name }}</h4>';
-        //html += '<p>Departs {{ $trip->start_time()->format('g:i a') }}</p>';
-        // html += '<strong><a href="/route/' + position.route.short_name + '">Route #'
-        //      + position.route.short_name + '</a> - ' + position.direction_id + '</strong>';
-        // html += '<p>' + position.route_long_name + '</p>';
-        var tu = vehicle.trip_update;
-        // console.log(tu);
-        if (!$.isEmptyObject(tu)) {
-          stu = tu.stop_time_updates;
-          if (!$.isEmptyObject(stu)) {
-            var delay = stu[0].arrival_delay + stu[0].departure_delay;
-            var delayTxt;
-            if (delay == 0) {
-              delayTxt = 'On schedule';
-            } else if (delay > 0) {
-              delayTxt = delay + ' seconds ahead of schedule';
-            } else {
-              delayTxt = -delay + ' seconds behind schedule';
-            }
-            html += '<p>' + delayTxt + '</p>';
-          }
-        }
-        // if (position.age) {
-        //   html += '<p class="small">Last position reported ' + position.age + '</p>';
-        // }
-        html += '<p class="small">Vehicle ID: ' + vehicle.vehicle_id.replace(/\"/g, "") + '</p>';
-        return html;
-      }
+      // function getContent(vehicle) {
+      //   var html = '';
+      //   html += '<h4>{{ $trip->route->short_name }}: {{ $trip->route->long_name }}</h4>';
+      //   //html += '<p>Departs {{ $trip->start_time()->format('g:i a') }}</p>';
+      //   // html += '<strong><a href="/route/' + position.route.short_name + '">Route #'
+      //   //      + position.route.short_name + '</a> - ' + position.direction_id + '</strong>';
+      //   // html += '<p>' + position.route_long_name + '</p>';
+      //   var tu = vehicle.trip_update;
+      //   // console.log(tu);
+      //   if (!$.isEmptyObject(tu)) {
+      //     stu = tu.stop_time_updates;
+      //     if (!$.isEmptyObject(stu)) {
+      //       var delay = stu[0].arrival_delay + stu[0].departure_delay;
+      //       var delayTxt;
+      //       if (delay == 0) {
+      //         delayTxt = 'On schedule';
+      //       } else if (delay > 0) {
+      //         delayTxt = delay + ' seconds ahead of schedule';
+      //       } else {
+      //         delayTxt = -delay + ' seconds behind schedule';
+      //       }
+      //       html += '<p>' + delayTxt + '</p>';
+      //     }
+      //   }
+      //   // if (position.age) {
+      //   //   html += '<p class="small">Last position reported ' + position.age + '</p>';
+      //   // }
+      //   html += '<p class="small">Vehicle ID: ' + vehicle.vehicle_id.replace(/\"/g, "") + '</p>';
+      //   return html;
+      // }
 
       function updateMap(set = false) {
         $.get({
@@ -153,7 +153,7 @@
               stu = tu.stop_time_updates;
               if (!$.isEmptyObject(stu)) {
                 var delay = stu[0].arrival_delay + stu[0].departure_delay;
-                var delayTxt = moment.duration(Math.abs(delay), 'seconds').humanize();
+                var delayTxt = moment.duration(Math.abs(delay), 'seconds').format("m[m] s[s]");
                 if (delay == 0) {
                   delayTxt = 'On schedule';
                 } else if (delay > 0) {
