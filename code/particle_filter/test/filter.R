@@ -13,21 +13,33 @@ source("src/h.R")
 drv = dbDriver("PostgreSQL")
 con = dbConnect(drv, dbname = "homestead", host = "localhost",
                 user = "homestead", port = "54320", password = "secret")
+con2 = dbConnect(drv, dbname = "historical", host = "localhost",
+                 user = "homestead", port = "54320", password = "secret")
 
-vs <- dbGetQuery(con, "SELECT vehicle_id FROM vehicle_positions")$vehicle_id
-vid <- vs[240]
-print(pf(con, vid, 500, sig.gps = 5, draw=TRUE))
+hist <- dbGetQuery(con2, "SELECT vehicle_id, count(vehicle_id) as n FROM vehicle_positions group by vehicle_id")
+vid <- "3A9A"
+vps <- dbGetQuery(
+    con2,
+    sprintf("SELECT * FROM vehicle_positions WHERE vehicle_id='%s' AND trip_id LIKE '%s' ORDER BY timestamp",
+            vid, '%v46.5'))
+
+for (i in 1:nrow(vps))
+    pf(con, vid, 500, sig.gps = 5, draw = TRUE, vp = vps[i, ])
+
+i <- 1
+pf(con, vid, 500, sig.gps = 5, draw = TRUE, vp = vps[i, ]); i <- i + 1
+
 
 
 
 ###
-vid <- "3A99"
-print(pf(con, vid, sig.gps = 50))
+print(pf(con, vid, sig.gps = 50, draw = TRUE,
+         vp = ))
 
 ret <- 0
 while(ret <= 0) {
     cat(".")
-    ret <- pf(con, vid, 1000, sig.gps = 5, draw=TRUE)
+    ret <- pf(con, vid, 1000, sig.gps = 5)
     Sys.sleep(0.5)
 }
 

@@ -18,15 +18,17 @@ pf <- function(con, vid, N = 500,
                mu.tau = 5,     ## average time a bus is stopped at a stop for
                rho = 0.1,       ## probability particle stops !due to bus stop,
                mu.nu = 20,      ## average time a bus is stopped at "lights"
-               draw = FALSE) {
+               draw = FALSE,
+               vp = dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE vehicle_id='%s'", vid))) {
+
     ## Get vehicle's latest realtime state:
-    vp <- dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE vehicle_id='%s'", vid))
     if (nrow(vp) == 0) return(invisible(1))
     if (nrow(vp) > 1) warning("Multiple instances for vehicle found. Using the first one.")
     vp <- vp[1, ]
 
     ## Get vehicle's shape and schedule:
-    info <- fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", vp$trip_id), flatten = TRUE)
+    qry <- sprintf("http://mybus.app/api/shape_schedule/%s", vp$trip_id)
+    info <- fromJSON(qry, flatten = TRUE)
     schedule <- flatten(info$schedule)
 
     colnames(schedule) <- gsub("pivot.", "", colnames(schedule))
@@ -35,9 +37,9 @@ pf <- function(con, vid, N = 500,
     sx <- (deg2rad(shape$lon) - deg2rad(vp$position_longitude)) * cos(deg2rad(vp$position_latitude))
     sy <- deg2rad(shape$lat) - deg2rad(vp$position_latitude)
     dist <- distance(cbind(sx, sy))
-    particles <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE vehicle_id='%s'", vid))
+    particles <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE vehicle_id='%s' AND active=TRUE", vid))
 
-
+    
 
     NEW <- FALSE
     if (nrow(particles) == 0L) {
@@ -57,7 +59,25 @@ pf <- function(con, vid, N = 500,
         particles$segment <- sapply(particles$distance_into_trip,
                                     function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
         particles$arrival_time <- particles$departure_time <- NA
-    } else {  ## else if ( trip_is_the_same ) { ... } else {
+    } else if (particles$trip_id[1] != vp$trip_id) {
+        cat("Trip has changed ... moving forward! \n")
+        delta <- vp$timestamp - particles$timestamp[1L]
+
+        if (delta <= 0) return(invisible(-1))
+        
+        ## "new trip"
+        ## initial proposal
+        sh.near <- shape[which(dist < 200), ]
+        if (nrow(sh.near) == 0) {
+            return(3)
+        }
+        
+        particles$distance_into_trip <- runif(nrow(particles), min(sh.near$dist_traveled), max(sh.near$dist_traveled))
+        particles$velocity <- msm::rtnorm(nrow(particles), particles$velocity, sd = 3, lower = 0, upper = 16)
+        particles$segment <- sapply(particles$distance_into_trip,
+                                    function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
+        particles$arrival_time <- particles$departure_time <- NA
+    } else {
         delta <- vp$timestamp - particles$timestamp[1L]
 
         if (delta <= 0) return(invisible(-1))
@@ -75,7 +95,6 @@ pf <- function(con, vid, N = 500,
         }
     }
 
-    #hist(particles$velocity, 50, xlim = c(0, 30))
 
     if (draw) {
         wi <- which(dist < 1000)
@@ -95,15 +114,6 @@ pf <- function(con, vid, N = 500,
 
     ## resampling step
     sig.xy <- sig.gps / R
-
-    ## if (draw) {
-    ##     ## draw the gps error "circle":
-    ##     theta <- seq(0, 2 * pi, length.out = 101)
-    ##     xx <- sig.xy * cos(theta)
-    ##     yy <- sig.xy * sin(theta)
-    ##     #addLines(rad2deg(yy) + vp$position_latitude,
-    ##     #         rad2deg(xx) / cos(deg2rad(vp$position_latitude)) + vp$position_longitude)
-    ## }
 
     pts <- h(particles$distance_into_trip, shape)
     px <- (deg2rad(pts[2L, ]) - deg2rad(vp$position_longitude)) * cos(deg2rad(vp$position_latitude))
@@ -132,19 +142,18 @@ pf <- function(con, vid, N = 500,
                            gpar = list(col = "green", cex = 0.3)))
     }
 
-    if (!NEW) {
-        ## delete the old particles ...
-        dbGetQuery(con, sprintf("DELETE FROM particles WHERE vehicle_id='%s'", vid))
-    }
+    ## set old particles to inactive
+    dbGetQuery(con, sprintf("UPDATE particles SET active=FALSE WHERE vehicle_id='%s' AND active=TRUE", vid))
 
     qry <- paste0(
         "INSERT INTO particles (vehicle_id, distance_into_trip, velocity, segment, arrival_time, ",
-        "departure_time, lat, lon, timestamp) VALUES ",
+        "departure_time, parent, lat, lon, trip_id, timestamp, active) VALUES ",
         with(particles, paste0("('", vehicle_id, "',", round(distance_into_trip, 2L),
                                ",", round(velocity, 3L), ",", segment, ",",
                                ifelse(is.na(arrival_time), 'NULL', round(arrival_time)), ",",
                                ifelse(is.na(departure_time), 'NULL', round(departure_time)),
-                               ",", pts[1L, wi], ",", pts[2L, wi], ",", vp$timestamp, ")",
+                               ",", if (NEW) 'NULL' else wi, ",", pts[1L, wi], ",", pts[2L, wi], ",'",
+                               vp$trip_id, "',", vp$timestamp, ",TRUE)",
                                collapse = ", ")))
     dbGetQuery(con, qry)
 

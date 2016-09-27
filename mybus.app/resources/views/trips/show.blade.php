@@ -1,5 +1,6 @@
 @extends('layouts.app')
 
+@section('container-class', 'scrollpage-app')
 @section('content')
   <div class="page">
     <h3>{{ $trip->route->short_name }} <small>{{ $trip->route->long_name }}</small></h3>
@@ -15,16 +16,22 @@
 
         <div id="scheduleDelay"></div>
 
+        <p class="small">
+          Vehicle ID: {{ $trip->vehicle_position->vehicle_id }}
+        </p>
         <hr>
         <h5>Particle Information</h5>
 
-        <p>
-          <strong>Average Speed</strong>
-          <span id="particleSpeeds"></span>
-          {{-- {{ $meanSpeed = round($trip->vehicle_position->particles()->avg('velocity'), 2) }}m/s
-          (&plusmn; {{ round($trip->vehicle_position->particles()
-                              ->select(DB::raw('stddev(velocity) as sd'))->first()->sd, 2) }}) --}}
-        </p>
+        <dl class="dl-horizontal">
+          <dt>Average Speed</dt>
+          <dd id="particleSpeeds">&ndash;</dd>
+
+          <dt>Average Delay</dt>
+          <dd id="particleDelay">&ndash;</dd>
+
+          <dt>Average Dwell Time</dt>
+          <dd id="particleDwell">&ndash;</dd>
+        </dl>
       </div>
     </div>
     <hr>
@@ -34,6 +41,8 @@
 
 @section('endmatter')
   <script>
+    var stops = {!! $stops->toJson() !!};
+
     function initMap() {
 
       var data = [
@@ -42,7 +51,6 @@
         @endforeach
       ];
 
-      var stops = {!! $stops->toJson() !!};
 
       var pos = {
         lat: {{ $trip->vehicle_position->position_latitude }},
@@ -63,18 +71,20 @@
       });
       shapePath.setMap(map);
 
-      var infoWindow = new google.maps.InfoWindow,
-          stopmarkers = [];
+      var stopmarkers = [];
 
       for (var i = 0; i < stops.length; i++) {
         pos = new google.maps.LatLng(parseFloat(stops[i].stop.lat),
                                      parseFloat(stops[i].stop.lon));
+        color = '{{ ($trip->route->color) ? $trip->route->color : "#000099" }}';
         stopmarkers[i] = new google.maps.Marker({
           position: pos,
           icon: {
             path: google.maps.SymbolPath.CIRCLE,
             scale: 3,
-            strokeColor: '{{ ($trip->route->color) ? $trip->route->color : "#000099" }}'
+            strokeColor: color,
+            fillColor: color,
+            fillOpacity: 1
           },
           draggable: false,
           map: map,
@@ -85,45 +95,7 @@
       var marker,
           time = {{ $trip->vehicle_position->timestamp }},
           particles = [],
-          particleTime = 0,
-          infowindow = new google.maps.InfoWindow();
-
-      // function infopanel() {
-      //   infowindow.close();
-      //   infowindow.setContent(getContent(this.info));
-      //   infowindow.open(map, this);
-      // }
-
-      // function getContent(vehicle) {
-      //   var html = '';
-      //   html += '<h4>{{ $trip->route->short_name }}: {{ $trip->route->long_name }}</h4>';
-      //   //html += '<p>Departs {{ $trip->start_time()->format('g:i a') }}</p>';
-      //   // html += '<strong><a href="/route/' + position.route.short_name + '">Route #'
-      //   //      + position.route.short_name + '</a> - ' + position.direction_id + '</strong>';
-      //   // html += '<p>' + position.route_long_name + '</p>';
-      //   var tu = vehicle.trip_update;
-      //   // console.log(tu);
-      //   if (!$.isEmptyObject(tu)) {
-      //     stu = tu.stop_time_updates;
-      //     if (!$.isEmptyObject(stu)) {
-      //       var delay = stu[0].arrival_delay + stu[0].departure_delay;
-      //       var delayTxt;
-      //       if (delay == 0) {
-      //         delayTxt = 'On schedule';
-      //       } else if (delay > 0) {
-      //         delayTxt = delay + ' seconds ahead of schedule';
-      //       } else {
-      //         delayTxt = -delay + ' seconds behind schedule';
-      //       }
-      //       html += '<p>' + delayTxt + '</p>';
-      //     }
-      //   }
-      //   // if (position.age) {
-      //   //   html += '<p class="small">Last position reported ' + position.age + '</p>';
-      //   // }
-      //   html += '<p class="small">Vehicle ID: ' + vehicle.vehicle_id.replace(/\"/g, "") + '</p>';
-      //   return html;
-      // }
+          particleTime = 0;
 
       function updateMap(set = false) {
         $.get({
@@ -175,6 +147,9 @@
                   }
                   particles = [];
                 }
+                var delaySum = 0,
+                    dwellSum = 0,
+                    dwellN   = 0;
                 for (var i=0; i<vehicle.particles.length; i++) {
                   particles[i] = new google.maps.Marker({
                     position: new google.maps.LatLng(vehicle.particles[i].lat,
@@ -189,15 +164,21 @@
                     map: map,
                     zIndex: 1
                   });
+                  delaySum += Math.max(vehicle.particles[i].arrival_time,
+                                       vehicle.particles[i].departure_time) -
+                    moment(moment().format('YYYY-MM-DD') + ' ' +
+                    stops[vehicle.particles[i].segment - 1].arrival_time).unix();
+                  dwellN += vehicle.particles[i].departure_time < vehicle.particles[i].arrival_time ? 0 : 1;
+                  dwellSum += (vehicle.particles[i].departure_time < vehicle.particles[i].arrival_time) ? 0 :
+                              vehicle.particles[i].departure_time - vehicle.particles[i].arrival_time;
                 }
+                var delay = delaySum / vehicle.particles.length;
+                $("#particleDelay").html(moment.duration(Math.abs(delay), 'seconds').format("m[m] s[s]"));
+                var dwell = dwellSum / dwellN;
+                $("#particleDwell").html(moment.duration(Math.abs(dwell), 'seconds').format("m[m] s[s]"));
                 particleTime = vehicle.particles[1].timestamp;
               }
             }
-
-            // google.maps.event.addListener(marker, 'click', infopanel);
-            //google.maps.event.addListener(markers[i], 'mouseover', lastStop);
-            //google.maps.event.addListener(markers[i], 'mouseout', clearStop);
-            //bounds.extend(pos);
           }
         });
       }

@@ -40,7 +40,7 @@
 
             for (var i = 0; i < data.length; i++) {
               pos = new google.maps.LatLng(data[i].lat, data[i].lon);
-              var fraction = 0.5 - Math.max(Math.min(data[i].delay, cutoff), (-cutoff)) / 1200;
+              var fraction = 0.5 + Math.max(Math.min(data[i].delay, cutoff), (-cutoff)) / 1200;
               var color = interpolateHsl(low, high, fraction);
               stops[i] = new google.maps.Marker({
                 position: pos,
