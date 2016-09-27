@@ -29,8 +29,9 @@ for (i in 1:nrow(vps))
 i <- 1
 pf(con, vid, 500, sig.gps = 5, draw = TRUE, vp = vps[i, ]); i <- i + 1
 
+res <- dbGetQuery(con, "SELECT * FROM particles ORDER BY timestamp")
 
-
+plot(res$timestamp, res$distance_into_trip, pch = 19, cex = 0.1)
 
 ###
 print(pf(con, vid, sig.gps = 50, draw = TRUE,
