@@ -133,6 +133,7 @@ pf <- function(con, vid, N = 500,
     if (sum(wt) == 0) return(2)
 
     wi <- sample(nrow(particles), N, replace = TRUE, prob = wt)
+    parents <- particles$id[wi]
     particles <- particles[wi, ]
 
     if (draw) {
@@ -152,7 +153,7 @@ pf <- function(con, vid, N = 500,
                                ",", round(velocity, 3L), ",", segment, ",",
                                ifelse(is.na(arrival_time), 'NULL', round(arrival_time)), ",",
                                ifelse(is.na(departure_time), 'NULL', round(departure_time)),
-                               ",", if (NEW) 'NULL' else wi, ",", pts[1L, wi], ",", pts[2L, wi], ",'",
+                               ",", if (NEW) 'NULL' else parents, ",", pts[1L, wi], ",", pts[2L, wi], ",'",
                                vp$trip_id, "',", vp$timestamp, ",TRUE)",
                                collapse = ", ")))
     dbGetQuery(con, qry)
