@@ -17,8 +17,8 @@ Route::get('/', function () {
 
 Auth::routes();
 Route::get('/logout', function() {
-  Auth::logout();
-  return redirect('/')->with('status', 'We hope to see you soon!');
+    Auth::logout();
+    return redirect('/')->with('status', 'We hope to see you soon!');
 });
 
 Route::get('/home', 'HomeController@index');
@@ -34,5 +34,11 @@ Route::get('/shapes/{id}', 'ShapeController@show');
 Route::get('/search', 'SearchController@search');
 
 Route::get('/d3', function() {
-  return view('d3');
+    return view('d3');
+});
+
+
+
+Route::get('/symbols', function() {
+    return view('symbols');
 });

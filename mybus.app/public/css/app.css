@@ -1109,7 +1109,7 @@ hr {
   margin-top: 22px;
   margin-bottom: 22px;
   border: 0;
-  border-top: 1px solid #eeeeee; }
+  border-top: 1px solid #cccccc; }
 
 .sr-only {
   position: absolute;
@@ -1330,7 +1330,7 @@ a.bg-danger:focus {
 .page-header {
   padding-bottom: 10px;
   margin: 44px 0 22px;
-  border-bottom: 1px solid #eeeeee; }
+  border-bottom: 1px solid #cccccc; }
 
 ul,
 ol {
@@ -5767,40 +5767,53 @@ button.close {
     display: none !important; } }
 
 .fullpage-app {
-  height: 100vh !important; }
-  .fullpage-app .fullpage-row,
-  .fullpage-app .app-nav, .fullpage-app .app-content {
-    height: 100%; }
-  .fullpage-app .page {
-    height: 100% !important;
-    padding-top: 3em; }
-  .fullpage-app .app-content {
-    background-color: #ebebeb;
-    -webkit-transition: background-color 2s ease-in-out;
-    transition: background-color 2s ease-in-out; }
-    .fullpage-app .app-content.opaque {
-      background-color: rgba(235, 235, 235, 0.85); }
-  @media (max-width: 1199px) {
-    .fullpage-app .app-nav {
-      position: fixed;
-      z-index: 100;
-      top: 0;
-      min-height: 100% !important;
-      right: -100%;
-      max-width: 400px !important;
-      width: 80%;
-      -webkit-transition: all 300ms ease-out;
-      transition: all 300ms ease-out; }
-      .fullpage-app .app-nav.slideout {
-        right: 0;
-        box-shadow: 0 -5px 7px 3px rgba(0, 0, 0, 0.2); }
-    .fullpage-app .app-content {
-      position: relative; }
-    .fullpage-app .nav-toggle {
-      position: fixed;
-      z-index: 200;
-      top: 5px;
-      right: 5px; } }
+  height: 100vh !important;
+  overflow: hidden; }
+
+.scrollpage-app {
+  height: 100%;
+  min-height: 100vh !important; }
+
+.fullpage-app .fullpage-row,
+.fullpage-app .app-nav,
+.fullpage-app .app-content, .scrollpage-app .fullpage-row,
+.scrollpage-app .app-nav,
+.scrollpage-app .app-content {
+  min-height: 100vh;
+  height: 100%; }
+
+.fullpage-app .page, .scrollpage-app .page {
+  height: 100% !important;
+  padding-top: 3em; }
+
+.fullpage-app .app-content, .scrollpage-app .app-content {
+  background-color: #ebebeb;
+  -webkit-transition: background-color 2s ease-in-out;
+  transition: background-color 2s ease-in-out; }
+  .fullpage-app .app-content.opaque, .scrollpage-app .app-content.opaque {
+    background-color: rgba(235, 235, 235, 0.85); }
+
+@media (max-width: 1199px) {
+  .fullpage-app .app-nav, .scrollpage-app .app-nav {
+    position: fixed;
+    z-index: 100;
+    top: 0;
+    min-height: 100% !important;
+    right: -100%;
+    max-width: 400px !important;
+    width: 80%;
+    -webkit-transition: all 300ms ease-out;
+    transition: all 300ms ease-out; }
+    .fullpage-app .app-nav.slideout, .scrollpage-app .app-nav.slideout {
+      right: 0;
+      box-shadow: 0 -5px 7px 3px rgba(0, 0, 0, 0.2); }
+  .fullpage-app .app-content, .scrollpage-app .app-content {
+    position: relative; }
+  .fullpage-app .nav-toggle, .scrollpage-app .nav-toggle {
+    position: fixed;
+    z-index: 200;
+    top: 5px;
+    right: 5px; } }
 
 .nav-toggle {
   display: inline-block;
@@ -5878,9 +5891,5 @@ button.close {
   fill: none;
   stroke: steelblue;
   stroke-width: 1.5px; }
-
-#shapeMap {
-  height: 70%;
-  background: orangered; }
 
 /*# sourceMappingURL=app.css.map */
