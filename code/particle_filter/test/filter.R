@@ -16,15 +16,23 @@ con = dbConnect(drv, dbname = "homestead", host = "localhost",
 con2 = dbConnect(drv, dbname = "historical", host = "localhost",
                  user = "homestead", port = "54320", password = "secret")
 
-hist <- dbGetQuery(con2, "SELECT vehicle_id, count(vehicle_id) as n FROM vehicle_positions group by vehicle_id")
-vid <- "3A9A"
+hist <- dbGetQuery(con2, "SELECT route_id, count(route_id) as n FROM vehicle_positions WHERE route_id LIKE '%v46.5' group by route_id order by n")
+rid <- "27402-20160920093629_v46.5"
+#vid <- "3A9A"
 vps <- dbGetQuery(
     con2,
-    sprintf("SELECT * FROM vehicle_positions WHERE vehicle_id='%s' AND trip_id LIKE '%s' ORDER BY timestamp",
-            vid, '%v46.5'))
+    sprintf("SELECT * FROM vehicle_positions WHERE route_id='%s' ORDER BY timestamp", rid))
+vps$trip_start_date <- format(as.POSIXct(vps$timestamp, origin = "1970-01-01"), "%Y-%m-%d")
 
-#for (i in 1:nrow(vps))
-#    pf(con, vid, 500, sig.gps = 5, draw = TRUE, vp = vps[i, ])
+# table(vps$trip_start_date)
+
+ind <- which(vps$trip_start_date == "2016-09-22")
+pb <- txtProgressBar(0, length(ind), style = 3)
+for (i in 1:length(ind)) {
+    setTxtProgressBar(pb, i)
+    pf(con, vps[ind[i], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[i], ])
+}; close(pb)
+
 
 trips <- dbGetQuery(con, "SELECT distinct trip_id FROM particles")$trip_id
 par(bg = "#333333", fg = "#cccccc", col.axis = "#cccccc", col.lab = "#cccccc", mfrow = c(4, 3))

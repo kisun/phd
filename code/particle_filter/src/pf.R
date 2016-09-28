@@ -43,7 +43,7 @@ pf <- function(con, vid, N = 500,
 
     NEW <- FALSE
     if (nrow(particles) == 0L) {
-        cat("Vehicle not yet instantiated ... doing that now ...\n")
+        #cat("Vehicle not yet instantiated ... doing that now ...\n")
         NEW <- TRUE
 
         ## initial proposal
@@ -60,7 +60,7 @@ pf <- function(con, vid, N = 500,
                                     function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
         particles$arrival_time <- particles$departure_time <- NA
     } else if (particles$trip_id[1] != vp$trip_id) {
-        cat("Trip has changed ... moving forward! \n")
+        #cat("Trip has changed ... moving forward! \n")
         delta <- vp$timestamp - particles$timestamp[1L]
 
         if (delta <= 0) return(invisible(-1))
@@ -82,7 +82,7 @@ pf <- function(con, vid, N = 500,
 
         if (delta <= 0) return(invisible(-1))
         ## movement step
-        cat("The bus has moved ...\n")
+        #cat("The bus has moved ...\n")
 
         ## add process noise to speeds:
         particles$velocity <- msm::rtnorm(nrow(particles), particles$velocity, sd = 3, lower = 0, upper = 16)
