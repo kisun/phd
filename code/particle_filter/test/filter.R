@@ -47,8 +47,12 @@ plotTrip <- function(trip, dwell = FALSE, ...) {
     plot(res$timestamp, res$distance_into_trip, pch = 19, cex = 0.1, xaxt = "n", yaxt = "n", yaxs = "i",
          xlab = "Time", ylab = "Distance into Trip (km)", col = "#cccccc", bty = "n", ylim = c(0, max(sh)*1.04), ...)
     abline(h =  sh, col = "#393939")
-    res$parentid <- res$parent - min(res$id) + 1
-    res$parentid[res$parentid < 1] <- NA
+    res$parentid <- sapply(res$parent ,function (x) {
+        ret <- which(res$id == x)
+        if (length(ret) == 1) return(ret) else return(NA)
+    })
+    #res$parentid <- res$parent - min(res$id) + 1
+    #res$parentid[res$parentid < 1] <- NA
     resl <- res[!is.na(res$parent), ]
     arrows(x0 = resl$timestamp,
            x1 = res$timestamp[resl$parentid],
@@ -76,15 +80,21 @@ plotTrip <- function(trip, dwell = FALSE, ...) {
     }
     dev.flush()
 }
+plotTrip(trips[1], dwell = TRUE)
+#par(bg = "#333333", fg = "#cccccc", col.axis = "#cccccc", col.lab = "#cccccc", mfrow = c(3, 3))
+#for (trip in trips[-(1:3)]) plotTrip(trip)
 
-par(bg = "#333333", fg = "#cccccc", col.axis = "#cccccc", col.lab = "#cccccc", mfrow = c(3, 3))
-for (trip in trips[-(1:3)]) plotTrip(trip)
+#par(bg = "#333333", fg = "#cccccc", col.axis = "#cccccc", col.lab = "#cccccc", mfrow = c(1,1))
+#plotTrip(trips[1], xlim = c(1474497914, 1474498270), ylim = c(4800, 5300))
 
-par(bg = "#333333", fg = "#cccccc", col.axis = "#cccccc", col.lab = "#cccccc", mfrow = c(1,1))
-plotTrip(trips[1], xlim = c(1474497914, 1474498270), ylim = c(4800, 5300))
-
-
-for (trip in trips) { plotTrip(trip, dwell = TRUE); locator(1) }
+pb <- txtProgressBar(0, length(trips), style = 3)
+for (trip in trips) {
+    pdf(sprintf('~/Desktop/trip-%s.pdf', trip), width = 9, height = 5)
+    plotTrip(trip, dwell = TRUE)
+    dev.off()
+    setTxtProgressBar(pb, which(trips == trip))
+}
+close(pb)
 
 
 
