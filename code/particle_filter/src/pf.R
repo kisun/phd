@@ -54,7 +54,7 @@ pf <- function(con, vid, N = 500,
         particles <- data.frame(vehicle_id = rep(vid, N),
                                 distance_into_trip = runif(N, min(sh.near$dist_traveled),
                                                            max(sh.near$dist_traveled)),
-                                velocity = runif(N, 0, 30))
+                                velocity = runif(N, 0, 16))
         ## determine which segment of the route each particle is on
         particles$segment <- sapply(particles$distance_into_trip,
                                     function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
