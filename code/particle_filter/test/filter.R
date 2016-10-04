@@ -151,6 +151,7 @@ filled.contour(x, y, z, color.palette=viridis::magma)
 
 #### Speed filter:
 N <- 500
+shape <- fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", trips[1]), flatten = TRUE)
 M <- nrow(shape$schedule)
 ds <- shape$schedule$pivot.shape_dist_traveled
 B0 <- matrix(rep(10, M), ncol = 1)
@@ -158,10 +159,7 @@ P0 <- 10 * diag(M)
 A <- diag(M)
 H <- diag(M)
 
-
-
-
-update <- function(res) {
+update <- function(res, q = 1) {
     if (missing(res)) stop("Please specify prior")
     N <- res$N
     M <- res$M
@@ -178,7 +176,7 @@ update <- function(res) {
     
     B <- res$B
     P <- res$P
-    Q <- 3 * diag(M)
+    Q <- q * diag(M)
     A <- res$A
     H <- res$H
     
@@ -228,16 +226,91 @@ shape <-fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", trips[1]), fl
 SHAPE <- shape$shape
 SHAPE$segment <- sapply(SHAPE$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
 
-
 res <- list(B = B0, P = P0, N = N, M = M, A = A, H = H, t = t0 + delta, delta = delta)
-plotSpeeds(res, shape = SHAPE)
+Bhist <- list(mean = res$B, var = cbind(diag(res$P)), t = res$t)
+q <- 0.1
+#plotSpeeds(res, shape = SHAPE)
 while(res$t < tt$max) {
     jpeg(sprintf("~/Desktop/figs/speeds_%s.jpg", res$t), width = 500, height = 1000)
-    res <- update(res)
+    res <- update(res, q = q)
+    Bhist$mean <- cbind(Bhist$mean, res$B)
+    Bhist$var <- cbind(Bhist$var, diag(res$P))
+    Bhist$t <- c(Bhist$t, res$t)
     plotSpeeds(res, shape = SHAPE)
     dev.off()
     Sys.sleep(0.1)
 }
 
+
+
 unlink("speed_history.gif")
-system("convert -delay 30 -loop 0 ~/Desktop/figs/speeds_*.jpg speed_history.gif")
+system("convert -delay 30 -loop 0 ~/Desktop/figs/speeds_*.jpg ~/Desktop/figs/speed_history.gif")
+
+
+
+library(grid)
+hist <- Bhist
+plotHistory <- function(hist) {
+    xlim <- range(hist$t)
+    ylim <- c(0, 16)
+    grid.newpage()
+    grid.rect(gp = gpar(fill = "#333333"))
+    pushViewport(viewport(width = 0.9, height = 0.9, layout = grid.layout(nrow = nrow(hist$mean)-1)))
+    xx <- rep(hist$t, each = 4)
+    xx <- xx[-(1:2)]
+    xx <- xx[1:(length(xx) - 2)]
+    yy <- rep(c(0, 1, 1, 0), length.out = length(xx))
+    for (i in 2:M-1) {
+        pushViewport(viewport(layout.pos.row = i, xscale = xlim, yscale = ylim, clip = TRUE))
+        if (i %% 2 == 0) grid.rect(gp = gpar(fill = "#444444", lwd = 0))
+        spd <- round(hist$mean[i, ] / 16 * 11)
+        cols <- RColorBrewer::brewer.pal(11, "RdYlGn")[spd]
+        grid.polygon(unit(xx, units = "native"),
+                     unit(yy, units = "npc"),
+                     id.lengths = rep(4, length(xx) / 4),
+                     gp = gpar(lwd = NA, col = cols, fill = cols))
+        ##grid.polygon(c(hist$t, rev(hist$t)),
+        ##             c(hist$mean[i, ] + hist$var[i, ], rev(hist$mean[i, ] - hist$var[i, ])),
+        ##             default.units = "native", gp = gpar(lwd = 0, fill = "#999999"))
+        y2 <- rbind(hist$mean[i, ] - hist$var[i, ], hist$mean[i, ] + hist$var[i, ])
+        grid.polyline(rep(hist$t, each = 2), c(y2), default.units = "native", id = rep(1:ncol(y2), each = 2),
+                      gp = gpar(col = "#33333380"))
+        grid.lines(hist$t + 30 * 5, hist$mean[i, ], default.units = "native",
+                   gp = gpar(lwd = 2))
+        popViewport()
+    }
+    
+    pushViewport(viewport(xscale = xlim, yscale = c(M-1, 0)))
+    tt <- as.POSIXct(hist$t, origin = "1970-01-01")
+    tta <- pretty(tt, min.n = 6)
+    grid.xaxis(at = tta, label = gsub("^0", "", format(tta, "%I%P")), gp = gpar(col = "#cccccc"))
+    grid.yaxis(at = 1:(M-1) - 0.5, label = 1:(M-1), gp = gpar(lwd = 0, col = "#cccccc"))
+    grid.text("Segment", x = unit(-3, "line"), y = 0.5, rot = 90, gp = gpar(col = "#cccccc"))
+}
+
+jpeg(paste0("~/Desktop/figs/speed_map_q-", q, ".jpg"), width = 1920, height = 1080)
+plotHistory(Bhist)
+grid.text(paste("Using q =", q), 0.5, unit(1, "npc") + unit(1, "line"), gp = gpar(col = "#cccccc"))
+dev.off()
+
+
+addTrips <- function() {
+    trips <- dbGetQuery(con, "SELECT distinct trip_id FROM particles")$trip_id
+    shape <-fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", trips[1]), flatten = TRUE)
+    sh <- shape$schedule$pivot.shape_dist_traveled
+    for (trip in trips) {
+        res <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE trip_id='%s' ORDER BY id", trip))
+        res$parentid <- sapply(res$parent ,function (x) {
+            ret <- which(res$id == x)
+            if (length(ret) == 1) return(ret) else return(NA)
+        })
+        resl <- res[!is.na(res$parent), ]
+        Ta <- tapply(resl$arrival_time, resl$segment, mean, na.rm = TRUE)
+        Td <- tapply(resl$departure_time, resl$segment, mean, na.rm = TRUE)
+        Ta <- Ta[-1]
+        Td <- Td[-length(Td)]
+        xx <- c(rbind(Td, Ta))
+        yy <- c(1, rep(2:(M-1), each = 2), M) - 1
+        grid.lines(xx, yy, default.units = "native")
+    }
+}
