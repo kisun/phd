@@ -19,6 +19,7 @@ pf <- function(con, vid, N = 500,
                rho = 0.1,       ## probability particle stops !due to bus stop,
                mu.nu = 20,      ## average time a bus is stopped at "lights"
                draw = FALSE,
+               speed,          ## a 'speed' object, with a mean vecotr B and covariance matrix P for segment speeds
                vp = dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE vehicle_id='%s'", vid))) {
 
     ## Get vehicle's latest realtime state:
@@ -54,10 +55,14 @@ pf <- function(con, vid, N = 500,
         particles <- data.frame(vehicle_id = rep(vid, N),
                                 distance_into_trip = runif(N, min(sh.near$dist_traveled),
                                                            max(sh.near$dist_traveled)),
-                                velocity = runif(N, 0, 16))
+                                velocity = runif(N, 0, 16))            
+        
         ## determine which segment of the route each particle is on
         particles$segment <- sapply(particles$distance_into_trip,
                                     function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
+        if (!missing(speed)) 
+            particles$velocity <- msm::rtnorm(N, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
+                                              lower = 0, upper = 16)        
         particles$arrival_time <- particles$departure_time <- NA
     } else if (particles$trip_id[1] != vp$trip_id) {
         #cat("Trip has changed ... moving forward! \n")
@@ -73,7 +78,12 @@ pf <- function(con, vid, N = 500,
         }
         
         particles$distance_into_trip <- runif(nrow(particles), min(sh.near$dist_traveled), max(sh.near$dist_traveled))
-        particles$velocity <- msm::rtnorm(nrow(particles), particles$velocity, sd = 3, lower = 0, upper = 16)
+        particles$velocity <- 
+            if (missing(speed))
+                msm::rtnorm(nrow(particles), particles$velocity, sd = 3, lower = 0, upper = 16)
+            else
+                msm::rtnorm(N, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
+                            lower = 0, upper = 16)
         particles$segment <- sapply(particles$distance_into_trip,
                                     function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
         particles$arrival_time <- particles$departure_time <- NA
@@ -82,17 +92,29 @@ pf <- function(con, vid, N = 500,
 
         if (delta <= 0) return(invisible(-1))
         ## movement step
-        #cat("The bus has moved ...\n")
 
-        ## add process noise to speeds:
-        particles$velocity <- msm::rtnorm(nrow(particles), particles$velocity, sd = 3, lower = 0, upper = 16)
-           # pmin(30, pmax(0, particles$velocity + rnorm(nrow(particles),0, sd = sqrt(delta))))
+        ## resample speeds
+
+        if (missing(speed))
+            particles$velocity <- msm::rtnorm(nrow(particles), particles$velocity, sd = 3, lower = 0, upper = 16)
+        else {
+            speed.proposal <- msm::rtnorm(N, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
+                                          lower = 0, upper = 16)
+            alpha.log <-
+                dnorm(speed.proposal, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]), TRUE) -
+                dnorm(particles$velocity, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]), TRUE)
+            particles$velocity <- ifelse(rbinom(length(alpha.log), 1, min(1, exp(alpha.log))) == 1,
+                                         speed.proposal, particles$velocity)
+        }
         particles$segment <- sapply(particles$distance_into_trip,
                                     function(x) which(schedule$shape_dist_traveled >= x)[1L] - 1L)
         ## move each particle
-        for (i in 1L:nrow(particles)) {
-            particles[i, ] <- transition(particles[i, ])
-        }
+        ## for (i in 1L:nrow(particles)) {
+        ##     particles[i, ] <- transition(particles[i, ])
+        ## }
+        e <- environment()
+        parts <- parallel::mclapply(1L:nrow(particles), function(i) transition(particles[i, ], e ), mc.cores = 3)
+        particles <- do.call(rbind, parts)
     }
 
 

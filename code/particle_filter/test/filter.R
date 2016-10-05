@@ -31,6 +31,7 @@ pb <- txtProgressBar(0, length(ind), style = 3)
 for (i in 1:length(ind)) {
     setTxtProgressBar(pb, i)
     pf(con, vps[ind[i], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[i], ])
+    ## update the 
 }; close(pb)
 
 
@@ -228,17 +229,17 @@ SHAPE$segment <- sapply(SHAPE$dist_traveled, function(x) which(shape$schedule$pi
 
 res <- list(B = B0, P = P0, N = N, M = M, A = A, H = H, t = t0 + delta, delta = delta)
 Bhist <- list(mean = res$B, var = cbind(diag(res$P)), t = res$t)
-q <- 0.1
+q <- 1
 #plotSpeeds(res, shape = SHAPE)
 while(res$t < tt$max) {
-    jpeg(sprintf("~/Desktop/figs/speeds_%s.jpg", res$t), width = 500, height = 1000)
+    #jpeg(sprintf("~/Desktop/figs/speeds_%s.jpg", res$t), width = 500, height = 1000)
     res <- update(res, q = q)
     Bhist$mean <- cbind(Bhist$mean, res$B)
     Bhist$var <- cbind(Bhist$var, diag(res$P))
     Bhist$t <- c(Bhist$t, res$t)
-    plotSpeeds(res, shape = SHAPE)
-    dev.off()
-    Sys.sleep(0.1)
+    #plotSpeeds(res, shape = SHAPE)
+    #dev.off()
+    #Sys.sleep(0.1)
 }
 
 
@@ -248,8 +249,8 @@ system("convert -delay 30 -loop 0 ~/Desktop/figs/speeds_*.jpg ~/Desktop/figs/spe
 
 
 
+
 library(grid)
-hist <- Bhist
 plotHistory <- function(hist) {
     xlim <- range(hist$t)
     ylim <- c(0, 16)
@@ -288,29 +289,197 @@ plotHistory <- function(hist) {
     grid.text("Segment", x = unit(-3, "line"), y = 0.5, rot = 90, gp = gpar(col = "#cccccc"))
 }
 
-jpeg(paste0("~/Desktop/figs/speed_map_q-", q, ".jpg"), width = 1920, height = 1080)
+#jpeg(paste0("~/Desktop/figs/speed_map_q-", q, ".jpg"), width = 1920, height = 1080)
 plotHistory(Bhist)
-grid.text(paste("Using q =", q), 0.5, unit(1, "npc") + unit(1, "line"), gp = gpar(col = "#cccccc"))
-dev.off()
+#grid.text(paste("Using q =", q), 0.5, unit(1, "npc") + unit(1, "line"), gp = gpar(col = "#cccccc"))
+#dev.off()
+apply(Bhist$mean, 1, function(x) sd(diff(x)))
+
+## addTrips <- function() {
+##     trips <- dbGetQuery(con, "SELECT distinct trip_id FROM particles")$trip_id
+##     shape <-fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", trips[1]), flatten = TRUE)
+##     sh <- shape$schedule$pivot.shape_dist_traveled
+##     for (trip in trips) {
+##         res <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE trip_id='%s' ORDER BY id", trip))
+##         res$parentid <- sapply(res$parent ,function (x) {
+##             ret <- which(res$id == x)
+##             if (length(ret) == 1) return(ret) else return(NA)
+##         })
+##         resl <- res[!is.na(res$parent), ]
+##         Ta <- tapply(resl$arrival_time, resl$segment, mean, na.rm = TRUE)
+##         Td <- tapply(resl$departure_time, resl$segment, mean, na.rm = TRUE)
+##         Ta <- Ta[-1]
+##         Td <- Td[-length(Td)]
+##         xx <- c(rbind(Td, Ta))
+##         yy <- c(1, rep(2:(M-1), each = 2), M) - 1
+##         grid.lines(xx, yy, default.units = "native")
+##     }
+## }
 
 
-addTrips <- function() {
-    trips <- dbGetQuery(con, "SELECT distinct trip_id FROM particles")$trip_id
-    shape <-fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", trips[1]), flatten = TRUE)
-    sh <- shape$schedule$pivot.shape_dist_traveled
-    for (trip in trips) {
-        res <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE trip_id='%s' ORDER BY id", trip))
-        res$parentid <- sapply(res$parent ,function (x) {
-            ret <- which(res$id == x)
-            if (length(ret) == 1) return(ret) else return(NA)
-        })
-        resl <- res[!is.na(res$parent), ]
-        Ta <- tapply(resl$arrival_time, resl$segment, mean, na.rm = TRUE)
-        Td <- tapply(resl$departure_time, resl$segment, mean, na.rm = TRUE)
-        Ta <- Ta[-1]
-        Td <- Td[-length(Td)]
-        xx <- c(rbind(Td, Ta))
-        yy <- c(1, rep(2:(M-1), each = 2), M) - 1
-        grid.lines(xx, yy, default.units = "native")
-    }
+for (i in 1:ncol(Bhist$mean)) {
+    plot(diff(Bhist$mean[, i]), type = "l", ylim = c(-16, 16), xlim = c(1, M))
+    locator(1)
 }
+
+
+zx <- log(apply(Bhist$mean, 2, function(x) x[-1] / x[-length(x)]))
+plot(1:ncol(zx), type="n", ylim = range(zx))
+apply(zx, 1, lines, col = "#33333330")
+
+barplot(rowMeans(zx), width = 1, space = 0)
+sd <- apply(zx, 1, sd) / sqrt(ncol(zx))
+arrows(1:nrow(zx) - 0.5, rowMeans(zx) - sd, y1 = rowMeans(zx + sd), length = 0.1, code = 0, angle = 90, lwd = 2)
+
+
+
+
+
+
+#####################################################################
+#####################################################################
+#####################################################################
+setwd("../")
+.libPaths("../../.Rlibrary")
+
+library(RPostgreSQL)
+library(jsonlite)
+library(iNZightPlots)
+library(iNZightMaps)
+library(mvtnorm)
+source("src/pf.R")
+source("src/mapping.R")
+source("src/h.R")
+source("src/figures.R")
+
+drv = dbDriver("PostgreSQL")
+con = dbConnect(drv, dbname = "homestead", host = "localhost",
+                user = "homestead", port = "54320", password = "secret")
+con2 = dbConnect(drv, dbname = "historical", host = "localhost",
+                 user = "homestead", port = "54320", password = "secret")
+
+
+hist <- dbGetQuery(con2, "SELECT route_id, count(route_id) as n FROM vehicle_positions WHERE route_id LIKE '%v46.5' group by route_id order by n")
+rid <- "27402-20160920093629_v46.5"
+#vid <- "3A9A"
+vps <- dbGetQuery(
+    con2,
+    sprintf("SELECT * FROM vehicle_positions WHERE route_id='%s' ORDER BY timestamp", rid))
+vps$trip_start_date <- format(as.POSIXct(vps$timestamp, origin = "1970-01-01"), "%Y-%m-%d")
+
+# table(vps$trip_start_date)
+
+ind <- which(vps$trip_start_date == "2016-09-22")
+pb <- txtProgressBar(0, length(ind), style = 3)
+kf.t <- vps[ind[1], "timestamp"]
+N <- 500
+shape <- fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", vps[ind[1], "trip_id"]), flatten = TRUE)
+SHAPE <- shape$shape
+SHAPE$segment <- sapply(SHAPE$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
+M <- nrow(shape$schedule)
+ds <- shape$schedule$pivot.shape_dist_traveled
+B0 <- matrix(rep(10, M), ncol = 1)
+P0 <- 10 * diag(M)
+A <- diag(M)
+H <- diag(M)
+delta <- 5 * 60
+speed <- list(B = B0, P = P0, N = N, M = M, A = A, H = H, t = kf.t, delta = delta)
+plotSpeeds(speed, shape = SHAPE)
+
+i <- 1
+
+for (i in i:length(ind)) {
+    setTxtProgressBar(pb, i)
+    ## update the speed KF:
+    if (vps[ind[i], "timestamp"] > speed$t + speed$delta) {
+        dev.set(2)
+        speed <- update(speed, q = 0.05)
+        plotSpeeds(speed, shape = SHAPE)
+        dev.set(3)
+    }
+    pf(con, vps[ind[i], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[i], ], speed = speed)
+    plotTrip(vps[ind[i], "trip_id"])
+    #locator(1)
+    #with(dbGetQuery(con, "SELECT * FROM particles WHERE active"), )
+}; close(pb)
+
+
+
+
+
+
+
+
+par(bg = "#333333", fg = "#cccccc", col.axis = "#cccccc", col.lab = "#cccccc", mfrow = c(4, 3))
+plotTrip <- function(trip, dwell = FALSE, ...) {
+    speed <- !dwell
+    dev.hold()
+    res <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE trip_id='%s' ORDER BY id", trip))
+    shape <-fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", trip), flatten = TRUE)
+    par(bg = "#333333", fg = "#cccccc", col.axis = "#cccccc", col.lab = "#cccccc")
+    layout(matrix(c(1,1,1,2), nrow = 1))
+    sh <- shape$schedule$pivot.shape_dist_traveled
+    par(mar = c(5.1, 4.1, 4.1, 0))
+    plot(res$timestamp, res$distance_into_trip, pch = 19, cex = 0.1, xaxt = "n", yaxt = "n", yaxs = "i",
+         xlab = "Time", ylab = "Distance into Trip (km)", col = "#cccccc", bty = "n", ylim = c(0, max(sh)*1.04), ...)
+    abline(h =  sh, col = "#393939")
+    res$parentid <- sapply(res$parent ,function (x) {
+        ret <- which(res$id == x)
+        if (length(ret) == 1) return(ret) else return(NA)
+    })
+    #res$parentid <- res$parent - min(res$id) + 1
+    #res$parentid[res$parentid < 1] <- NA
+    resl <- res[!is.na(res$parent), ]
+    arrows(x0 = resl$timestamp,
+           x1 = ifelse(resl$segment == res$segment[resl$parentid] & !is.na(res$departure_time[resl$parentid]),
+                       res$timestamp[resl$parentid],
+                       resl$departure_time),
+           y0 = resl$distance_into_trip,
+           y1 = ifelse(resl$segment == res$segment[resl$parentid] & !is.na(res$departure_time[resl$parentid]),
+                       res$distance_into_trip[resl$parentid],
+                       shape$schedule$pivot.shape_dist_traveled[resl$segment]),
+           code = 0, col = "#cc666640")
+    arrows(x0 = ifelse(resl$departure_time <= resl$timestamp,
+                       resl$departure_time, NA),
+           x1 = resl$arrival_time,
+           y0 = shape$schedule$pivot.shape_dist_traveled[resl$segment], code = 0, col = "#cc666640")
+    arrows(x0 = ifelse(resl$segment != res$segment[resl$parentid],
+                       resl$arrival_time, NA),
+           x1 = res$timestamp[resl$parentid],
+           y0 = shape$schedule$pivot.shape_dist_traveled[resl$segment],
+           y1 = res$distance_into_trip[resl$parentid], code = 0, col = "#cc666640")
+    ts <- as.POSIXct(res$timestamp, origin = "1970-01-01")
+    axis(1, pretty(ts), labels = format(pretty(ts), "%H:%M"), lwd = 0)
+    axis(2, at = pretty(shape$schedule$pivot.shape_dist_traveled/1000*1000, high.u.bias = 1),
+         labels = pretty(shape$schedule$pivot.shape_dist_traveled/1000, high.u.bias = 1),
+         lwd = 0, las = 2, cex.axis = 0.8)
+    if (dwell) {
+        res2 <- res[res$id %in% res$parent, ]
+        res2$dwell <- res2$departure_time - res2$arrival_time
+        mu.dwell <- with(res2[res2$dwell > 0, ], tapply(dwell, segment, mean))
+        pi.stop <- with(res2[!is.na(res2$dwell), ], tapply(dwell, segment, function(x) mean(x > 0)))
+        if (length(mu.dwell) > 0) {
+            par(mar = c(5.1, 0, 4.1, 2.1))
+            plot(mu.dwell, sh[as.numeric(names(mu.dwell))], type = "n", bty = "n", yaxt = "n", yaxs = "i",
+                 ylab = "", xlab = "Dwell time (s)", xaxt = "n", xaxs = "i",
+                 xlim = c(0, max(mu.dwell)*1.04), ylim = c(0, max(sh)*1.04))
+            abline(h = sh, col = "#393939")
+            abline(v = 0, col = "#888888")
+            points(mu.dwell, sh[as.numeric(names(mu.dwell))], pch = 19, cex = 2 * sqrt(pi.stop))
+        }
+    } else {
+        par(mar = c(5.1, 0, 4.1, 2.1))
+        plot(res$velocity, res$distance_into_trip, col = "#cc666670", type = "n", bty = "n", yaxt = "n", xaxt = "n",
+             xlab = "Velocity (m/s)", ylab = "", xlim = c(0, 16), ylim = c(0, max(sh)*1.04), yaxs = "i", xaxs = "i")
+        abline(h = sh, col = "#393939")
+        abline(v = 0, col = "#555555")
+        points(res$velocity, res$distance_into_trip, col = "#cc666670", pch = 19)
+        axis(4, at = pretty(shape$schedule$pivot.shape_dist_traveled/1000*1000, high.u.bias = 1),
+             labels = pretty(shape$schedule$pivot.shape_dist_traveled/1000, high.u.bias = 1),
+             lwd = 0, las = 2, cex.axis = 0.8)
+        axis(1, lwd = 0)
+    }
+    dev.flush()
+}
+trips <- dbGetQuery(con, "SELECT trip_id, min(timestamp) as start FROM particles GROUP BY trip_id ORDER BY start")$trip_id
+plotTrip(trips[18])
