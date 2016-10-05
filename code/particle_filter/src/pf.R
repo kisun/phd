@@ -109,9 +109,6 @@ pf <- function(con, vid, N = 500,
         particles$segment <- sapply(particles$distance_into_trip,
                                     function(x) which(schedule$shape_dist_traveled >= x)[1L] - 1L)
         ## move each particle
-        ## for (i in 1L:nrow(particles)) {
-        ##     particles[i, ] <- transition(particles[i, ])
-        ## }
         e <- environment()
         parts <- parallel::mclapply(1L:nrow(particles), function(i) transition(particles[i, ], e ), mc.cores = 3)
         particles <- do.call(rbind, parts)

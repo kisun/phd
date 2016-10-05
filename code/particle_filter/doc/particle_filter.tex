@@ -1,0 +1,216 @@
+\documentclass[14paper,twoside]{article}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+
+
+\usepackage[hidelinks]{hyperref}
+\usepackage{cleveref}
+
+\usepackage{fullpage}
+
+
+\newcommand{\bX}{\mathbf{X}}
+\newcommand{\bY}{\mathbf{Y}}
+\newcommand{\bZ}{\mathbf{Z}}
+
+\newcommand{\f}[1]{f\left(#1\right)}
+\newcommand{\g}[1]{g\left(#1\right)}
+\newcommand{\lhood}[1]{\ell\left(#1\right)}
+
+
+\title{Real-time Bus Model Algorithm}
+\author{Tom Elliott}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Outline}
+\label{sec:outline}
+
+The algorithm runs in real-time\footnote{or at least in chronological sequence in the case of testing}
+and ``simultaneously'' models the state of vehicles (\cref{sec:bus}),
+and the state of route segments (\cref{sec:speed}).
+
+
+
+\section{Vehicle State Model: Particle Filter}
+\label{sec:bus}
+
+
+The vehicle state is modeled using a particle filter, 
+as this gives good coverage of all plausible states.
+Assuming we are only interested in a single vehicle,
+we have unknown state $\bX_k$ associated with observation $\bY_k$,
+at time $t_k$.
+
+
+The vehicle state is
+\begin{equation}
+  \label{eq:vehicle_state}
+  \bX_k = 
+  \begin{bmatrix}
+    d_k \\ v_k \\ s_k \\ T_{s_k} \\ D_{s_k}
+  \end{bmatrix} =
+  \left[
+    \begin{array}{l}
+      \text{distance into trip (m)} \\
+      \text{velocity (speed) of the vehicle } (ms^{-1}) \\
+      \text{(route) segment identifier / last stop} \\
+      \text{arrival time at the last stop} \\
+      \text{departure time from the last stop}
+    \end{array}
+  \right].
+\end{equation}
+Within the framework of the particle filter, the state is represented by a sample of \emph{particles},
+each with it's own state estimate, denoted by a superscript: $\bX_k^{(i)}$.
+
+The observations are GPS coordinates plus a timestamp,
+\begin{equation}
+  \label{eq:vehicle_observation}
+  \bY_k =
+  \begin{bmatrix}
+    \phi_k \\ \lambda_k \\ t_k
+  \end{bmatrix} =
+  \left[
+    \begin{array}{l}
+      \text{latitude (degrees north/south)} \\
+      \text{longitude (degrees east/west)} \\
+      \text{timestamp (seconds since 12am 01/01/1970)}
+    \end{array}
+  \right]
+\end{equation}
+
+
+To compare the state to the observation, 
+we transform the particles states into a coordinate space using the function $h$.
+This uses the shape information to transform the distance into trip measurment for particle $i$, $d_k^{(i)}$,
+into a GPS coordinate $\bY_k^{(i)}$;
+we then use an equirectangular projection 
+$\left\{g : \bY_k^{(i)} \,|\, \bY_k \mapsto \bZ_k^{(i)} \right\}$ 
+on the particles, centered on the observation, to obtain 
+\begin{equation}
+  \label{eq:transform}
+  \g{\bY_k^{(i)} | \bY_k} = \bZ_k^{(i)} =
+  \begin{bmatrix}
+    x_k^{(i)} \\ y_k^{(i)}
+  \end{bmatrix} =
+  \begin{bmatrix}
+    \left( \Lambda_k^{(i)} - \Lambda_k \right) \cos \left( \Phi_k \right) \\
+    \Phi_k^{(i)} - \Phi_k
+  \end{bmatrix}
+\end{equation}
+where $\Phi = \frac{\pi}{180} \phi$ and $\Lambda = \frac{\pi}{180} \lambda$ 
+(i.e., the latitude and longitude in radians).
+Note that $g(\bY_k) = \left[0\ 0\right]^T$.
+We can therefore use a bivariate normal to compute the likelihood of each particle,
+\begin{align}
+  \label{eq:particle_likelihood}
+  \g{h(\bX_k^{(i)}) \,|\, \bY_k} = \bZ_k^{(i)} 
+  &\sim  \mathcal{N}\left(
+    \begin{bmatrix}
+      0 \\ 0
+    \end{bmatrix},
+    \frac{1}{R}\cdot\begin{bmatrix}
+      \sigma_y^2 & 0 \\ 0 & \sigma_y^2
+    \end{bmatrix}
+  \right) \\
+  \lhood{\bX_k^{(i)}| \bY_k} 
+  &= \frac{1}{\sqrt{\left(2\pi\right)^2 \left| \boldsymbol{\Sigma} \right|}}
+    e^{-\frac{1}{2}\left(g(h(\bX_k^{(i)})|\bY_k) - \boldsymbol{\mu}\right)^T\boldsymbol\Sigma^{-1}\left(g(h(\bX_k^{(i)})|\bY_k) - 
+    \boldsymbol{\mu}\right)} \nonumber \\
+  &= \frac{1}{2\sqrt{2\pi^2 \sigma_y^2}} 
+    e^{-\frac{1}{2}  \left(g(h(\bX_k^{(i)})|\bY_k)\right)^T \boldsymbol\Sigma^{-1} \left(g(h(\bX_k^{(i)})|\bY_k)\right) } \nonumber \\
+  \label{eq:particle_likelihood_const}
+  &= \frac{1}{2\sqrt{2}\pi \sigma_y} e^{\sigma^2\left((x_k^{(i)})^2 + (y_k^{(i)})^2\right)} \\
+  \label{eq:particle_likelihood_final}
+  \lhood{\bX_k^{(i)}| \bY_k} 
+  &\propto e^{\sigma^2\left((x_k^{(i)})^2 + (y_k^{(i)})^2\right)}
+\end{align}
+where $x_k^{(i)}$ and $y_k^{(i)}$ are as defined in \cref{eq:transform}.
+
+The weight of each particle is simply computed as
+\begin{equation}
+  \label{eq:particle_weights}
+  w_i = \frac{\lhood{\bX_k^{(i)} | \bY_k}}{\sum_{j=1}^M \lhood{\bX_k^{(j)} | \bY_k}}
+  = \frac{e^{\sigma^2\left((x_k^{(i)})^2 + (y_k^{(i)})^2\right)}}{\sum_{j=1}^M e^{\sigma^2\left((x_k^{(j)})^2 + (y_k^{(j)})^2\right)}}.
+\end{equation}
+From the weight formula, we see that the constant from \cref{eq:particle_likelihood_const}
+can indeed be left out of the likelihood shown in \cref{eq:particle_likelihood_final}.
+
+
+The last step is the transition function $\left\{ f : \bX_{k-1}^{(i)} \mapsto \bX_k^{(i)} \right \}$,
+which effectively describes the behaviour of the vehicle.
+There are several components we must consider:
+\begin{enumerate}
+\item is the bus at a stop? (or perhaps stopped at an intersection?)
+\item will the bus pass one or more stops during the next time step?
+\item if it does, does it stop?
+\item if it stops, how long does it wait there?
+\end{enumerate}
+
+First we define $\delta_k = t_k - t_{k-1}$.
+
+\subsection{Is the bus at a stop?}
+
+At the start of each iteration, we first decide whether the bus still stay where it is,
+and if so for how long.
+The values used depend on whether the bus is at a stop or not (in which case it \emph{could} be 
+at an intersection).
+
+First off, if the bus \emph{is not} at a bus stop, we define $\rho$ as the probability that is
+is currently stopped.
+Then we define $\nu$ as the average time spent stopped due to, for example, traffic lights.
+Thus, at the beginning of an iteration, we reduce the time available to travel $\tilde \delta_k$ 
+by sampling $q_i \sim \mathrm{Bernoulli}(\rho)$ and $c_i \sim \mathcal{E}\left(\frac{1}{\nu}\right)$,
+leaving us with
+\begin{equation}
+  \label{eq:start_intersection}
+  \tilde\delta_k = 
+  \begin{cases}
+    \delta_k - q_i c_i & q_i c_i \leq \delta_k, \\
+    0 & \text{otherwise}.
+  \end{cases}
+\end{equation}
+
+Alternatively, if the bus \emph{is} at a stop, we detect this by checking if $A_{s_k}^{(i)}$ is set, 
+and $D_{s_k}^{(i)}$ is not.
+When the vehicle is at a stop, we must ensure that is stays for \emph{at least} $\gamma$ seconds
+($\gamma$ is the time taken to decelerate, open doors, close doors, and accelerate, 
+i.e., the minimum dwell time).
+Then, since the exponential distribution is memoryless, we simply draw a new dwell time for each particle,
+$c_k^{(i)} \sim \mathcal{E}\left(\frac{1}{\tau_{s_k}}\right)$,
+where $\tau_j$ is the average dwell time at stop $j$.
+\begin{equation}
+  \label{eq:start_stop}
+  \tilde\delta_k =
+  \begin{cases}
+    t_k + c_k^{(i)} & t_k - T_{s_k}^{(i)} \geq \gamma, \\
+    T_{s_k} + \gamma + c_k^{(i)} & \text{otherwise}.
+  \end{cases}
+\end{equation}
+
+Each particle then moves on to the next step with $\tilde\delta_k$ time remaining to travel.
+
+
+\subsection{Setting Particle Speed: will it pass any stops?}
+
+The first step is to add noise to the system.
+This is done by adjusting the speed of each particle.
+However, instead of adding random noise, 
+we actually want to make use of the speed distribution of the current segment,
+which has a mean and variance as estimated by the Kalman filter (\cref{sec:speed}).
+
+
+
+
+
+\section{Route Segment Speed: Kalman Filter}
+\label{sec:speed}
+
+
+
+\end{document}
+\label{eq:obs_transform}
