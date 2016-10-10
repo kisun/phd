@@ -392,13 +392,14 @@ for (i in i:length(ind)) {
     setTxtProgressBar(pb, i)
     ## update the speed KF:
     if (vps[ind[i], "timestamp"] > speed$t + speed$delta) {
-        dev.set(2)
-        speed <- update(speed, q = 0.05)
+        jpeg(sprintf("~/Desktop/figs/speeds_%s.jpg", speed$t), width = 500, height = 1000)
+        speed <- update(speed, q = 1)
+        if (any(diag(speed$P) < 0.000001)) diag(speed$P) <- pmax(0.000001, diag(speed$P))
         plotSpeeds(speed, shape = SHAPE)
-        dev.set(3)
+        dev.off()
     }
     pf(con, vps[ind[i], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[i], ], speed = speed)
-    plotTrip(vps[ind[i], "trip_id"])
+    #plotTrip(vps[ind[i], "trip_id"])
     #locator(1)
     #with(dbGetQuery(con, "SELECT * FROM particles WHERE active"), )
 }; close(pb)
@@ -482,4 +483,8 @@ plotTrip <- function(trip, dwell = FALSE, ...) {
     dev.flush()
 }
 trips <- dbGetQuery(con, "SELECT trip_id, min(timestamp) as start FROM particles GROUP BY trip_id ORDER BY start")$trip_id
-plotTrip(trips[18])
+
+for ( i in 1:length(trips)) {
+    plotTrip(trips[i])
+    locator(1)
+}

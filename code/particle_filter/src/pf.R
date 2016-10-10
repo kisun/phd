@@ -65,7 +65,6 @@ pf <- function(con, vid, N = 500,
                                               lower = 0, upper = 16)        
         particles$arrival_time <- particles$departure_time <- NA
     } else if (particles$trip_id[1] != vp$trip_id) {
-        #cat("Trip has changed ... moving forward! \n")
         delta <- vp$timestamp - particles$timestamp[1L]
 
         if (delta <= 0) return(invisible(-1))
@@ -110,7 +109,8 @@ pf <- function(con, vid, N = 500,
                                     function(x) which(schedule$shape_dist_traveled >= x)[1L] - 1L)
         ## move each particle
         e <- environment()
-        parts <- parallel::mclapply(1L:nrow(particles), function(i) transition(particles[i, ], e ), mc.cores = 3)
+        parts <- lapply(1L:nrow(particles), function(i) transition(particles[i, ], e))#, mc.cores = 3)
+        
         particles <- do.call(rbind, parts)
     }
 
