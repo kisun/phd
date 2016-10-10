@@ -2,6 +2,7 @@
 
 \usepackage{amsmath}
 \usepackage{amsfonts}
+\usepackage{bbm}
 
 
 \usepackage[hidelinks]{hyperref}
@@ -13,6 +14,15 @@
 \newcommand{\bX}{\mathbf{X}}
 \newcommand{\bY}{\mathbf{Y}}
 \newcommand{\bZ}{\mathbf{Z}}
+\newcommand{\bnu}{\boldsymbol{\nu}}
+\newcommand{\bw}{\mathbf{w}}
+\newcommand{\bQ}{\mathbf{Q}}
+\newcommand{\bR}{\mathbf{R}}
+\newcommand{\bz}{\mathbf{z}}
+\newcommand{\bv}{\mathbf{v}}
+\newcommand{\br}{\mathbf{r}}
+\newcommand{\bS}{\mathbf{S}}
+\newcommand{\bK}{\mathbf{K}}
 
 \newcommand{\f}[1]{f\left(#1\right)}
 \newcommand{\g}[1]{g\left(#1\right)}
@@ -196,6 +206,7 @@ Each particle then moves on to the next step with $\tilde\delta_k$ time remainin
 
 
 \subsection{Setting Particle Speed: will it pass any stops?}
+\label{sec:speed_pass}
 
 The first step is to add noise to the system.
 This is done by adjusting the speed of each particle.
@@ -203,14 +214,199 @@ However, instead of adding random noise,
 we actually want to make use of the speed distribution of the current segment,
 which has a mean and variance as estimated by the Kalman filter (\cref{sec:speed}).
 
+To do this, we can use a Metropolis-type step, in which we add noise to each particle,
+and then accept the new state with probability $\alpha_i$.
+Let $v_{k-1}^{(i)}$ be the initial speed of each particle,
+and $v_k^{(i)\star}$ be the proposed speed, then we define
+\begin{equation}
+  \label{eq:speed_alpha_proposal}
+  \alpha_i = \min\left\{
+    1, \frac{p\left(v_k^{(i)\star}\,|\, \nu_{s_k}, \xi_{s_k}^2 \right)}{p\left(v_{k-1}^{(i)}\,|\, \nu_{s_k}, \xi_{s_k}^2 \right)}
+  \right\},
+\end{equation}
+where $\nu_{s_k}$ and $\xi_{s_k}^2$ are estimated by the Kalman filter in \cref{sec:speed}.
+Then we set $v_k^{(i)} = v_k^{(i)\star}$ with probability $\alpha_i$, otherwise it is set to $v_{k-1}^{(i)}$.
 
 
+Once the particles have a new speed, we can begin moving them.
+First, let $\mathbf{S}^d = \left\{ S_j^d : j = 1, \ldots, M \right\}$ be the distance into trip
+of the stops along the route.
+We then determine the time until arrival (in seconds) at the next stop, $s_{k-1}^{(i)} + 1$,
+\begin{equation}
+  \label{eq:time_till_arrival}
+  \mathrm{ETA}_{s_{k-1}^{(i)} + 1} = \frac{S^d_{s_{k-1}^{(i)} + 1} - d_{k-1}^{(i)}}{v_k^{(i)}}.
+\end{equation}
+
+If the travel time remaining is greater than the ETA, i.e., if $\tilde\delta_k \geq \mathrm{ETA}_{s_{k-1}^{(i)} + 1}$.
+then the particle will reach the next stop.
+
+If the particle \emph{does not} reach the next stop, we simply compute the distance into trip for the particle
+\begin{equation}
+  \label{eq:distance_into_trip_traveled}
+  d_k^{(i)} = d_{k-1}^{(i)} + \tilde\delta_k v_k^{(i)}
+\end{equation}
+and then we are done transitioning the given particle (the remaining steps are skipped).
+
+
+
+\subsection{Stop arrival: does it stop?}
+
+At this stage, we assume the bus reaches the next stop.
+We therefore set $s_k = s_{k-1} + 1$.
+The arrival time is then computed as
+\begin{equation}
+  \label{eq:arrival_time}
+  A_{s_k}^{(i)} = t_{k-1} + \mathrm{ETA}_{s_{k}^{(i)} + 1}
+  = t_{k-1} + \frac{S^d_{s_{k}^{(i)} + 1} - d_{k-1}^{(i)}}{v_k^{(i)}}.
+\end{equation}
+
+We now determine whether or not the bus stops.
+This is simply a Bernoulli random variable, sampled for each particle,
+with a probability $\pi_{\ell|r}$, which is the probability
+of stopping at stop $\ell$, given that the trip is $r$:
+\begin{equation}
+  \label{eq:bus_stopped}
+  p_{s_k}^{(i)} \sim \mathrm{Bernoilli}\left(\pi_{\ell|r}\right)
+\end{equation}
+Here, $\pi_{\ell|r}$ can be modelled using a random effects model,
+such that
+\begin{equation}
+  \label{eq:pi_model}
+  \mathrm{logit}\left(\pi_{\ell|r}\right) \sim \mathcal{N}\left(\eta_\ell, \sigma_\pi \right).
+\end{equation}
+More details later.
+
+
+
+\subsection{Stop dwell time}
+
+Now we determine the dwell time for each particle,
+which is conditionaly on the bus stopping (i.e., $p_j^{(i)} = 1$).
+First we define $\gamma$ as the \emph{minimum dwell time},
+which encorporates decelleration, opening and closing doors, and acceleration.
+$\gamma$ is common for all stops and trips (for now).
+
+The dwell time $\bar t_{s_k}^{(i)}$ is the total dwell time at stop $s_k$,
+and is exponentially distributed with expected dwell time $\tau_{\ell|r}$.
+Therefore, the total dwell time is
+\begin{equation}
+  \label{eq:total_dwell_time}
+  \gamma + \bar t_{s_k}^{(i)}, \qquad \bar t_{s_k}^{(i)} \sim \mathcal{E}\left(\frac{1}{\tau_{\ell|r}}\right)
+\end{equation}
+
+
+\subsection{Departure time and repeat}
+
+Finally, we compute the departure time.
+This combines the above two steps, so that 
+\begin{equation}
+  \label{eq:departure_time}
+  D_{s_k}^{(i)\star} = A_{s_k}^{(i)} + p_{s_k}^{(i)} \left( \gamma + \bar t_{s_k}^{(i)} \right).
+\end{equation}
+
+Now, if $D_{s_k}^{(i)\star} < t_k$, then there is still time remaining to continue traveling,
+so we set $D_{s_k}^{(i)} = D_{s_k}^{(i)\star}$ and $\tilde\delta_k = t_k - D_{s_k}^{(i)}$,
+and then repeat from \cref{sec:speed_pass}.
+If $D_{s_k}^{(i)\star} < t_k$, then we leave $D_{s_k}^{(i)}$ unset and end the transition.
+In both cases, we set $d_k^{(i)} = S_{s_k}^d$ (i.e., position the particle at the stop).
 
 
 \section{Route Segment Speed: Kalman Filter}
 \label{sec:speed}
 
 
+The Gaussian assumptions make a lot more sense for speed along a segment;
+the only potential cause for concern is the truncation at 0
+and $\approx$ 50 or 100 km/h.
+
+The state is
+\begin{equation}
+  \label{eq:speed_state}
+  \bnu_k = 
+  \begin{bmatrix}
+    \nu_1 \\ \nu_2 \\ \vdots \\ \nu_M
+  \end{bmatrix},
+\end{equation}
+where each $b_j$ is the mean speed along segment $j$.
+The state estimate has covariance matrix 
+\begin{equation}
+  \label{eq:state_cov}
+  \Xi_k = 
+  \begin{bmatrix}
+    \xi_1 & 0 & \cdots & 0 \\
+    0 & \xi_2 & \cdots & 0 \\
+    \vdots & \vdots & \ddots & \vdots \\
+    0 & 0 & \cdots & \xi_M
+  \end{bmatrix}
+\end{equation}
+i.e., it is diagnoal, with all other covariances 0 (for now).
+
+The transition function is simply the identity matrix, $\mathbbm{1}_M$,
+and the system noise is $\bw_k \sim \mathcal{N}(\mathbf{0}, \bQ_k)$,
+where $\bQ_k = \Delta_k \sigma_\nu \mathbbm{1}_M$,
+i.e., the average variance in speed per interval of length $\Delta_k$,
+and $\sigma_\nu$ is the variation per minute.
+The value of $\sigma_\nu$ determines how quickly the speeds can change,
+and is therefore rather important\ldots
+
+The transition model is thus
+\begin{equation}
+  \label{eq:speed_transition_function}
+  \bnu_k = \mathbbm{1}_M \bnu_{k-1} + \bw_k
+\end{equation}
+
+
+For the observations, we simply average over \emph{all} particles that were positioned in
+each segment over the past $\Delta_k$ interval,
+and also use the sample variance as an estimate for $\bR_k$.
+
+The mean speed in segment $j$ is $\bar z_j$, with variance $\hat v_j^2$.
+Therefore, the measurement matrix is also the identity $\mathbbm{1}_M$.
+So the measurement model is
+\begin{equation}
+  \label{eq:speed_measurement_model}
+  \bz_k = \mathbbm{1}_M \bnu_k + \bv_k,
+\end{equation}
+where $\bv_k \sim \mathcal{N}(\mathbf{0}, \bR_k)$,
+and
+\begin{equation}
+  \label{eq:speed_covariance_obs}
+  \bR_k =
+  \begin{bmatrix}
+    \hat v_1 & 0 & \cdots & 0 \\
+    0 & \hat v_2 & \cdots & 0 \\
+    \vdots & \vdots & \ddots & \vdots \\
+    0 & 0 & \cdots & \hat v_M
+  \end{bmatrix}
+\end{equation}
+
+The estimations become fairly simple due to the identity matrices.
+
+\textbf{Predict:}
+\begin{align}
+  \label{eq:speed_predict1}
+  \hat \bnu_{k|k-1} &= \hat\bnu_{k-1|k-1} \\
+  \label{eq:speed_predict2}
+  \Xi_{k|k-1} &= \Xi_{k-1|k-1} + \bQ_k
+\end{align}
+
+\textbf{Update:}
+\begin{align}
+  \label{eq:speed_update1}
+  \tilde\br_k &= \bz_k - \hat\bnu_{k|k-1} \\
+  \label{eq:speed_update2}
+  \bS_k &= \Xi_{k|k-1} + \bR_k \\
+  \label{eq:speed_update3}
+  \bK_k &= \Xi_{k|k-1} \bS_k^{-1} \\
+  \label{eq:speed_update4}
+  \hat\bnu_{k|k} &= \hat\bnu_{k|k-1} + \bK_k \tilde\br_k \\
+  \label{eq:speed_update5}
+  \Xi_{k|k} &= \left(\mathbbm{1}_M - \bK_k\right) \Xi_{k|k-1}
+\end{align}
+
+
+In situations where there are no observations in a given segment, 
+we just use the previous estimate of $\nu_{j,k-1}$ with a large variance (e.g., $1\times 10^6$).
+
 
 \end{document}
-\label{eq:obs_transform}
