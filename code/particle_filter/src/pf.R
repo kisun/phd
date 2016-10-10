@@ -81,7 +81,8 @@ pf <- function(con, vid, N = 500,
             if (missing(speed))
                 msm::rtnorm(nrow(particles), particles$velocity, sd = 3, lower = 0, upper = 16)
             else
-                msm::rtnorm(N, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
+                msm::rtnorm(nrow(particles), particles$velocity, 3,
+                            ##speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
                             lower = 0, upper = 16)
         particles$segment <- sapply(particles$distance_into_trip,
                                     function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
@@ -97,8 +98,9 @@ pf <- function(con, vid, N = 500,
         if (missing(speed))
             particles$velocity <- msm::rtnorm(nrow(particles), particles$velocity, sd = 3, lower = 0, upper = 16)
         else {
-            speed.proposal <- msm::rtnorm(N, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
-                                          lower = 0, upper = 16)
+            speed.proposal <-  msm::rtnorm(nrow(particles), particles$velocity, 3, lower = 0, upper = 16)
+            ##msm::rtnorm(N, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
+            ##            lower = 0, upper = 16)
             alpha.log <-
                 dnorm(speed.proposal, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]), TRUE) -
                 dnorm(particles$velocity, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]), TRUE)

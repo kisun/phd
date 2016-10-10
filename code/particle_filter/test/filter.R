@@ -359,12 +359,13 @@ con2 = dbConnect(drv, dbname = "historical", host = "localhost",
                  user = "homestead", port = "54320", password = "secret")
 
 
-hist <- dbGetQuery(con2, "SELECT route_id, count(route_id) as n FROM vehicle_positions WHERE route_id LIKE '%v46.5' group by route_id order by n")
+Hist <- dbGetQuery(con2, "SELECT route_id, count(route_id) as n FROM vehicle_positions WHERE route_id LIKE '%v46.5' group by route_id order by n")
 rid <- "27402-20160920093629_v46.5"
 #vid <- "3A9A"
 vps <- dbGetQuery(
     con2,
-    sprintf("SELECT * FROM vehicle_positions WHERE route_id='%s' ORDER BY timestamp", rid))
+    sprintf("SELECT DISTINCT trip_id, route_id, vehicle_id, position_latitude, position_longitude, timestamp FROM vehicle_positions WHERE route_id='%s' ORDER BY timestamp",
+            rid))
 vps$trip_start_date <- format(as.POSIXct(vps$timestamp, origin = "1970-01-01"), "%Y-%m-%d")
 
 # table(vps$trip_start_date)
@@ -384,26 +385,48 @@ A <- diag(M)
 H <- diag(M)
 delta <- 5 * 60
 speed <- list(B = B0, P = P0, N = N, M = M, A = A, H = H, t = kf.t, delta = delta)
-plotSpeeds(speed, shape = SHAPE)
+#plotSpeeds(speed, shape = SHAPE)
 
 i <- 1
+
+BHist <- list(mean = speed$B, var = cbind(diag(speed$P)), t = speed$t)
 
 for (i in i:length(ind)) {
     setTxtProgressBar(pb, i)
     ## update the speed KF:
+#    i <- i + 1
     if (vps[ind[i], "timestamp"] > speed$t + speed$delta) {
+        cat("Kalman filter update ...\n")
         jpeg(sprintf("~/Desktop/figs/speeds_%s.jpg", speed$t), width = 500, height = 1000)
         speed <- update(speed, q = 1)
         if (any(diag(speed$P) < 0.000001)) diag(speed$P) <- pmax(0.000001, diag(speed$P))
+        BHist$mean <- cbind(BHist$mean, speed$B)
+        BHist$var <- cbind(BHist$var, diag(speed$P))
+        BHist$t <- c(BHist$t, speed$t)
         plotSpeeds(speed, shape = SHAPE)
         dev.off()
     }
-    pf(con, vps[ind[i], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[i], ], speed = speed)
-    #plotTrip(vps[ind[i], "trip_id"])
-    #locator(1)
-    #with(dbGetQuery(con, "SELECT * FROM particles WHERE active"), )
+    pf(con, vps[ind[i], "vehicle_id"], 1000, sig.gps = 5, vp = vps[ind[i], ], speed = speed)
+    ## vel <- dbGetQuery(con, sprintf("SELECT velocity, segment FROM particles WHERE vehicle_id='%s' AND active",
+    ##                                vps[ind[i], "vehicle_id"]))
+    ## useg <- 1:23
+    ## nseg <- length(useg)
+    ## N <- round(sqrt(nseg))
+    ## M <- ceiling(sqrt(nseg))
+    ## dev.hold()
+    ## par(mfrow = c(N, M))
+    ## for (j in seq_along(useg)) {
+    ##     hist(vel$velocity[vel$segment == useg[j]], breaks = seq(0, 16, by = 0.5), freq = FALSE,
+    ##          main = paste0("Segment ", useg[j]), xlab = "Velocity (m/s)", col = "lightblue",
+    ##          ylim = c(0, 2.5))
+    ##     curve(dnorm(x, speed$B[useg[j]], sqrt(diag(speed$P)[useg[j]])), 0, 16, 1001, add = TRUE,
+    ##           lty = 2, col = "#990000", lwd = 2)
+    ## }
+    ## dev.flush()
+    ## locator(1)
 }; close(pb)
 
+plothistory(speed)
 
 
 

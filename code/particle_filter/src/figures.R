@@ -49,7 +49,7 @@ update <- function(res, q = 1) {
     obs <- dbGetQuery(
         con,
         sprintf("SELECT segment, AVG(velocity) AS mean, VAR_SAMP(velocity) AS sd FROM particles WHERE timestamp BETWEEN %s AND %s GROUP BY segment",
-                t - delta, t))
+                t, t + delta))
     Obs <- data.frame(segment = 1:M, mean = res$B, sd = rep(1e6, M))
     Obs[Obs$segment %in% obs$segment, ] <- obs
     Obs[is.na(Obs$sd), "sd"] <- 10
