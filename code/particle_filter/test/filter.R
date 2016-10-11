@@ -270,14 +270,14 @@ plotHistory <- function(hist) {
                      unit(yy, units = "npc"),
                      id.lengths = rep(4, length(xx) / 4),
                      gp = gpar(lwd = NA, col = cols, fill = cols))
-        ##grid.polygon(c(hist$t, rev(hist$t)),
-        ##             c(hist$mean[i, ] + hist$var[i, ], rev(hist$mean[i, ] - hist$var[i, ])),
-        ##             default.units = "native", gp = gpar(lwd = 0, fill = "#999999"))
+        grid.polygon(c(hist$t, rev(hist$t)),
+                     c(hist$mean[i, ] + hist$var[i, ], rev(hist$mean[i, ] - hist$var[i, ])),
+                     default.units = "native", gp = gpar(lwd = 0, fill = "#33333330"))
         y2 <- rbind(hist$mean[i, ] - hist$var[i, ], hist$mean[i, ] + hist$var[i, ])
-        grid.polyline(rep(hist$t, each = 2), c(y2), default.units = "native", id = rep(1:ncol(y2), each = 2),
-                      gp = gpar(col = "#33333380"))
+        #grid.polyline(rep(hist$t, each = 2), c(y2), default.units = "native", id = rep(1:ncol(y2), each = 2),
+        #              gp = gpar(col = "#33333380"))
         grid.lines(hist$t + 30 * 5, hist$mean[i, ], default.units = "native",
-                   gp = gpar(lwd = 2))
+                   gp = gpar(lwd = 1, col = "#333333"))
         popViewport()
     }
     
@@ -407,27 +407,25 @@ for (i in i:length(ind)) {
         dev.off()
     }
     pf(con, vps[ind[i], "vehicle_id"], 1000, sig.gps = 5, vp = vps[ind[i], ], speed = speed)
-    ## vel <- dbGetQuery(con, sprintf("SELECT velocity, segment FROM particles WHERE vehicle_id='%s' AND active",
-    ##                                vps[ind[i], "vehicle_id"]))
-    ## useg <- 1:23
-    ## nseg <- length(useg)
-    ## N <- round(sqrt(nseg))
-    ## M <- ceiling(sqrt(nseg))
-    ## dev.hold()
-    ## par(mfrow = c(N, M))
-    ## for (j in seq_along(useg)) {
-    ##     hist(vel$velocity[vel$segment == useg[j]], breaks = seq(0, 16, by = 0.5), freq = FALSE,
-    ##          main = paste0("Segment ", useg[j]), xlab = "Velocity (m/s)", col = "lightblue",
-    ##          ylim = c(0, 2.5))
-    ##     curve(dnorm(x, speed$B[useg[j]], sqrt(diag(speed$P)[useg[j]])), 0, 16, 1001, add = TRUE,
-    ##           lty = 2, col = "#990000", lwd = 2)
-    ## }
-    ## dev.flush()
-    ## locator(1)
+    vel <- dbGetQuery(con, sprintf("SELECT velocity, segment FROM particles WHERE active AND timestamp > %s",
+                                   speed$t - delta))
+    useg <- 1:23
+    nseg <- length(useg)
+    N <- round(sqrt(nseg))
+    M <- ceiling(sqrt(nseg))
+    dev.hold()
+    par(mfrow = c(N, M))
+    for (j in seq_along(useg)) {
+        hist(vel$velocity[vel$segment == useg[j]], breaks = seq(0, 16, by = 0.5), freq = FALSE,
+             main = paste0("Segment ", useg[j]), xlab = "Velocity (m/s)", col = "lightblue",
+             ylim = c(0, 2.5))
+        curve(dnorm(x, speed$B[useg[j]], sqrt(diag(speed$P)[useg[j]])), 0, 16, 1001, add = TRUE,
+              lty = 2, col = "#990000", lwd = 2)
+    }
+    dev.flush()
 }; close(pb)
 
-plothistory(speed)
-
+plotHistory(BHist)
 
 
 

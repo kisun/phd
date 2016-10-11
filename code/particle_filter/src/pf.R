@@ -78,12 +78,12 @@ pf <- function(con, vid, N = 500,
         
         particles$distance_into_trip <- runif(nrow(particles), min(sh.near$dist_traveled), max(sh.near$dist_traveled))
         particles$velocity <- 
-            if (missing(speed))
+            ##if (missing(speed))
                 msm::rtnorm(nrow(particles), particles$velocity, sd = 3, lower = 0, upper = 16)
-            else
-                msm::rtnorm(nrow(particles), particles$velocity, 3,
+            ##else
+            ##    msm::rtnorm(nrow(particles), particles$velocity, 3,
                             ##speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
-                            lower = 0, upper = 16)
+            ##                lower = 0, upper = 16)
         particles$segment <- sapply(particles$distance_into_trip,
                                     function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
         particles$arrival_time <- particles$departure_time <- NA
@@ -95,18 +95,18 @@ pf <- function(con, vid, N = 500,
 
         ## resample speeds
 
-        if (missing(speed))
+        ##if (missing(speed))
             particles$velocity <- msm::rtnorm(nrow(particles), particles$velocity, sd = 3, lower = 0, upper = 16)
-        else {
-            speed.proposal <-  msm::rtnorm(nrow(particles), particles$velocity, 3, lower = 0, upper = 16)
+        ##else {
+        ##    speed.proposal <-  msm::rtnorm(nrow(particles), particles$velocity, 3, lower = 0, upper = 16)
             ##msm::rtnorm(N, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
             ##            lower = 0, upper = 16)
-            alpha.log <-
-                dnorm(speed.proposal, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]), TRUE) -
-                dnorm(particles$velocity, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]), TRUE)
-            particles$velocity <- ifelse(rbinom(length(alpha.log), 1, min(1, exp(alpha.log))) == 1,
-                                         speed.proposal, particles$velocity)
-        }
+        ##    alpha.log <-
+        ##        dnorm(speed.proposal, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]), TRUE) -
+        ##        dnorm(particles$velocity, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]), TRUE)
+        ##    particles$velocity <- ifelse(rbinom(length(alpha.log), 1, min(1, exp(alpha.log))) == 1,
+        ##                                 speed.proposal, particles$velocity)
+        ##}
         particles$segment <- sapply(particles$distance_into_trip,
                                     function(x) which(schedule$shape_dist_traveled >= x)[1L] - 1L)
         ## move each particle
@@ -148,7 +148,12 @@ pf <- function(con, vid, N = 500,
     theta <- seq(0, 2 * pi, length.out = 101L)
     xx <- sig.xy * cos(theta)
     yy <- sig.xy * sin(theta)
-    lhood <- dmvnorm(cbind(px, py), c(0, 0), diag(2L) * sig.xy^2)
+    llhood <- dmvnorm(cbind(px, py), c(0, 0), diag(2L) * sig.xy^2, log = TRUE)
+    if (!missing(speed))
+        llhood <- llhood + dnorm(particles$velocity,
+                                 speed$B[particles$segment],
+                                 diag(speed$P)[particles$segment], log = TRUE)
+    lhood <- exp(llhood)
     wt <- lhood / sum(lhood)
     wt[is.na(wt)] <- 0
     if (sum(wt) == 0) return(2)
