@@ -190,7 +190,7 @@ for (i in i:length(ind)) {
     ## dev.flush()
 }; close(pb)
 
-# dev.new()
+dev.new()
 shape <- INFO$shape
 schedule <- INFO$schedule
 shape$segment <- sapply(shape$dist_traveled, function(x) which(schedule$pivot.shape_dist_traveled >= x)[1])
