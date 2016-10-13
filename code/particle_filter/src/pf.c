@@ -81,8 +81,6 @@ void transition(double *d, double *v, int *s, double *A, double *D, double *ts, 
 	if (s[i] >= *M) {
 	  break;
 	}
-
-	// some speed stuff once KF working? //
       
 	// DWELL time
 	double tbar = (runif() < *pi ? 1 : 0) * (*gamma + rexp(*tau));
@@ -91,6 +89,13 @@ void transition(double *d, double *v, int *s, double *A, double *D, double *ts, 
 	if (tr > 0 ) {
 	  // still time left --- drive off!
 	  D[i] = A[i] + tbar;
+	  // adjust speed for the new segment
+	  double speedProposal = truncated_normal_ab_sample(v[i], 3, 2, 15, &seed[i]);
+	  double alpha = truncated_normal_ab_pdf(speedProposal, nu[s[i]], xi[s[i]], 2, 15) /
+	    truncated_normal_ab_pdf(v[i], nu[s[i]-1], xi[s[i]-1], 2, 15);
+	  if (runif() < alpha) {
+	    v[i] = speedProposal;
+	  }
 	}
             
       } else {

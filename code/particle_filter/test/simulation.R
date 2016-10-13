@@ -54,10 +54,10 @@ drawSegments <- function(shape, schedule, speeds, times) {
              border = cols[i, ], col = cols[i, ])
         if (!is.null(var)) {
             polygon(c(times, rev(times)),
-                    c(Sd[i] + (Sd[i + 1] - Sd[i]) * pmin((speeds[i, ] + sqrt(var[i, ])) / MAX.speed, 1),
-                      rev(Sd[i] + (Sd[i + 1] - Sd[i]) * pmax(0, (speeds[i, ] - sqrt(var[i, ])) / MAX.speed))),
+                    c(Sd[i] + (Sd[i + 1] - Sd[i]) * (1 - pmin((speeds[i, ] + sqrt(var[i, ])) / MAX.speed, 1)),
+                      rev(Sd[i] + (Sd[i + 1] - Sd[i]) * (1 - pmax(0, (speeds[i, ] - sqrt(var[i, ])) / MAX.speed)))),
                     border = NULL, col = "#33333320")
-            lines(times, Sd[i] + (Sd[i + 1] - Sd[i]) * speeds[i, ] / MAX.speed, lwd = 1, col = "#333333")
+            lines(times, Sd[i] + (Sd[i + 1] - Sd[i]) * (1 - speeds[i, ] / MAX.speed), lwd = 1, col = "#333333")
         }
     }
     abline(h = Sd[2:(length(Sd) - 1)], col = "#33333330")
@@ -175,7 +175,7 @@ for (i in i:length(ind)) {
         #plotSpeeds(speed, shape = SHAPE)
         #dev.off()
     }
-    pf(con, vps[ind[i], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[i], ], speed = speed,
+    pf(con, vps[ind[i], "vehicle_id"], 500, sig.gps = 2, vp = vps[ind[i], ], speed = speed,
        gamma = gamma, pi = pi, tau = tau, rho = 0, info = infoList[[vps[ind[i], "trip_id"]]])
     ## vel <- dbGetQuery(con, sprintf("SELECT velocity, segment FROM particles WHERE active AND timestamp > %s",
     ##                                speed$t - delta))
@@ -282,6 +282,7 @@ plotTrip <- function(vid, trip, true, dwell = FALSE, ...) {
 }
 vs <- dbGetQuery(con, "SELECT vehicle_id, min(timestamp) as start FROM particles GROUP BY vehicle_id ORDER BY start")$vehicle_id
 
+#dev.new()
 for (vi in vs) {
     plotTrip(vi, tid, true = hist.db[hist.db$vehicle_id == vi, ])
     locator(1)
