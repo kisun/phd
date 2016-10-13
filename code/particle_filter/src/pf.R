@@ -56,17 +56,18 @@ pf <- function(con, vid, N = 500,
             return(3)
         }
         particles <- data.frame(vehicle_id = rep(vid, N),
-                                distance_into_trip = runif(N, min(sh.near$dist_traveled),
-                                                           max(sh.near$dist_traveled)),
+                                distance_into_trip = 0, #runif(N, min(sh.near$dist_traveled),
+                                                        #   max(sh.near$dist_traveled)),
                                 velocity = runif(N, 0, 16))            
         
         ## determine which segment of the route each particle is on
-        particles$segment <- sapply(particles$distance_into_trip,
-                                    function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
+        particles$segment <- 1# sapply(particles$distance_into_trip,
+                              #      function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
         if (!missing(speed)) 
             particles$velocity <- msm::rtnorm(N, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
                                               lower = 0, upper = 16)        
-        particles$arrival_time <- particles$departure_time <- NaN
+        particles$arrival_time <- vp$timestamp
+        particles$departure_time <- NaN
     } else if (particles$trip_id[1] != vp$trip_id) {
         delta <- vp$timestamp - particles$timestamp[1L]
 
@@ -169,6 +170,10 @@ pf <- function(con, vid, N = 500,
     return(invisible(0))
 }
 
+# [1]    0.000  503.938 1103.697 1682.903 2335.090 2773.469 3195.717
+# [8] 3516.529 3874.836 4364.703 4687.835 5165.386 5384.502 5576.885
+#[15] 5880.514 6381.475 6604.276 6820.027 7114.357 7342.469 7560.355
+#[22] 8049.232 8348.781
 
 
 deg2rad <- function(deg) deg * pi / 180

@@ -165,16 +165,16 @@ for (i in i:length(ind)) {
     setTxtProgressBar(pb, i)
     ## update the speed KF:
 #    i <- i + 1
-    ## if (vps[ind[i], "timestamp"] > speed$t + speed$delta) {
-    ##     #jpeg(sprintf("~/Desktop/figs/speeds_%s.jpg", speed$t), width = 500, height = 1000)
-    ##     speed <- update(speed, q = 2)
-    ##     if (any(diag(speed$P) < 0.000001)) diag(speed$P) <- pmax(0.000001, diag(speed$P))
-    ##     BHist$mean <- cbind(BHist$mean, speed$B)
-    ##     BHist$var <- cbind(BHist$var, diag(speed$P))
-    ##     BHist$t <- c(BHist$t, speed$t)
-    ##     #plotSpeeds(speed, shape = SHAPE)
-    ##     #dev.off()
-    ## }
+    if (vps[ind[i], "timestamp"] > speed$t + speed$delta) {
+        #jpeg(sprintf("~/Desktop/figs/speeds_%s.jpg", speed$t), width = 500, height = 1000)
+        speed <- update(speed, q = 2)
+        if (any(diag(speed$P) < 0.000001)) diag(speed$P) <- pmax(0.000001, diag(speed$P))
+        BHist$mean <- cbind(BHist$mean, speed$B)
+        BHist$var <- cbind(BHist$var, diag(speed$P))
+        BHist$t <- c(BHist$t, speed$t)
+        #plotSpeeds(speed, shape = SHAPE)
+        #dev.off()
+    }
     pf(con, vps[ind[i], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[i], ], speed = speed,
        gamma = gamma, pi = pi, tau = tau, rho = 0, info = infoList[[vps[ind[i], "trip_id"]]])
     ## vel <- dbGetQuery(con, sprintf("SELECT velocity, segment FROM particles WHERE active AND timestamp > %s",
@@ -215,14 +215,12 @@ plotTrip <- function(vid, trip, true, dwell = FALSE, ...) {
     sh <- shape$schedule$pivot.shape_dist_traveled
     par(mar = c(5.1, 4.1, 4.1, 0))
     plot(res$timestamp, res$distance_into_trip, pch = 19, cex = 0.1, xaxt = "n", yaxt = "n", yaxs = "i",
-         xlab = "Time", ylab = "Distance into Trip (km)", col = "#cccccc", bty = "n", ylim = c(0, max(sh)*1.04), ...)
+         xlab = "Time", ylab = "Distance into Trip (km)", col = "#cccccc", bty = "n", ylim = c(0, max(sh)*1.04))#, ...)
     abline(h =  sh, col = "#393939")
     res$parentid <- sapply(res$parent ,function (x) {
         ret <- which(res$id == x)
         if (length(ret) == 1) return(ret) else return(NA)
     })
-    #res$parentid <- res$parent - min(res$id) + 1
-    #res$parentid[res$parentid < 1] <- NA
     resl <- res[!is.na(res$parent), ]
     arrows(x0 = resl$timestamp,
            x1 = ifelse(resl$segment == res$segment[resl$parentid] & !is.na(res$departure_time[resl$parentid]),

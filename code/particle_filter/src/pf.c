@@ -62,7 +62,7 @@ void transition(double *d, double *v, int *s, double *A, double *D, double *ts, 
     v[i] = truncated_normal_ab_sample(v[i], 2, 2, 15, &seed[i]);
 
     while (tr > 0) {
-      double ds = Sd[s[i] + 1];
+      double ds = Sd[s[i]];
 
       double eta = (ds - d[i]) / v[i];
 
