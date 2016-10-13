@@ -15,11 +15,12 @@ pf <- function(con, vid, N = 500,
                sig.gps = 20,
                pi = 0.5,        ## probability particle stops due to bus stop
                gamma = 6,       ## deceleration/open-doors/close-doors/acceleration time
-               mu.tau = 5,     ## average time a bus is stopped at a stop for
+               tau = 5,         ## average time a bus is stopped at a stop for
                rho = 0.1,       ## probability particle stops !due to bus stop,
-               mu.nu = 20,      ## average time a bus is stopped at "lights"
+               upsilon = 20,    ## average time a bus is stopped at "lights"
                draw = FALSE,
-               speed,          ## a 'speed' object, with a mean vecotr B and covariance matrix P for segment speeds
+               speed,           ## a 'speed' object, with a mean vecotr B and covariance matrix P for segment speeds
+               info = NULL,
                vp = dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE vehicle_id='%s'", vid))) {
 
     ## Get vehicle's latest realtime state:
@@ -28,18 +29,20 @@ pf <- function(con, vid, N = 500,
     vp <- vp[1, ]
 
     ## Get vehicle's shape and schedule:
-    qry <- sprintf("http://mybus.app/api/shape_schedule/%s", vp$trip_id)
-    info <- fromJSON(qry, flatten = TRUE)
+    if (is.null(info)) {
+        qry <- sprintf("http://mybus.app/api/shape_schedule/%s", vp$trip_id)
+        info <- fromJSON(qry, flatten = TRUE)
+    }
     schedule <- flatten(info$schedule)
 
     colnames(schedule) <- gsub("pivot.", "", colnames(schedule))
     shape <- info$shape
-
+    Sd <- schedule$shape_dist_traveled
+    
     sx <- (deg2rad(shape$lon) - deg2rad(vp$position_longitude)) * cos(deg2rad(vp$position_latitude))
     sy <- deg2rad(shape$lat) - deg2rad(vp$position_latitude)
     dist <- distance(cbind(sx, sy))
     particles <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE vehicle_id='%s' AND active=TRUE", vid))
-
     
 
     NEW <- FALSE
@@ -63,7 +66,7 @@ pf <- function(con, vid, N = 500,
         if (!missing(speed)) 
             particles$velocity <- msm::rtnorm(N, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
                                               lower = 0, upper = 16)        
-        particles$arrival_time <- particles$departure_time <- NA
+        particles$arrival_time <- particles$departure_time <- NaN
     } else if (particles$trip_id[1] != vp$trip_id) {
         delta <- vp$timestamp - particles$timestamp[1L]
 
@@ -82,34 +85,14 @@ pf <- function(con, vid, N = 500,
 
         particles$segment <- sapply(particles$distance_into_trip,
                                     function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
-        particles$arrival_time <- particles$departure_time <- NA
+        particles$arrival_time <- particles$departure_time <- NaN
     } else {
         delta <- vp$timestamp - particles$timestamp[1L]
-
         if (delta <= 0) return(invisible(-1))
-        ## movement step
 
-        ## resample speeds
-
-        ##if (missing(speed))
-            particles$velocity <- msm::rtnorm(nrow(particles), particles$velocity, sd = 0.5, lower = 2, upper = 16)
-        ## else {
-        ##     speed.proposal <-  msm::rtnorm(nrow(particles), particles$velocity, 3, lower = 0, upper = 16)
-        ##     ##msm::rtnorm(N, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
-        ##     ##            lower = 0, upper = 16)
-        ##     alpha.log <-
-        ##         dnorm(speed.proposal, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]), TRUE) -
-        ##         dnorm(particles$velocity, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]), TRUE)
-        ##     particles$velocity <- ifelse(rbinom(length(alpha.log), 1, min(1, exp(alpha.log))) == 1,
-        ##                                  speed.proposal, particles$velocity)
-        ## }
-        particles$segment <- sapply(particles$distance_into_trip,
-                                    function(x) which(schedule$shape_dist_traveled >= x)[1L] - 1L)
-        ## move each particle
-        e <- environment()
-        parts <- lapply(1L:nrow(particles), function(i) transition(particles[i, ], e))#, mc.cores = 3)
-        
-        particles <- do.call(rbind, parts)
+        ## --- move each particle
+        particles <- transitionC(particles)
+        ## print(head(particles))
     }
 
 
@@ -144,7 +127,10 @@ pf <- function(con, vid, N = 500,
     theta <- seq(0, 2 * pi, length.out = 101L)
     xx <- sig.xy * cos(theta)
     yy <- sig.xy * sin(theta)
+
     llhood <- dmvnorm(cbind(px, py), c(0, 0), diag(2L) * sig.xy^2, log = TRUE)
+    #llhood <- sig.xy^2 / 2 * ( xx^2 + yy^2 )
+    #print(llhood)
     #if (!missing(speed))
     #    llhood <- llhood + dnorm(particles$velocity,
     #                             speed$B[particles$segment],
@@ -225,7 +211,7 @@ transition <- function(p, e = parent.frame()) {
     ## ## OK so that's done --- now lets move!
     while (tr > 0) {
         d <- p$distance_into_trip[1L]
-        v <- p$velocity[1L]  ## this will later depend on the segment we are in
+        v <- p$velocity[1L]  ##+ this will later depend on the segment we are in
         if (v <= 0) return(p)
 
         ## distance of the next stop, and how long it'll take to get there:
@@ -237,8 +223,17 @@ transition <- function(p, e = parent.frame()) {
             ## bus reaches stop: compute dwell time
             p$segment <- p$segment + 1
             p$arrival_time <- p$timestamp + eta
-            p$departure_time <- NA
-            p$velocity <- msm::rtnorm(1, p$velocity, sd = 3, lower = 2, upper = 16)
+            p$departure_time <- NaN
+            vel.prop <- msm::rtnorm(1, p$velocity, sd = 3, lower = 2, upper = 16)
+            if (is.null(e$speed)) {
+                p$velocity <- vel.prop
+            } else {
+                alpha.log <-
+                    dnorm(vel.prop, e$speed$B[p$segment], sqrt(diag(e$speed$P)[p$segment]), TRUE) -
+                    dnorm(p$velocity, e$speed$B[p$segment], sqrt(diag(e$speed$P)[p$segment]), TRUE)
+                p$velocity <- ifelse(rbinom(length(alpha.log), 1, min(1, exp(alpha.log))) == 1,
+                                   vel.prop, p$velocity)
+            }
             
             tau <- rbinom(1L, 1L, e$pi) * (e$gamma + rexp(1L, 1 / e$mu.tau))
             tr <- tr - tau
@@ -257,4 +252,30 @@ transition <- function(p, e = parent.frame()) {
     }
     
     p
+}
+
+
+transitionC <- function(p, e = parent.frame()) {    
+    dyn.load("bin/pf.so")
+    seed <- sample(2^30, nrow(p)) ## in future can do this through the parent C function.
+    result <- .C("transition",
+                 d = p$distance_into_trip,
+                 v = p$velocity,
+                 s = as.integer(p$segment),
+                 A = ifelse(is.na(p$arrival_time), NaN, p$arrival_time),
+                 D = ifelse(is.na(p$departure_time), NaN, p$departure_time),
+                 ts = p$timestamp,
+                 N = as.integer(nrow(p)),
+                 delta = e$delta, gamma = e$gamma, pi = e$pi, tau = e$tau, rho = e$rho, upsilon = e$upsilon,
+                 M = length(e$speed$B), nu.hat = e$speed$B, xi.hat = diag(e$speed$P), Sd = e$Sd,
+                 seed = as.integer(seed),
+                 NAOK = TRUE)
+
+    p$distance_into_trip <- result$d
+    p$velocity <- result$v
+    p$segment <- result$s
+    p$arrival_time <- result$A
+    p$departure_time <- result$D
+
+    invisible(p)
 }

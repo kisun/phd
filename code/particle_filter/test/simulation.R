@@ -154,24 +154,29 @@ delta <- 5 * 60
 speed <- list(B = B0, P = P0, N = N, M = M, A = A, H = H, t = kf.t, delta = delta)
 i <- 1
 BHist <- list(mean = speed$B, var = cbind(diag(speed$P)), t = speed$t)
+infoList <- lapply(unique(vps$trip_id), function(ID) {
+    fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", ID), flatten = TRUE)
+})
+names(infoList) <- unique(vps$trip_id)
 
 pb <- txtProgressBar(0, length(ind), style = 3)
+Rprof("pf_profile.out")
 for (i in i:length(ind)) {
     setTxtProgressBar(pb, i)
     ## update the speed KF:
 #    i <- i + 1
-    if (vps[ind[i], "timestamp"] > speed$t + speed$delta) {
-        #jpeg(sprintf("~/Desktop/figs/speeds_%s.jpg", speed$t), width = 500, height = 1000)
-        speed <- update(speed, q = 2)
-        if (any(diag(speed$P) < 0.000001)) diag(speed$P) <- pmax(0.000001, diag(speed$P))
-        BHist$mean <- cbind(BHist$mean, speed$B)
-        BHist$var <- cbind(BHist$var, diag(speed$P))
-        BHist$t <- c(BHist$t, speed$t)
-        #plotSpeeds(speed, shape = SHAPE)
-        #dev.off()
-    }
+    ## if (vps[ind[i], "timestamp"] > speed$t + speed$delta) {
+    ##     #jpeg(sprintf("~/Desktop/figs/speeds_%s.jpg", speed$t), width = 500, height = 1000)
+    ##     speed <- update(speed, q = 2)
+    ##     if (any(diag(speed$P) < 0.000001)) diag(speed$P) <- pmax(0.000001, diag(speed$P))
+    ##     BHist$mean <- cbind(BHist$mean, speed$B)
+    ##     BHist$var <- cbind(BHist$var, diag(speed$P))
+    ##     BHist$t <- c(BHist$t, speed$t)
+    ##     #plotSpeeds(speed, shape = SHAPE)
+    ##     #dev.off()
+    ## }
     pf(con, vps[ind[i], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[i], ], speed = speed,
-       gamma = gamma, pi = pi, mu.tau = tau, rho = 0)
+       gamma = gamma, pi = pi, tau = tau, rho = 0, info = infoList[[vps[ind[i], "trip_id"]]])
     ## vel <- dbGetQuery(con, sprintf("SELECT velocity, segment FROM particles WHERE active AND timestamp > %s",
     ##                                speed$t - delta))
     ## useg <- 1:23
@@ -188,7 +193,9 @@ for (i in i:length(ind)) {
     ##           lty = 2, col = "#990000", lwd = 2)
     ## }
     ## dev.flush()
-}; close(pb)
+}; close(pb); Rprof(NULL)
+
+summaryRprof("pf_profile.out")
 
 dev.new()
 shape <- INFO$shape
@@ -281,3 +288,28 @@ for (vi in vs) {
     plotTrip(vi, tid, true = hist.db[hist.db$vehicle_id == vi, ])
     locator(1)
 }
+
+
+## testing
+delta <- 30
+gamma <- 6
+pi <- 0.5
+tau <- 5
+rho <- 0.1
+upsilon <- 20
+p <- data.frame(distance_into_trip = 0, velocity = 10, segment = 0, arrival_time = 0, departure_time = 0, timestamp = 30)
+p <- rbind(p, p, p)
+speed <- c(10, 5, 9, 10)
+speed.var <- c(2, 0.4, 1, 2)
+Sd <- c(0, 1000, 1700, 2000, 2500)
+
+
+transitionC(p)
+
+(transitionC(p))
+
+(p <- transitionC(p)); p$timestamp <- p$timestamp + delta
+
+
+
+#  MAKEFLAGS="PKG_CPPFLAGS=-Iinclude"  R CMD SHLIB -o bin/pf.so src/truncated_normal.c src/pf.c
