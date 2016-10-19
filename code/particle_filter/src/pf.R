@@ -19,7 +19,8 @@ pf <- function(con, vid, N = 500,
                rho = 0.1,       ## probability particle stops !due to bus stop,
                upsilon = 20,    ## average time a bus is stopped at "lights"
                draw = FALSE,
-               speed,           ## a 'speed' object, with a mean vecotr B and covariance matrix P for segment speeds
+               speed,         ## a 'speed' object, with a mean vecotr B and covariance matrix P for segment speeds
+               SPEED.range = c(0, 110 * 1000 / 60^2),
                info = NULL,
                vp = dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE vehicle_id='%s'", vid))) {
 
@@ -260,7 +261,7 @@ transition <- function(p, e = parent.frame()) {
 }
 
 
-transitionC <- function(p, e = parent.frame()) {    
+transitionC <- function(p, e = parent.frame()) {
     dyn.load("bin/pf.so")
     seed <- sample(2^30, nrow(p)) ## in future can do this through the parent C function.
     result <- .C("transition",
@@ -273,6 +274,7 @@ transitionC <- function(p, e = parent.frame()) {
                  N = as.integer(nrow(p)),
                  delta = e$delta, gamma = e$gamma, pi = e$pi, tau = e$tau, rho = e$rho, upsilon = e$upsilon,
                  M = length(e$speed$B), nu.hat = e$speed$B, xi.hat = diag(e$speed$P), Sd = e$Sd,
+                 sMAX = e$SPEED.range[2], sMIN = e$SPEED.range[1],
                  seed = as.integer(seed),
                  NAOK = TRUE)
 

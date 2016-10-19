@@ -1,6 +1,8 @@
 ## A simulation
 
-setwd("../")
+
+setwd(file.path(gsub(".code.particle_filter.?", "", getwd()),
+              "code", "particle_filter")); getwd()
 .libPaths("../../.Rlibrary")
 
 library(RPostgreSQL)
@@ -29,7 +31,7 @@ shape$segment <- sapply(shape$dist_traveled, function(x) which(schedule$pivot.sh
 Times <- seq(0, 2 * 60, by = 5)
 
 ## functions:
-drawSegments <- function(shape, schedule, speeds, times) {
+drawSegments <- function(shape, schedule, speeds, times, true) {
     var <- NULL
     if (class(speeds) == "list") {
         speeds <- BHist$mean
@@ -40,7 +42,8 @@ drawSegments <- function(shape, schedule, speeds, times) {
         if (missing(times)) times <- seq(0, nrow(speeds), by = 1)
     }
     Sd <- schedule$pivot.shape_dist_traveled
-    o <- par(mfrow = c(1, 1), bg = "#333333", fg = "#cccccc", col.axis = "#cccccc", col.lab = "#cccccc", col.main = "#cccccc")
+    o <- par(mfrow = c(1, 1), bg = "#333333", fg = "#cccccc", col.axis = "#cccccc",
+             col.lab = "#cccccc", col.main = "#cccccc")
     plot(NA, type = "n", xlab = "Time (minutes)", ylab = "Segment", 
          xlim = range(times), xaxs = "i",
          ylim = c(max(Sd), 0), yaxt = "n", yaxs = "i")
@@ -58,6 +61,9 @@ drawSegments <- function(shape, schedule, speeds, times) {
                       rev(Sd[i] + (Sd[i + 1] - Sd[i]) * (1 - pmax(0, (speeds[i, ] - sqrt(var[i, ])) / MAX.speed)))),
                     border = NULL, col = "#33333320")
             lines(times, Sd[i] + (Sd[i + 1] - Sd[i]) * (1 - speeds[i, ] / MAX.speed), lwd = 1, col = "#333333")
+        }
+        if (!missing(true)) {
+            lines(times, Sd[i] + (Sd[i + 1] - Sd[i]) * (1 - true[i, ] / MAX.speed), col = "#222222", lty = 2)
         }
     }
     abline(h = Sd[2:(length(Sd) - 1)], col = "#33333330")
@@ -176,7 +182,8 @@ for (i in i:length(ind)) {
         #dev.off()
     }
     pf(con, vps[ind[i], "vehicle_id"], 500, sig.gps = 2, vp = vps[ind[i], ], speed = speed,
-       gamma = gamma, pi = pi, tau = tau, rho = 0, info = infoList[[vps[ind[i], "trip_id"]]])
+       gamma = gamma, pi = pi, tau = tau, rho = 0, info = infoList[[vps[ind[i], "trip_id"]]],
+       SPEED.range = c(MIN.speed, MAX.speed))
     ## vel <- dbGetQuery(con, sprintf("SELECT velocity, segment FROM particles WHERE active AND timestamp > %s",
     ##                                speed$t - delta))
     ## useg <- 1:23
@@ -201,7 +208,7 @@ dev.new()
 shape <- INFO$shape
 schedule <- INFO$schedule
 shape$segment <- sapply(shape$dist_traveled, function(x) which(schedule$pivot.shape_dist_traveled >= x)[1])
-drawSegments(shape, schedule, BHist)
+drawSegments(shape, schedule, BHist, true = Speed[, -1])
 
 
 
