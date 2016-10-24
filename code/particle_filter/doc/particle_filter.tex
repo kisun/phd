@@ -103,7 +103,7 @@ $\left\{g : \bY_k^{(i)} \,|\, \bY_k \mapsto \bZ_k^{(i)} \right\}$
 on the particles, centered on the observation, to obtain 
 \begin{equation}
   \label{eq:transform}
-  \g{\bY_k^{(i)} | \bY_k} = \bZ_k^{(i)} =
+  \g{\bY_k^{(i)} | \bY_k, \sigma^2_y} = \bZ_k^{(i)} =
   \begin{bmatrix}
     x_k^{(i)} \\ y_k^{(i)}
   \end{bmatrix} =
@@ -115,40 +115,38 @@ on the particles, centered on the observation, to obtain
 where $\Phi = \frac{\pi}{180} \phi$ and $\Lambda = \frac{\pi}{180} \lambda$ 
 (i.e., the latitude and longitude in radians).
 Note that $g(\bY_k) = \left[0\ 0\right]^T$.
-We can therefore use a bivariate normal to compute the likelihood of each particle,
+We can therefore use a bivariate normal to compute the likelihood of each particle
+using $\boldsymbol{\mu} = \begin{bmatrix} 0 \\ 0 \end{bmatrix}$
+and $\Sigma = \frac{\sigma^2_y}{R} I_2$ where $I_n$ is an $n\times x$ identity matrix:
 \begin{align}
   \label{eq:particle_likelihood}
-  \g{h(\bX_k^{(i)}) \,|\, \bY_k} = \bZ_k^{(i)} 
+  \g{h(\bX_k^{(i)}) \,|\, \bY_k, \sigma^2_y} = \bZ_k^{(i)} 
   &\sim  \mathcal{N}\left(
     \begin{bmatrix}
       0 \\ 0
     \end{bmatrix},
-    \frac{1}{R}\cdot\begin{bmatrix}
-      \sigma_y^2 & 0 \\ 0 & \sigma_y^2
-    \end{bmatrix}
+    \frac{\sigma_y^2}{R}\cdot I_2
   \right) \\
-  \lhood{\bX_k^{(i)}| \bY_k} 
+  \lhood{\bX_k^{(i)}| \bY_k, \sigma^2_y} 
   &= \frac{1}{\sqrt{\left(2\pi\right)^2 \left| \boldsymbol{\Sigma} \right|}}
     e^{-\frac{1}{2}\left(g(h(\bX_k^{(i)})|\bY_k) - \boldsymbol{\mu}\right)^T\boldsymbol\Sigma^{-1}\left(g(h(\bX_k^{(i)})|\bY_k) - 
     \boldsymbol{\mu}\right)} \nonumber \\
-  &= \frac{1}{2\sqrt{2\pi^2 \sigma_y^2}} 
-    e^{-\frac{1}{2}  \left(g(h(\bX_k^{(i)})|\bY_k)\right)^T \boldsymbol\Sigma^{-1} \left(g(h(\bX_k^{(i)})|\bY_k)\right) } \nonumber \\
-  \label{eq:particle_likelihood_const}
-  &= \frac{1}{2\sqrt{2}\pi \sigma_y} e^{\sigma^2\left((x_k^{(i)})^2 + (y_k^{(i)})^2\right)} \\
+  &\propto
+    e^{-\frac{1}{2}  \left(g(h(\bX_k^{(i)})|\bY_k)\right)^T \left(\frac{\sigma^2_y}{R} I_2 \right)^{-1} \left(g(h(\bX_k^{(i)})|\bY_k)\right) } \nonumber \\
   \label{eq:particle_likelihood_final}
-  \lhood{\bX_k^{(i)}| \bY_k} 
-  &\propto e^{\sigma^2\left((x_k^{(i)})^2 + (y_k^{(i)})^2\right)}
+  \lhood{\bX_k^{(i)}| \bY_k, \sigma^2_y} 
+  &\propto e^{-\frac{R}{2\sigma^2}\left((x_k^{(i)})^2 + (y_k^{(i)})^2\right)}
 \end{align}
-where $x_k^{(i)}$ and $y_k^{(i)}$ are as defined in \cref{eq:transform}.
+where $x_k^{(i)}$ and $y_k^{(i)}$ are as defined in \cref{eq:transform},
+and we can drop the constant since it is common to all particles,
+so is not required for computing weights.
 
 The weight of each particle is simply computed as
 \begin{equation}
   \label{eq:particle_weights}
-  w_i = \frac{\lhood{\bX_k^{(i)} | \bY_k}}{\sum_{j=1}^M \lhood{\bX_k^{(j)} | \bY_k}}
-  = \frac{e^{\sigma^2\left((x_k^{(i)})^2 + (y_k^{(i)})^2\right)}}{\sum_{j=1}^M e^{\sigma^2\left((x_k^{(j)})^2 + (y_k^{(j)})^2\right)}}.
+  w_i = \frac{\lhood{\bX_k^{(i)} | \bY_k, \sigma^2_y}}{\sum_{j=1}^M \lhood{\bX_k^{(j)} | \bY_k, \sigma^2_y}}
+  = \frac{e^{-\frac{R}{2\sigma^2}\left((x_k^{(i)})^2 + (y_k^{(i)})^2\right)}}{\sum_{j=1}^M e^{-\frac{R}{2\sigma^2}\left((x_k^{(j)})^2 + (y_k^{(j)})^2\right)}}.
 \end{equation}
-From the weight formula, we see that the constant from \cref{eq:particle_likelihood_const}
-can indeed be left out of the likelihood shown in \cref{eq:particle_likelihood_final}.
 
 
 The last step is the transition function $\left\{ f : \bX_{k-1}^{(i)} \mapsto \bX_k^{(i)} \right \}$,
@@ -174,7 +172,7 @@ First off, if the bus \emph{is not} at a bus stop, we define $\rho$ as the proba
 is currently stopped.
 Then we define $\nu$ as the average time spent stopped due to, for example, traffic lights.
 Thus, at the beginning of an iteration, we reduce the time available to travel $\tilde \delta_k$ 
-by sampling $q_i \sim \mathrm{Bernoulli}(\rho)$ and $c_i \sim \mathcal{E}\left(\frac{1}{\nu}\right)$,
+by sampling $q_i \sim \mathrm{Bernoulli}(\rho)$ and $c_i \sim \mathcal{E}\left(\frac{1}{\upsilon}\right)$,
 leaving us with
 \begin{equation}
   \label{eq:start_intersection}
@@ -341,9 +339,9 @@ The state estimate has covariance matrix
 \end{equation}
 i.e., it is diagnoal, with all other covariances 0 (for now).
 
-The transition function is simply the identity matrix, $\mathbbm{1}_M$,
+The transition function is simply the identity matrix, $I_M$,
 and the system noise is $\bw_k \sim \mathcal{N}(\mathbf{0}, \bQ_k)$,
-where $\bQ_k = \Delta_k \sigma_\nu \mathbbm{1}_M$,
+where $\bQ_k = \Delta_k \sigma_\nu I_M$,
 i.e., the average variance in speed per interval of length $\Delta_k$,
 and $\sigma_\nu$ is the variation per minute.
 The value of $\sigma_\nu$ determines how quickly the speeds can change,
@@ -352,7 +350,7 @@ and is therefore rather important\ldots
 The transition model is thus
 \begin{equation}
   \label{eq:speed_transition_function}
-  \bnu_k = \mathbbm{1}_M \bnu_{k-1} + \bw_k
+  \bnu_k = I_M \bnu_{k-1} + \bw_k
 \end{equation}
 
 
@@ -361,11 +359,11 @@ each segment over the past $\Delta_k$ interval,
 and also use the sample variance as an estimate for $\bR_k$.
 
 The mean speed in segment $j$ is $\bar z_j$, with variance $\hat v_j^2$.
-Therefore, the measurement matrix is also the identity $\mathbbm{1}_M$.
+Therefore, the measurement matrix is also the identity $I_M$.
 So the measurement model is
 \begin{equation}
   \label{eq:speed_measurement_model}
-  \bz_k = \mathbbm{1}_M \bnu_k + \bv_k,
+  \bz_k = I_M \bnu_k + \bv_k,
 \end{equation}
 where $\bv_k \sim \mathcal{N}(\mathbf{0}, \bR_k)$,
 and
@@ -401,7 +399,7 @@ The estimations become fairly simple due to the identity matrices.
   \label{eq:speed_update4}
   \hat\bnu_{k|k} &= \hat\bnu_{k|k-1} + \bK_k \tilde\br_k \\
   \label{eq:speed_update5}
-  \Xi_{k|k} &= \left(\mathbbm{1}_M - \bK_k\right) \Xi_{k|k-1}
+  \Xi_{k|k} &= \left(I_M - \bK_k\right) \Xi_{k|k-1}
 \end{align}
 
 

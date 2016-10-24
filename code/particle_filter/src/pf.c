@@ -25,12 +25,16 @@ void transition(double *d, double *v, int *s, double *A, double *D, double *ts, 
 		int *seed)
 {
   srand((unsigned) seed[0]);
+
+  //puts("\n\nStarting loop ...\n");
   
   for (int i=0;i<*N;i++) {
+    //printf("\nIteration %d: ", i);
     if (s[i] >= *M) continue;
     double tr = *delta;
     
     // first off, the bus might be stuck at lights or at a stop
+    //printf("A ");
     double wait = 0;
     if (isnan(D[i]) && !isnan(A[i])) {
       // The bus is at a stop.
@@ -58,15 +62,18 @@ void transition(double *d, double *v, int *s, double *A, double *D, double *ts, 
 	continue;
       }
     }
-    
+
+    ///printf("B ");
     // Add noise
     v[i] = truncated_normal_ab_sample(v[i], 2, *sMIN, *sMAX, &seed[i]);
 
+    //printf("C ");
     while (tr > 0) {
       double ds = Sd[s[i]];
 
       double eta = (ds - d[i]) / v[i];
 
+      //printf("D ");
       if (tr > eta) {
 	tr -= eta;
 	// Bus will reach the next stop; dwell time!
@@ -87,7 +94,7 @@ void transition(double *d, double *v, int *s, double *A, double *D, double *ts, 
 	double tbar = (runif() < *pi ? 1 : 0) * (*gamma + rexp(*tau));
 	tr -= tbar;
       
-	if (tr > 0 ) {
+	if (tr > 0) {
 	  // still time left --- drive off!
 	  D[i] = A[i] + tbar;
 	  // adjust speed for the new segment

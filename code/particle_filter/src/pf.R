@@ -94,7 +94,6 @@ pf <- function(con, vid, N = 500,
 
         ## --- move each particle
         particles <- transitionC(particles)
-        ## print(head(particles))
     }
 
 
@@ -126,13 +125,13 @@ pf <- function(con, vid, N = 500,
                   gpar = list(col = "lightblue", alpha = 0.9, cex = 0.1))
     }
 
-    theta <- seq(0, 2 * pi, length.out = 101L)
-    xx <- sig.xy * cos(theta)
-    yy <- sig.xy * sin(theta)
+    ## theta <- seq(0, 2 * pi, length.out = 101L)
+    ## xx <- sig.xy * cos(theta)
+    ## yy <- sig.xy * sin(theta)
 
-    llhood <- dmvnorm(cbind(px, py), c(0, 0), diag(2L) * sig.xy^2, log = TRUE)
-    #llhood <- sig.xy^2 / 2 * ( xx^2 + yy^2 )
-    #print(llhood)
+
+    #llhood <- dmvnorm(cbind(px, py), c(0, 0), diag(2L) * sig.xy^2, log = TRUE)
+    llhood <- - 1 / (2 * sig.xy^2) * ( px^2 + py^2 )
     #if (!missing(speed))
     #    llhood <- llhood + dnorm(particles$velocity,
     #                             speed$B[particles$segment],
@@ -171,94 +170,12 @@ pf <- function(con, vid, N = 500,
     return(invisible(0))
 }
 
-# [1]    0.000  503.938 1103.697 1682.903 2335.090 2773.469 3195.717
-# [8] 3516.529 3874.836 4364.703 4687.835 5165.386 5384.502 5576.885
-#[15] 5880.514 6381.475 6604.276 6820.027 7114.357 7342.469 7560.355
-#[22] 8049.232 8348.781
-
 
 deg2rad <- function(deg) deg * pi / 180
 rad2deg <- function(rad) rad * 180 / pi
 R <- 6371 * 1000
 distance <- function(x) sqrt(x[, 1L]^2 + x[, 2L]^2) * R
 
-##' Transition a particle ("imaginary bus") to the future
-##'
-##' @title Transtion function
-##' @param p a particle state
-##' @param delta time since the last observation
-##' @param schedule the schedule (with stop locations and stuff)
-##' @return a moved particle
-##' @author Tom Elliott
-transition <- function(p, e = parent.frame()) {
-    ## the amount of time we have to play with:
-    tr <- e$delta
-
-    ## first off, the bus might be stuck at lights or at a stop
-    if (is.na(p$departure_time) && !is.na(p$arrival_time)) {
-        ## there is a MINIMUM wait time of `gamma`
-        wait <- 0
-        if (p$timestamp - p$arrival_time < e$gamma) {
-            wait <- wait + e$gamma - p$timestamp + p$arrival_time
-        }
-        wait <- wait + rexp(1L, 1 / e$mu.tau)
-        tr <- tr - wait
-        if (tr <= 0) return(p)
-        p$departure_time <- p$arrival_time + wait
-    } else {
-        wait <- rbinom(1L, 1L, e$rho) * rexp(1L, 1 / e$mu.nu)
-        tr <- tr - wait
-        if (tr <= 0) return(p)
-    }
-
-    d <- p$distance_into_trip[1L]
-    v <- p$velocity[1L]
-
-    ## ## OK so that's done --- now lets move!
-    while (tr > 0) {
-        d <- p$distance_into_trip[1L]
-        v <- p$velocity[1L]  ##+ this will later depend on the segment we are in
-        if (v <= 0) return(p)
-
-        ## distance of the next stop, and how long it'll take to get there:
-        ds <- e$schedule[p$segment[1L] + 1L, "shape_dist_traveled"]
-        eta <- (ds - d) / v
-        tr <- tr - eta
-
-        if (tr > 0) {
-            ## bus reaches stop: compute dwell time
-            p$segment <- p$segment + 1
-            p$arrival_time <- p$timestamp + eta
-            p$departure_time <- NaN
-            vel.prop <- msm::rtnorm(1, p$velocity, sd = 3, lower = 2, upper = 16)
-            if (is.null(e$speed)) {
-                p$velocity <- vel.prop
-            } else {
-                alpha.log <-
-                    dnorm(vel.prop, e$speed$B[p$segment], sqrt(diag(e$speed$P)[p$segment]), TRUE) -
-                    dnorm(p$velocity, e$speed$B[p$segment], sqrt(diag(e$speed$P)[p$segment]), TRUE)
-                p$velocity <- ifelse(rbinom(length(alpha.log), 1, min(1, exp(alpha.log))) == 1,
-                                   vel.prop, p$velocity)
-            }
-            
-            tau <- rbinom(1L, 1L, e$pi) * (e$gamma + rexp(1L, 1 / e$mu.tau))
-            tr <- tr - tau
-            p$distance_into_trip <- ds
-
-            if (p$segment + 1 >= nrow(e$schedule)) tr <- 0
-
-            if (tr > 0) {
-                ## bus leaves!
-                p$departure_time <- p$arrival_time + tau
-            }
-        } else {
-            ## bus doesn't reach stop: compute distance it'll travel
-            p$distance_into_trip <- d + (tr + eta) * v
-        }
-    }
-    
-    p
-}
 
 
 transitionC <- function(p, e = parent.frame()) {

@@ -1,4 +1,5 @@
-setwd("../")
+setwd(file.path(gsub(".code.particle_filter.+", "", getwd()),
+              "code", "particle_filter")); getwd()
 .libPaths("../../.Rlibrary")
 
 library(RPostgreSQL)
@@ -9,6 +10,7 @@ library(mvtnorm)
 source("src/pf.R")
 source("src/mapping.R")
 source("src/h.R")
+source("src/figures.R")
 
 drv = dbDriver("PostgreSQL")
 con = dbConnect(drv, dbname = "homestead", host = "localhost",
@@ -27,10 +29,16 @@ vps$trip_start_date <- format(as.POSIXct(vps$timestamp, origin = "1970-01-01"), 
 # table(vps$trip_start_date)
 
 ind <- which(vps$trip_start_date == "2016-09-22")
+infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
+    fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", ID), flatten = TRUE)
+})
+names(infoList) <- unique(vps$trip_id)
+
 pb <- txtProgressBar(0, length(ind), style = 3)
 for (i in 1:length(ind)) {
     setTxtProgressBar(pb, i)
-    pf(con, vps[ind[i], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[i], ])
+    pf(con, vps[ind[i], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[i], ],
+       info = infoList[[vps[ind[i], "trip_id"]]], SPEED.range = c(1, 60) * 1000 / 60^2)
     ## update the 
 }; close(pb)
 
@@ -339,7 +347,8 @@ arrows(1:nrow(zx) - 0.5, rowMeans(zx) - sd, y1 = rowMeans(zx + sd), length = 0.1
 #####################################################################
 #####################################################################
 #####################################################################
-setwd("../")
+setwd(file.path(gsub(".code.particle_filter.+", "", getwd()),
+              "code", "particle_filter")); getwd()
 .libPaths("../../.Rlibrary")
 
 library(RPostgreSQL)
@@ -368,61 +377,63 @@ vps <- dbGetQuery(
             rid))
 vps$trip_start_date <- format(as.POSIXct(vps$timestamp, origin = "1970-01-01"), "%Y-%m-%d")
 
-# table(vps$trip_start_date)
-
 ind <- which(vps$trip_start_date == "2016-09-22")
-pb <- txtProgressBar(0, length(ind), style = 3)
+infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
+    fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", ID), flatten = TRUE)
+})
+names(infoList) <- unique(vps$trip_id[ind])
+
+
 kf.t <- vps[ind[1], "timestamp"]
 N <- 500
-shape <- fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", vps[ind[1], "trip_id"]), flatten = TRUE)
-SHAPE <- shape$shape
-SHAPE$segment <- sapply(SHAPE$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
-M <- nrow(shape$schedule)
-ds <- shape$schedule$pivot.shape_dist_traveled
+shape <- infoList[[1]]$shape
+shape$segment <- sapply(shape$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
+schedule <- infoList[[1]]$schedule
+M <- nrow(schedule)
+ds <- schedule$pivot.shape_dist_traveled
 B0 <- matrix(rep(10, M), ncol = 1)
 P0 <- 10 * diag(M)
 A <- diag(M)
 H <- diag(M)
 delta <- 5 * 60
 speed <- list(B = B0, P = P0, N = N, M = M, A = A, H = H, t = kf.t, delta = delta)
-#plotSpeeds(speed, shape = SHAPE)
 
-i <- 1
-
+i <- 0
 BHist <- list(mean = speed$B, var = cbind(diag(speed$P)), t = speed$t)
-
-for (i in i:length(ind)) {
+pb <- txtProgressBar(0, length(ind), style = 3)
+for (i in max(i, 1):length(ind)) {
     setTxtProgressBar(pb, i)
     ## update the speed KF:
-#    i <- i + 1
+    #i <- i + 1
     if (vps[ind[i], "timestamp"] > speed$t + speed$delta) {
-        cat("Kalman filter update ...\n")
-        jpeg(sprintf("~/Desktop/figs/speeds_%s.jpg", speed$t), width = 500, height = 1000)
+        ## cat("Kalman filter update ...\n")
+        ## jpeg(sprintf("~/Desktop/figs/speeds_%s.jpg", speed$t), width = 500, height = 1000)
         speed <- update(speed, q = 1)
         if (any(diag(speed$P) < 0.000001)) diag(speed$P) <- pmax(0.000001, diag(speed$P))
         BHist$mean <- cbind(BHist$mean, speed$B)
         BHist$var <- cbind(BHist$var, diag(speed$P))
         BHist$t <- c(BHist$t, speed$t)
-        plotSpeeds(speed, shape = SHAPE)
-        dev.off()
+        ## plotSpeeds(speed, shape = shape)
+        ## dev.off()
     }
-    pf(con, vps[ind[i], "vehicle_id"], 1000, sig.gps = 5, vp = vps[ind[i], ], speed = speed)
-    vel <- dbGetQuery(con, sprintf("SELECT velocity, segment FROM particles WHERE active AND timestamp > %s",
-                                   speed$t - delta))
-    useg <- 1:23
-    nseg <- length(useg)
-    N <- round(sqrt(nseg))
-    M <- ceiling(sqrt(nseg))
-    dev.hold()
-    par(mfrow = c(N, M))
-    for (j in seq_along(useg)) {
-        hist(vel$velocity[vel$segment == useg[j]], breaks = seq(0, 16, by = 0.5), freq = FALSE,
-             main = paste0("Segment ", useg[j]), xlab = "Velocity (m/s)", col = "lightblue",
-             ylim = c(0, 2.5))
-        curve(dnorm(x, speed$B[useg[j]], sqrt(diag(speed$P)[useg[j]])), 0, 16, 1001, add = TRUE,
-              lty = 2, col = "#990000", lwd = 2)
-    }
-    dev.flush()
+    pf(con, vps[ind[i], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[i], ], speed = speed,
+       info = infoList[[vps[ind[i], "trip_id"]]], SPEED.range = c(2, 60) * 1000 / 60^2)
+    ## vel <- dbGetQuery(con, sprintf("SELECT velocity, segment FROM particles WHERE active AND timestamp > %s",
+    ##                                speed$t - delta))
+    ## useg <- 1:23
+    ## nseg <- length(useg)
+    ## N <- round(sqrt(nseg))
+    ## M <- ceiling(sqrt(nseg))
+    ## dev.hold()
+    ## par(mfrow = c(N, M))
+    ## for (j in seq_along(useg)) {
+    ##     hist(vel$velocity[vel$segment == useg[j]], breaks = seq(0, 16, by = 0.5), freq = FALSE,
+    ##          main = paste0("Segment ", useg[j]), xlab = "Velocity (m/s)", col = "lightblue",
+    ##          ylim = c(0, 2.5))
+    ##     curve(dnorm(x, speed$B[useg[j]], sqrt(diag(speed$P)[useg[j]])), 0, 16, 1001, add = TRUE,
+    ##           lty = 2, col = "#990000", lwd = 2)
+    ## }
+    ## dev.flush()
 }; close(pb)
 
 plotHistory(BHist)
