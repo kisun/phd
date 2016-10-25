@@ -30,3 +30,10 @@ clean:
 	-rm -r $(BUILDDIR)
 	-rm -f bin/*
 	-rm src/*.o
+
+
+
+
+
+upload:
+	scp -r css images js index.html tell029@login02.fos.auckland.ac.nz:/mnt/tell029/web/homepages.stat/tell029/phd/particle_filter/figs_2016-10-26/
