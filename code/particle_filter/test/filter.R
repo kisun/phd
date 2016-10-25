@@ -560,3 +560,107 @@ for ( i in 1:length(trips)) {
     plotTrip(trips[i])
     locator(1)
 }
+
+
+
+
+Hist <- dbGetQuery(con2, "SELECT route_id, count(route_id) as n FROM vehicle_positions WHERE route_id LIKE '%v46.5' group by route_id order by n")
+rid <- "27402-20160920093629_v46.5"
+#vid <- "3A9A"
+vps <- dbGetQuery(
+    con2,
+    sprintf("SELECT DISTINCT trip_id, route_id, vehicle_id, position_latitude, position_longitude, timestamp FROM vehicle_positions WHERE route_id='%s' ORDER BY timestamp",
+            rid))
+vps$trip_start_date <- format(as.POSIXct(vps$timestamp, origin = "1970-01-01"), "%Y-%m-%d")
+
+ind <- which(vps$trip_start_date == "2016-09-22" & vps$vehicle_id == "3A99")
+infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
+    fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", ID), flatten = TRUE)
+})
+names(infoList) <- unique(vps$trip_id[ind])
+N <- 500
+shape <- infoList[[1]]$shape
+shape$segment <- sapply(shape$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
+schedule <- infoList[[1]]$schedule
+M <- nrow(schedule)
+kf.t <- vps[ind[1], "timestamp"]
+ds <- schedule$pivot.shape_dist_traveled
+B0 <- matrix(rep(10, M), ncol = 1)
+P0 <- 10 * diag(M)
+A <- diag(M)
+H <- diag(M)
+delta <- 5 * 60
+speed <- list(B = B0, P = P0, N = N, M = M, A = A, H = H, t = kf.t, delta = delta)
+PRED <- list("schedule" = array(NA, dim = c(M, 500, length(ind))),
+             "schedule_adherance" = array(NA, dim = c(M, 500, length(ind))),
+             "vehicle_state" = array(NA, dim = c(M, 500, length(ind))),
+             "traffic_state" = array(NA, dim = c(M, 500, length(ind))))
+PRED <- array(NA, dim = c(M, 500, length(ind), 4))
+BHist <- list(mean = speed$B, var = cbind(diag(speed$P)), t = speed$t)
+MAX.speed <- 60 * 1000 / 60^2
+MIN.speed <- 10 * 1000 / 60^2
+
+k <- 1
+pb <- txtProgressBar(0, length(ind), style = 3)
+for (k in max(k, 1):length(ind)) {
+    setTxtProgressBar(pb, k)
+    ## update the speed KF:
+    if (vps[ind[k], "timestamp"] > speed$t + speed$delta) {
+        speed <- update(speed, q = 1)
+        if (any(diag(speed$P) < 0.000001)) diag(speed$P) <- pmax(0.000001, diag(speed$P))
+        BHist$mean <- cbind(BHist$mean, speed$B)
+        BHist$var <- cbind(BHist$var, diag(speed$P))
+        BHist$t <- c(BHist$t, speed$t)
+    }
+    pf(con, vps[ind[k], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[k], ], speed = speed,
+       info = infoList[[vps[ind[k], "trip_id"]]], SPEED.range = c(MIN.speed, MAX.speed))
+    dat <- dbGetQuery(con,
+                      sprintf("SELECT distance_into_trip, velocity, arrival_time, departure_time, segment FROM particles WHERE vehicle_id = '%s' AND active",
+                              vps[ind[k], "vehicle_id"]))
+    sk <- dat$segment
+    St <- as.numeric(as.POSIXct(paste(vps$trip_start_date[1],
+                                      infoList[[vps[ind[k], "trip_id"]]]$schedule$pivot.arrival_time)))
+    tstart <- min(St)
+    St <- St - tstart
+    invisible(sapply(1:length(sk), function(i) {
+        if (sk[i] < M) {
+            PRED[-(1:sk[i]), i, k, 1] <<- St[-(1:sk[i])]
+            PRED[-(1:sk[i]), i,  k, 2] <<-
+                St[-(1:sk[i])] + (ifelse(is.na(dat$departure_time[i]),
+                                         dat$arrival_time[i], dat$departure_time[i]) - St[sk[i]]) - tstart
+            PRED[-(1:sk[i]), i, k, 3] <<-
+                vps[ind[k], "timestamp"] + (ds[-(1:sk[i])] - dat$distance_into_trip[i]) / dat$velocity[i] +
+                cumsum(rbinom(M - sk[i], 1, 0.5) * (6 + rexp(M - sk[i], 1 / 5))) - tstart
+            PRED[-(1:sk[i]), i, k, 4] <<-
+                vps[ind[k], "timestamp"] +
+                (ds[sk[i] + 1] - dat$distance_into_trip[i]) / msm::rtnorm(1, speed$B[sk[i]], diag(speed$P)[sk[i]],
+                                                                          MIN.speed, MAX.speed) +
+                cumsum((ds[(sk[i]+1):M] - ds[sk[i]:(M-1)]) /
+                       msm::rtnorm(M - sk[i], speed$B[sk[i]:M], diag(speed$P)[sk[i]:M], MIN.speed, MAX.speed)) +
+                cumsum(rbinom(M - sk[i], 1, 0.5) * (6 + rexp(M - sk[i], 1 / 5))) - tstart
+        }
+        NULL
+    }))
+}; close(pb)
+
+
+
+animation::saveHTML({
+    for (k in 1:length(ind)) {
+        dev.hold()
+        plot(NA, xlim = range(PRED, na.rm = TRUE), ylim = c(0, M) + 0.5,
+             xlab = "Arrival Time", xaxt = "n", ylab = "Stop #", yaxs = "i", yaxt = "n")
+        abline(h = 2:M - 0.5, lty = 3, col = "#cccccc")
+        axis(2, at = 1:M, las = 1, tick = FALSE)
+        for (j in 2:M) {
+            ## Scheduled
+            points(PRED[j,,k,1], rep(j - 0.5, N), pch = 19, cex = 0.2)
+            points(PRED[j,,k,2], rep(j - 0.3, N), pch = 19, cex = 0.2, col = "#990000")
+            points(PRED[j,,k,3], rep(j - 0.1, N), pch = 19, cex = 0.2, col = "#009900")
+            points(PRED[j,,k,4], rep(j + 0.1, N), pch = 19, cex = 0.2, col = "#000099")
+        }
+        legend("bottomright", legend = rev(c("Schedule", "Schedule Deviation", "Vehicle State", "Traffic State")),
+               col = rev(c("black", "#990000", "#009900", "#000099")), pch = 19, cex = 0.8, bty = "n")
+        dev.flush()
+    }
+}, "arrival_time_predictions", ani.width = 900, ani.height = 600)
