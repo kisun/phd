@@ -42,7 +42,7 @@ MIN.speed <- 10 * (1000 / 60^2)
 set.seed(25101990)
 Speed <- matrix(NA, nrow = nrow(schedule) - 1, ncol = length(Times))
 Speed[, 1] <- msm::rtnorm(nrow(Speed), 10, 2, lower = MIN.speed, upper = MAX.speed)
-drawSegments(shape, schedule, Speed[,  1])
+drawSegments(shape, schedule, Speed[,  1], MAX = MAX.speed)
 for (i in 2:ncol(Speed)) {
     Speed[, i] <- msm::rtnorm(nrow(Speed),
                               ifelse(rbinom(nrow(Speed), 1, 0.09) == 1,
@@ -50,7 +50,7 @@ for (i in 2:ncol(Speed)) {
                                      Speed[, i - 1]),
                               0.05, lower = MIN.speed, upper = MAX.speed)
 }
-drawSegments(shape, schedule, Speed, c(Times, max(Times) + 5))
+drawSegments(shape, schedule, Speed, c(Times, max(Times) + 5), MAX = MAX.speed)
 ## simulated trips: every 10 minutes
 start <- seq(0, 90, by = 10) * 60
 delta <- 30
@@ -110,11 +110,12 @@ vps <- hist.db
 ind <- 1:nrow(vps)
 kf.t <- vps[ind[1], "timestamp"]
 N <- 500
-shape <- fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", vps[ind[1], "trip_id"]), flatten = TRUE)
-SHAPE <- shape$shape
-SHAPE$segment <- sapply(SHAPE$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
-M <- nrow(shape$schedule)
-ds <- shape$schedule$pivot.shape_dist_traveled
+info <- fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", vps[ind[1], "trip_id"]), flatten = TRUE)
+shape <- info$shape
+schedule <- info$schedule
+info$segment <- sapply(info$dist_traveled, function(x) which(schedule$pivot.shape_dist_traveled >= x)[1])
+M <- nrow(schedule)
+ds <- schedule$pivot.shape_dist_traveled
 B0 <- matrix(rep(10, M), ncol = 1)
 P0 <- 10 * diag(M)
 A <- diag(M)
@@ -171,7 +172,7 @@ dev.new()
 shape <- INFO$shape
 schedule <- INFO$schedule
 shape$segment <- sapply(shape$dist_traveled, function(x) which(schedule$pivot.shape_dist_traveled >= x)[1])
-drawSegments(shape, schedule, BHist, true = Speed[, -1])
+drawSegments(shape, schedule, BHist, true = Speed[, -1], MAX = MAX.speed)
 
 
 
@@ -259,26 +260,11 @@ for (vi in vs) {
 }
 
 
-## testing
-delta <- 30
-gamma <- 6
-pi <- 0.5
-tau <- 5
-rho <- 0.1
-upsilon <- 20
-p <- data.frame(distance_into_trip = 0, velocity = 10, segment = 0, arrival_time = 0, departure_time = 0, timestamp = 30)
-p <- rbind(p, p, p)
-speed <- c(10, 5, 9, 10)
-speed.var <- c(2, 0.4, 1, 2)
-Sd <- c(0, 1000, 1700, 2000, 2500)
-
-
-transitionC(p)
-
-(transitionC(p))
-
-(p <- transitionC(p)); p$timestamp <- p$timestamp + delta
-
 
 
 #  MAKEFLAGS="PKG_CPPFLAGS=-Iinclude"  R CMD SHLIB -o bin/pf.so src/truncated_normal.c src/pf.c
+
+
+
+
+### arrival times

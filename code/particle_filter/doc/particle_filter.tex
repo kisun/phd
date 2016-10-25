@@ -117,7 +117,7 @@ where $\Phi = \frac{\pi}{180} \phi$ and $\Lambda = \frac{\pi}{180} \lambda$
 Note that $g(\bY_k) = \left[0\ 0\right]^T$.
 We can therefore use a bivariate normal to compute the likelihood of each particle
 using $\boldsymbol{\mu} = \begin{bmatrix} 0 \\ 0 \end{bmatrix}$
-and $\Sigma = \frac{\sigma^2_y}{R} I_2$ where $I_n$ is an $n\times x$ identity matrix:
+and $\Sigma = \frac{\sigma^2_y}{R} I_2$ where $I_n$ is an $n\times n$ identity matrix:
 \begin{align}
   \label{eq:particle_likelihood}
   \g{h(\bX_k^{(i)}) \,|\, \bY_k, \sigma^2_y} = \bZ_k^{(i)} 
@@ -405,6 +405,128 @@ The estimations become fairly simple due to the identity matrices.
 
 In situations where there are no observations in a given segment, 
 we just use the previous estimate of $\nu_{j,k-1}$ with a large variance (e.g., $1\times 10^6$).
+
+
+
+\section{Arrival Time Prediction}
+\label{sec:arrival-time-pred}
+
+The last part consists of predicting arrival times at the remaining stops along the route.
+This will be done using a combination of schedule, vehicle state (PF),
+and road congestion (KF).
+
+
+We propose several alternative prediction methods:
+\begin{enumerate}
+\item \textbf{Schedule}: i.e., disregard all data and just use the static scheduled arrival times.
+  This will be our baseline.
+
+\item \textbf{Schedule adherance}: this takes the arrival/departure delay at the most recent stop,
+  and applies it to the subsequence stops.
+
+\item \textbf{Current vehicle state}: use the current state (i.e., speed) of the bus and use it to 
+  predict the travel time to subsequent stops.
+  This will include uncertainty allowing for dwell times at intermediate stops.
+
+\item \textbf{Current traffic state}: instead of using the vehicle state, this method will use the 
+  estimated traffic speed for each segment (from the Kalman filter).
+  Again, dwell times included as uncertainty.
+
+\item \textbf{Headway}: use the previous bus(es)' travel times to predict arrival times for the current bus.
+
+\item \textbf{Combinations}: compare the accuracy and precision of the above methods,
+  and explore combinations of them to predict arrival times.
+\end{enumerate}
+
+Methods 2--4 will make explicit use of the particle filter to obtain a distribution of arrival times.
+Method 5 could too, but it'll be more complicated because of the historical particle trajectories too.
+
+
+\subsection{Schedule}
+\label{sec:pred-schedule}
+
+Given a vehicle with state $\bX_k$ (see \cref{eq:vehicle_state} on \cpageref{eq:vehicle_state}) 
+on a particular trip with $M$ stops,
+the scheduled arrival times at stops are $\bS^t = \left\{S_j^t : j = 1, \ldots, M\right\}$.
+Then the arrival time prediction at stops $j = s_k + 1, \ldots, M$ are
+\begin{equation}
+  \label{eq:pred-schedule}
+  \hat A_j^{[1]} = S_j^t.
+\end{equation}
+
+As a measure of uncertainty, we could use historical data on arrival time variability.
+Of course, this could be extended to use \emph{historical} arrival time averages
+instead of scheduled, but that data is difficult to obtain.
+
+
+\subsection{Schedule adherance}
+\label{sec:pred-schedule-adherance}
+
+Given a vehicle with state $\bX_k$ on a trip with $M$ stops,
+the arrival and departure time delay at stop $j$ are respectively defined as 
+\begin{equation}
+  \label{eq:arrival-departure-delay}
+  \tilde A_j = A_j - S_j^t \qquad \text{and} \qquad \tilde D_j = D_j - S_j^t.
+\end{equation}
+Note that both use the schedule \emph{arrival} time: this is true for most stops,
+except layovers, which have a specific departure time which the bus will wait for.
+We will account for these later on;
+for now, the routes we work with wont have layovers.
+
+
+Therefore, the arrival time predictions at stops $j = s_k + 1, \ldots, M$ are
+\begin{equation}
+  \label{eq:pred-schedule-adherance}
+  \hat A_j^{[2]} = 
+  \begin{cases}
+    S_j^t + \tilde A_{s_k} & \text{if bus is still at stop $s_k$} \\
+    S_j^t + \tilde D_{s_k} & \text{if bus has departed stop $s_k$}
+  \end{cases}.
+\end{equation}
+This is done for each particle, generating a distribution of arrival times.
+
+Again, as with the schedule prediction, we could use historical averages in place of scheduled times,
+and thus arrival/departure delay would be relative to the average historical arrival/departure time.
+
+
+
+\subsection{Current vehicle state}
+\label{sec:pred-vehicle-state}
+
+Given a vehicle with state $\bX_k$ on a trip with $M$ stops with distances
+$\bS^d = \left\{S_j^d : j = 1, \ldots, M\right\}$ along the route,
+the predicted arrival time to each of stops $j = s_k + 1, \ldots, M$ for each particle is given as
+\begin{equation}
+  \label{eq:pred-vehicle-state}
+  \hat A_j^{[3]} = t_k + \frac{S_j^d - d_k}{v_k} + 
+  \sum_{\ell = s_k}^{j-1} p_\ell \left( \gamma + \bar t_\ell \right)
+\end{equation}
+where the summation is simply the accumulated dwell time at intermediate stops
+(as defined in \cref{sec:speed_pass}).
+Note that if the bus has departed the last stop, then $p_{s_k} = 0$;
+otherwise, $p_{s_k} = 1$ and dwell time \emph{remaining} is computed as before.
+Also note that to reduce clutter, the superscripts (e.g., $v_k^{(i)}$) have been removed from parameters.
+
+$p_\ell$ and $\bar t_\ell$ will be sampled for each particle, 
+based on parameters that are updated using historical data.
+An alternative would be to record the mean and variability of historical dwell times,
+and use this instead if computational efficiency becomes a problem.
+
+
+\subsection{Current traffic state}
+\label{sec:pred-traffic-state}
+
+Given a vehicle with state $\bX_k$ on a trip with $M$ stops and 
+a traffic state represented by $\hat \nu$ and $\Xi$,
+we can sample speed $\dot v_j \sim \mathcal{N}(\hat\nu_j, \Xi_{j,j})$ (and therefore travel time) for each particle 
+to predict arrival time:
+\begin{equation}
+  \label{eq:pred-traffic-state}
+  \hat A_j^{[4]} = t_k 
+  + \underbrace{\frac{S_{s_k + 1}^d - d_k}{\dot v_{s_k}}}_{\text{time to next stop}}
+  + \underbrace{\sum_{\ell = s_k + 1}^{j - 1} \frac{S_{\ell + 1}^d - S_\ell^d}{\dot v_\ell}}_{\text{intermediate travel times}}
+  + \underbrace{\sum_{\ell = s_k}^{j-1} p_\ell \left( \gamma + \bar t_\ell \right)}_{\text{dwell times}}
+\end{equation}
 
 
 \end{document}

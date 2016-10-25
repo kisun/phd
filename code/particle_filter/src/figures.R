@@ -97,3 +97,43 @@ plotSpeeds <- function(res, shape = NULL) {
                  gpar = list(col = cols, lwd = 4))
     }
 }
+
+
+drawSegments <- function(shape, schedule, speeds, times, true, MAX.speed = 100 * 1000 / 60^2) {
+    var <- NULL
+    if (class(speeds) == "list") {
+        speeds <- BHist$mean
+        times <- BHist$t / 60
+        var <- BHist$var
+    } else {
+        speeds <- cbind(speeds)
+        if (missing(times)) times <- seq(0, nrow(speeds), by = 1)
+    }
+    Sd <- schedule$pivot.shape_dist_traveled
+    o <- par(mfrow = c(1, 1), bg = "#333333", fg = "#cccccc", col.axis = "#cccccc",
+             col.lab = "#cccccc", col.main = "#cccccc")
+    plot(NA, type = "n", xlab = "Time (minutes)", ylab = "Segment", 
+         xlim = range(times), xaxs = "i",
+         ylim = c(max(Sd), 0), yaxt = "n", yaxs = "i")
+    axis(2, at = Sd[-1] - diff(Sd) / 2, labels = 1:(length(Sd) - 1), las = 1, tick = FALSE, cex.axis = 0.8)
+    spd <- round(speeds / MAX.speed * 10) + 1
+    cols <- apply(spd, 1, function(x) RColorBrewer::brewer.pal(11, "RdYlGn")[x])
+    cols <- if (is.null(dim(cols))) cbind(cols) else t(cols)
+    for (i in 1:nrow(speeds)) {
+        rect(times[-length(times)], rep(Sd[i], length(times) - 1),
+             times[-1], rep(Sd[i + 1], length(times) - 1),
+             border = cols[i, ], col = cols[i, ])
+        if (!is.null(var)) {
+            polygon(c(times, rev(times)),
+                    c(Sd[i] + (Sd[i + 1] - Sd[i]) * (1 - pmin((speeds[i, ] + sqrt(var[i, ])) / MAX.speed, 1)),
+                      rev(Sd[i] + (Sd[i + 1] - Sd[i]) * (1 - pmax(0, (speeds[i, ] - sqrt(var[i, ])) / MAX.speed)))),
+                    border = NULL, col = "#33333320")
+            lines(times, Sd[i] + (Sd[i + 1] - Sd[i]) * (1 - speeds[i, ] / MAX.speed), lwd = 1, col = "#333333")
+        }
+        if (!missing(true)) {
+            lines(times, Sd[i] + (Sd[i + 1] - Sd[i]) * (1 - true[i, ] / MAX.speed), col = "#222222", lty = 2, type = "s")
+        }
+    }
+    abline(h = Sd[2:(length(Sd) - 1)], col = "#33333330")
+    par(o)
+}
