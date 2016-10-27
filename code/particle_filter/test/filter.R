@@ -12,11 +12,15 @@ source("src/mapping.R")
 source("src/h.R")
 source("src/figures.R")
 
+host <- ifelse(system("whoami", TRUE) == "tell029", "localhost", "130.216.50.187")
+user <- "homestead"
+port <- "54320"
+pass <- "secret"
 drv = dbDriver("PostgreSQL")
-con = dbConnect(drv, dbname = "homestead", host = "localhost",
-                user = "homestead", port = "54320", password = "secret")
-con2 = dbConnect(drv, dbname = "historical", host = "localhost",
-                 user = "homestead", port = "54320", password = "secret")
+con = dbConnect(drv, dbname = "homestead", host = host,
+                user = user, port = port, password = pass)
+con2 = dbConnect(drv, dbname = "historical", host = host,
+                 user = user, port = port, password = pass)
 
 hist <- dbGetQuery(con2, "SELECT route_id, count(route_id) as n FROM vehicle_positions WHERE route_id LIKE '%v46.25' group by route_id order by n")
 rid <- "27402-20161011151756_v46.25"
@@ -25,6 +29,10 @@ vps <- dbGetQuery(
     con2,
     sprintf("SELECT * FROM vehicle_positions WHERE route_id='%s' ORDER BY timestamp", rid))
 vps$trip_start_date <- format(as.POSIXct(vps$timestamp, origin = "1970-01-01"), "%Y-%m-%d")
+
+
+## Above is common ...
+## Below is different things ...
 
 # table(vps$trip_start_date)
 
@@ -564,23 +572,19 @@ for ( i in 1:length(trips)) {
 
 
 
-Hist <- dbGetQuery(con2, "SELECT route_id, count(route_id) as n FROM vehicle_positions WHERE route_id LIKE '%v46.25' group by route_id order by n")
-rid <- "27402-20161011151756_v46.25"
-#vid <- "3A9A"
-vps <- dbGetQuery(
-    con2,
-    sprintf("SELECT * FROM vehicle_positions WHERE route_id='%s' ORDER BY timestamp", rid))
-vps$trip_start_date <- format(as.POSIXct(vps$timestamp, origin = "1970-01-01"), "%Y-%m-%d")
-
 ind <- which(vps$trip_start_date == "2016-10-26")
 infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
-    fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", ID), flatten = TRUE)
+    fromJSON(sprintf("http://130.216.50.187:8000/api/shape_schedule/%s", ID), flatten = TRUE)
 })
 names(infoList) <- unique(vps$trip_id[ind])
+for (i in 2:length(infoList))
+    infoList[[i]]$schedule$pivot.shape_dist_traveled <-
+        infoList[[1]]$schedule$pivot.shape_dist_traveled
 
 N <- 500
 shape <- infoList[[1]]$shape
-shape$segment <- sapply(shape$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
+shape$segment <-
+    sapply(shape$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
 schedule <- infoList[[1]]$schedule
 M <- nrow(schedule)
 kf.t <- vps[ind[1], "timestamp"]
@@ -634,10 +638,12 @@ for (k in max(k, 1):length(ind)) {
                     cumsum(rbinom(M - sk[i], 1, 0.5) * (6 + rexp(M - sk[i], 1 / 5))) - tstart
                 PRED[-(1:sk[i]), i, k, 4] <<-
                     vps[ind[k], "timestamp"] +
-                    (ds[sk[i] + 1] - dat$distance_into_trip[i]) / msm::rtnorm(1, speed$B[sk[i]], diag(speed$P)[sk[i]],
+                    (ds[sk[i] + 1] - dat$distance_into_trip[i]) / msm::rtnorm(1, speed$B[sk[i]],
+                                                                              diag(speed$P)[sk[i]],
                                                                               MIN.speed, MAX.speed) +
                     cumsum((ds[(sk[i]+1):M] - ds[sk[i]:(M-1)]) /
-                           msm::rtnorm(M - sk[i], speed$B[sk[i]:M], diag(speed$P)[sk[i]:M], MIN.speed, MAX.speed)) +
+                           msm::rtnorm(M - sk[i], speed$B[sk[i]:M],
+                                       diag(speed$P)[sk[i]:M], MIN.speed, MAX.speed)) +
                     cumsum(rbinom(M - sk[i], 1, 0.5) * (6 + rexp(M - sk[i], 1 / 5))) - tstart
             }
             NULL
@@ -646,9 +652,11 @@ for (k in max(k, 1):length(ind)) {
 }; close(pb)
 
 
+# select distinct trip_id, stop_sequence, stop_id, arrival_delay, departure_delay from trip_updates as tu, stop_time_updates as stu where tu.oid=stu.trip_update_id order by trip_id, stop_sequence;
 
 animation::saveHTML({
-    for (k in 1:length(ind)) {
+    
+    for (k in 1:k) { #length(ind)) {
         dev.hold()
         plot(NA, xlim = range(PRED, na.rm = TRUE), ylim = c(0, M) + 0.5,
              xlab = "Arrival Time", xaxt = "n", ylab = "Stop #", yaxs = "i", yaxt = "n")
@@ -665,4 +673,5 @@ animation::saveHTML({
                col = rev(c("black", "#990000", "#009900", "#000099")), pch = 19, cex = 0.8, bty = "n")
         dev.flush()
     }
+    
 }, "arrival_time_predictions", ani.width = 900, ani.height = 600)
