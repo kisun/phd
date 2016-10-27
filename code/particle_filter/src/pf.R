@@ -57,8 +57,7 @@ pf <- function(con, vid, N = 500,
             return(3)
         }
         particles <- data.frame(vehicle_id = rep(vid, N),
-                                distance_into_trip = 0, #runif(N, min(sh.near$dist_traveled),
-                                                        #   max(sh.near$dist_traveled)),
+                                distance_into_trip = runif(N, min(sh.near$dist_traveled), max(sh.near$dist_traveled)),
                                 velocity = runif(N, 0, 16))            
         
         ## determine which segment of the route each particle is on
@@ -129,6 +128,13 @@ pf <- function(con, vid, N = 500,
     ## xx <- sig.xy * cos(theta)
     ## yy <- sig.xy * sin(theta)
 
+    if (draw) {
+        addPoints(pts[1L, wi], pts[2L, wi], pch = 19,
+                  gpar = list(col = "orangered", alpha = 0.8, cex = 0.5))
+        with(vp, addPoints(position_latitude, position_longitude, pch = 19,
+                           gpar = list(col = "green", cex = 0.3)))
+    }
+
 
     #llhood <- dmvnorm(cbind(px, py), c(0, 0), diag(2L) * sig.xy^2, log = TRUE)
     llhood <- - 1 / (2 * sig.xy^2) * ( px^2 + py^2 )
@@ -144,13 +150,6 @@ pf <- function(con, vid, N = 500,
     wi <- sample(nrow(particles), N, replace = TRUE, prob = wt)
     parents <- particles$id[wi]
     particles <- particles[wi, ]
-
-    if (draw) {
-        addPoints(pts[1L, wi], pts[2L, wi], pch = 19,
-                  gpar = list(col = "orangered", alpha = 0.8, cex = 0.5))
-        with(vp, addPoints(position_latitude, position_longitude, pch = 19,
-                           gpar = list(col = "green", cex = 0.3)))
-    }
 
     ## set old particles to inactive
     dbGetQuery(con, sprintf("UPDATE particles SET active=FALSE WHERE vehicle_id='%s' AND active=TRUE", vid))
