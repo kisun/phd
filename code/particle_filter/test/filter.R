@@ -572,6 +572,17 @@ for ( i in 1:length(trips)) {
 
 
 
+
+
+
+
+
+
+
+
+
+### Latest 
+
 ind <- which(vps$trip_start_date == "2016-10-26")
 infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
     fromJSON(sprintf("http://130.216.50.187:8000/api/shape_schedule/%s", ID), flatten = TRUE)
@@ -595,16 +606,13 @@ A <- diag(M)
 H <- diag(M)
 delta <- 5 * 60
 speed <- list(B = B0, P = P0, N = N, M = M, A = A, H = H, t = kf.t, delta = delta)
-PRED <- list("schedule" = array(NA, dim = c(M, 500, length(ind))),
-             "schedule_adherance" = array(NA, dim = c(M, 500, length(ind))),
-             "vehicle_state" = array(NA, dim = c(M, 500, length(ind))),
-             "traffic_state" = array(NA, dim = c(M, 500, length(ind))))
 PRED <- array(NA, dim = c(M, 500, length(ind), 4))
 BHist <- list(mean = speed$B, var = cbind(diag(speed$P)), t = speed$t)
 MAX.speed <- 60 * 1000 / 60^2
 MIN.speed <- 10 * 1000 / 60^2
 
-k <- 1
+k <- 0
+library(iNZightMaps)
 pb <- txtProgressBar(0, length(ind), style = 3)
 for (k in max(k, 1):length(ind)) {
     setTxtProgressBar(pb, k)
