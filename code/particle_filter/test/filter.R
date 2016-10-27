@@ -18,8 +18,8 @@ con = dbConnect(drv, dbname = "homestead", host = "localhost",
 con2 = dbConnect(drv, dbname = "historical", host = "localhost",
                  user = "homestead", port = "54320", password = "secret")
 
-hist <- dbGetQuery(con2, "SELECT route_id, count(route_id) as n FROM vehicle_positions WHERE route_id LIKE '%v46.5' group by route_id order by n")
-rid <- "27402-20160920093629_v46.5"
+hist <- dbGetQuery(con2, "SELECT route_id, count(route_id) as n FROM vehicle_positions WHERE route_id LIKE '%v46.25' group by route_id order by n")
+rid <- "27402-20161011151756_v46.25"
 #vid <- "3A9A"
 vps <- dbGetQuery(
     con2,
@@ -28,11 +28,11 @@ vps$trip_start_date <- format(as.POSIXct(vps$timestamp, origin = "1970-01-01"), 
 
 # table(vps$trip_start_date)
 
-ind <- which(vps$trip_start_date == "2016-09-22")
+ind <- which(vps$trip_start_date == "2016-10-26")
 infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
     fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", ID), flatten = TRUE)
 })
-names(infoList) <- unique(vps$trip_id)
+names(infoList) <- unique(vps$trip_id[ind])
 
 pb <- txtProgressBar(0, length(ind), style = 3)
 for (i in 1:length(ind)) {
@@ -367,17 +367,17 @@ con = dbConnect(drv, dbname = "homestead", host = "localhost",
 con2 = dbConnect(drv, dbname = "historical", host = "localhost",
                  user = "homestead", port = "54320", password = "secret")
 
-
-Hist <- dbGetQuery(con2, "SELECT route_id, count(route_id) as n FROM vehicle_positions WHERE route_id LIKE '%v46.5' group by route_id order by n")
-rid <- "27402-20160920093629_v46.5"
+hist <- dbGetQuery(con2, "SELECT route_id, count(route_id) as n FROM vehicle_positions WHERE route_id LIKE '%v46.25' group by route_id order by n")
+rid <- "27402-20161011151756_v46.25"
 #vid <- "3A9A"
 vps <- dbGetQuery(
     con2,
-    sprintf("SELECT DISTINCT trip_id, route_id, vehicle_id, position_latitude, position_longitude, timestamp FROM vehicle_positions WHERE route_id='%s' ORDER BY timestamp",
-            rid))
+    sprintf("SELECT * FROM vehicle_positions WHERE route_id='%s' ORDER BY timestamp", rid))
 vps$trip_start_date <- format(as.POSIXct(vps$timestamp, origin = "1970-01-01"), "%Y-%m-%d")
 
-ind <- which(vps$trip_start_date == "2016-09-22")
+# table(vps$trip_start_date)
+
+ind <- which(vps$trip_start_date == "2016-10-26")
 infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
     fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", ID), flatten = TRUE)
 })
@@ -564,20 +564,20 @@ for ( i in 1:length(trips)) {
 
 
 
-Hist <- dbGetQuery(con2, "SELECT route_id, count(route_id) as n FROM vehicle_positions WHERE route_id LIKE '%v46.5' group by route_id order by n")
-rid <- "27402-20160920093629_v46.5"
+Hist <- dbGetQuery(con2, "SELECT route_id, count(route_id) as n FROM vehicle_positions WHERE route_id LIKE '%v46.25' group by route_id order by n")
+rid <- "27402-20161011151756_v46.25"
 #vid <- "3A9A"
 vps <- dbGetQuery(
     con2,
-    sprintf("SELECT DISTINCT trip_id, route_id, vehicle_id, position_latitude, position_longitude, timestamp FROM vehicle_positions WHERE route_id='%s' ORDER BY timestamp",
-            rid))
+    sprintf("SELECT * FROM vehicle_positions WHERE route_id='%s' ORDER BY timestamp", rid))
 vps$trip_start_date <- format(as.POSIXct(vps$timestamp, origin = "1970-01-01"), "%Y-%m-%d")
 
-ind <- which(vps$trip_start_date == "2016-09-22" & vps$vehicle_id == "3A99")
+ind <- which(vps$trip_start_date == "2016-10-26")
 infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
     fromJSON(sprintf("http://mybus.app/api/shape_schedule/%s", ID), flatten = TRUE)
 })
 names(infoList) <- unique(vps$trip_id[ind])
+
 N <- 500
 shape <- infoList[[1]]$shape
 shape$segment <- sapply(shape$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
@@ -612,35 +612,37 @@ for (k in max(k, 1):length(ind)) {
         BHist$var <- cbind(BHist$var, diag(speed$P))
         BHist$t <- c(BHist$t, speed$t)
     }
-    pf(con, vps[ind[k], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[k], ], speed = speed,
-       info = infoList[[vps[ind[k], "trip_id"]]], SPEED.range = c(MIN.speed, MAX.speed))
-    dat <- dbGetQuery(con,
-                      sprintf("SELECT distance_into_trip, velocity, arrival_time, departure_time, segment FROM particles WHERE vehicle_id = '%s' AND active",
-                              vps[ind[k], "vehicle_id"]))
-    sk <- dat$segment
-    St <- as.numeric(as.POSIXct(paste(vps$trip_start_date[1],
-                                      infoList[[vps[ind[k], "trip_id"]]]$schedule$pivot.arrival_time)))
-    tstart <- min(St)
-    St <- St - tstart
-    invisible(sapply(1:length(sk), function(i) {
-        if (sk[i] < M) {
-            PRED[-(1:sk[i]), i, k, 1] <<- St[-(1:sk[i])]
-            PRED[-(1:sk[i]), i,  k, 2] <<-
-                St[-(1:sk[i])] + (ifelse(is.na(dat$departure_time[i]),
-                                         dat$arrival_time[i], dat$departure_time[i]) - St[sk[i]]) - tstart
-            PRED[-(1:sk[i]), i, k, 3] <<-
-                vps[ind[k], "timestamp"] + (ds[-(1:sk[i])] - dat$distance_into_trip[i]) / dat$velocity[i] +
-                cumsum(rbinom(M - sk[i], 1, 0.5) * (6 + rexp(M - sk[i], 1 / 5))) - tstart
-            PRED[-(1:sk[i]), i, k, 4] <<-
-                vps[ind[k], "timestamp"] +
-                (ds[sk[i] + 1] - dat$distance_into_trip[i]) / msm::rtnorm(1, speed$B[sk[i]], diag(speed$P)[sk[i]],
-                                                                          MIN.speed, MAX.speed) +
-                cumsum((ds[(sk[i]+1):M] - ds[sk[i]:(M-1)]) /
-                       msm::rtnorm(M - sk[i], speed$B[sk[i]:M], diag(speed$P)[sk[i]:M], MIN.speed, MAX.speed)) +
-                cumsum(rbinom(M - sk[i], 1, 0.5) * (6 + rexp(M - sk[i], 1 / 5))) - tstart
-        }
-        NULL
-    }))
+    res <- pf(con, vps[ind[k], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[k], ], speed = speed,
+              info = infoList[[vps[ind[k], "trip_id"]]], SPEED.range = c(MIN.speed, MAX.speed))
+    if (res <= 0) {
+        dat <- dbGetQuery(con,
+                          sprintf("SELECT distance_into_trip, velocity, arrival_time, departure_time, segment FROM particles WHERE vehicle_id = '%s' AND active",
+                                  vps[ind[k], "vehicle_id"]))
+        sk <- dat$segment
+        St <- as.numeric(as.POSIXct(paste(vps$trip_start_date[1],
+                                          infoList[[vps[ind[k], "trip_id"]]]$schedule$pivot.arrival_time)))
+        tstart <- min(St)
+        St <- St - tstart
+        invisible(sapply(1:length(sk), function(i) {
+            if (sk[i] < M) {
+                PRED[-(1:sk[i]), i, k, 1] <<- St[-(1:sk[i])]
+                PRED[-(1:sk[i]), i,  k, 2] <<-
+                    St[-(1:sk[i])] + (ifelse(is.na(dat$departure_time[i]),
+                                             dat$arrival_time[i], dat$departure_time[i]) - St[sk[i]]) - tstart
+                PRED[-(1:sk[i]), i, k, 3] <<-
+                    vps[ind[k], "timestamp"] + (ds[-(1:sk[i])] - dat$distance_into_trip[i]) / dat$velocity[i] +
+                    cumsum(rbinom(M - sk[i], 1, 0.5) * (6 + rexp(M - sk[i], 1 / 5))) - tstart
+                PRED[-(1:sk[i]), i, k, 4] <<-
+                    vps[ind[k], "timestamp"] +
+                    (ds[sk[i] + 1] - dat$distance_into_trip[i]) / msm::rtnorm(1, speed$B[sk[i]], diag(speed$P)[sk[i]],
+                                                                              MIN.speed, MAX.speed) +
+                    cumsum((ds[(sk[i]+1):M] - ds[sk[i]:(M-1)]) /
+                           msm::rtnorm(M - sk[i], speed$B[sk[i]:M], diag(speed$P)[sk[i]:M], MIN.speed, MAX.speed)) +
+                    cumsum(rbinom(M - sk[i], 1, 0.5) * (6 + rexp(M - sk[i], 1 / 5))) - tstart
+            }
+            NULL
+        }))
+    }
 }; close(pb)
 
 
