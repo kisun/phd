@@ -612,7 +612,6 @@ MAX.speed <- 60 * 1000 / 60^2
 MIN.speed <- 10 * 1000 / 60^2
 
 k <- 0
-library(iNZightMaps)
 pb <- txtProgressBar(0, length(ind), style = 3)
 for (k in max(k, 1):length(ind)) {
     setTxtProgressBar(pb, k)
@@ -659,18 +658,48 @@ for (k in max(k, 1):length(ind)) {
     }
 }; close(pb)
 
+## save(PRED, file = "predictions.rda")
 
-# select distinct trip_id, stop_sequence, stop_id, arrival_delay, departure_delay from trip_updates as tu, stop_time_updates as stu where tu.oid=stu.trip_update_id order by trip_id, stop_sequence;
+## load("predictions.rda")
+
+
+drawSegments(shape, schedule, BHist, MAX.speed = MAX.speed)
+
+arrivaltimes <- dbGetQuery(con2, sprintf("select distinct trip_id, stop_sequence, stop_id, arrival_delay, departure_delay from trip_updates as tu, stop_time_updates as stu where tu.oid=stu.trip_update_id and timestamp between %s and %s order by trip_id, stop_sequence", min(vps[ind, "timestamp"]), max(vps[ind, "timestamp"])))
 
 animation::saveHTML({
     
-    for (k in 1:k) { #length(ind)) {
+    for (k in 1:400) {
         dev.hold()
-        plot(NA, xlim = range(PRED, na.rm = TRUE), ylim = c(0, M) + 0.5,
-             xlab = "Arrival Time", xaxt = "n", ylab = "Stop #", yaxs = "i", yaxt = "n")
+        plot(NA, xlim = c(0, 90 * 60), ylim = c(0, M) + 0.5,
+             xlab = "Arrival Time (min after trip start)", xaxs = "i", xaxt = "n",
+             ylab = "Stop #", yaxs = "i", yaxt = "n")
         abline(h = 2:M - 0.5, lty = 3, col = "#cccccc")
         axis(2, at = 1:M, las = 1, tick = FALSE)
+        axis(1, at = pretty(c(0, 90)) * 60, labels = pretty(c(0, 90)))
         for (j in 2:M) {
+            ## "Actual"
+            Ta <- arrivaltimes[arrivaltimes$trip_id == vps[ind[k], "trip_id"], ]
+            if (nrow(Ta) > 0) {
+                sapply(unique(Ta$stop_sequence), function(s) {
+                    arr <- Ta[Ta$stop_sequence == s & Ta$arrival_delay != 0, "arrival_delay"]
+                    dep <- Ta[Ta$stop_sequence == s & Ta$departure_delay != 0, "departure_delay"]
+                    if (length(arr) == 0 & length(dep) == 0) (c(NA, NA))
+                    if (length(arr) == 0) return(rep(max(dep), 2))
+                    if (length(dep) == 0) return(rep(max(arr), 2))
+                    return(c(max(arr), max(dep)))
+                }) -> delays
+                dimnames(delays) <- list(c("arrival", "departure"), unique(Ta$stop_sequence))
+
+                St <- infoList[[vps[ind[k], "trip_id"]]]$schedule[, c("pivot.arrival_time", "pivot.departure_time")]
+                St[, 1] <- as.numeric(as.POSIXct(paste(vps[ind[k], "trip_start_date"], St[, 1]), origin = "1970-01-01"))
+                St[, 2] <- as.numeric(as.POSIXct(paste(vps[ind[k], "trip_start_date"], St[, 2]), origin = "1970-01-01"))
+                St <- as.matrix(St)
+                for (s in as.character(unique(Ta$stop_sequence))) {
+                    delays[, s] <- St[s, ] + delays[, s] - min(St)
+                    lines(delays[, s], rep(as.numeric(s), 2) + 0.3, col = "orangered", lwd = 2)
+                }
+            }
             ## Scheduled
             points(PRED[j,,k,1], rep(j - 0.5, N), pch = 19, cex = 0.2)
             points(PRED[j,,k,2], rep(j - 0.3, N), pch = 19, cex = 0.2, col = "#990000")
@@ -680,6 +709,7 @@ animation::saveHTML({
         legend("bottomright", legend = rev(c("Schedule", "Schedule Deviation", "Vehicle State", "Traffic State")),
                col = rev(c("black", "#990000", "#009900", "#000099")), pch = 19, cex = 0.8, bty = "n")
         dev.flush()
+
     }
     
 }, "arrival_time_predictions", ani.width = 900, ani.height = 600)
