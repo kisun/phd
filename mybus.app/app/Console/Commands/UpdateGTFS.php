@@ -346,8 +346,11 @@ class UpdateGTFS extends Command
                 DB::statement('DROP TABLE tmp');
                 echo "done.\n";
             }
+
         }
 
-        unlink(storage_path() . '/gtfs.zip');
+        if ( file_exists(storage_path() . '/gtfs.zip' )) {
+            unlink(storage_path() . '/gtfs.zip');
+        }
     }
 }

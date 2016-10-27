@@ -1,0 +1,19 @@
+Studies have shown that an arrival-time countdown at bus stops
+can reduce passengers' percieved waiting times;
+of course, this assumes some level of accuracy in the predictions.
+For a variety of reasons, this is not often the case.
+We present an approach to arrival time prediction that,
+rather than modeling only a single vehicle or route, 
+takes into account all other transit vehicles in the area.
+Using a particle filter (PF) in real-time to model the state (location and speed) 
+of all buses in Auckland, we generate a "map" of current traffic conditions for all bus routes,
+which is updated using a Kalman filter (KF).
+This in turn is used to refine the particle filter estimates for subsequent buses.
+To make arrival time predictions, we use the KF state estimates to compute
+a vehicle's arrival time at all remaining stops, independently for each particle.
+This generates a distribution of plausible arrival times accounting for uncertainty,
+such as from traffic lights and time spent at stops dropping off and picking up passengers.
+To communicate uncertainty to passengers,
+we consider using prediction intervals ("2-5 minutes")
+rather than point estimates ("3 minutes"),
+both of which are straightforward to obtain from the PF sample.
