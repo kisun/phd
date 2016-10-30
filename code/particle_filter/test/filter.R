@@ -612,6 +612,10 @@ MAX.speed <- 60 * 1000 / 60^2
 MIN.speed <- 10 * 1000 / 60^2
 
 k <- 0
+<<<<<<< HEAD
+=======
+library(iNZightMaps)
+>>>>>>> cbd436c5bad90949124f572244aee801fd11d901
 pb <- txtProgressBar(0, length(ind), style = 3)
 for (k in max(k, 1):length(ind)) {
     setTxtProgressBar(pb, k)
@@ -658,6 +662,7 @@ for (k in max(k, 1):length(ind)) {
     }
 }; close(pb)
 
+<<<<<<< HEAD
 ## save(PRED, file = "predictions.rda")
 
 ## load("predictions.rda")
@@ -700,6 +705,20 @@ animation::saveHTML({
                     lines(delays[, s], rep(as.numeric(s), 2) + 0.3, col = "orangered", lwd = 2)
                 }
             }
+=======
+
+# select distinct trip_id, stop_sequence, stop_id, arrival_delay, departure_delay from trip_updates as tu, stop_time_updates as stu where tu.oid=stu.trip_update_id order by trip_id, stop_sequence;
+
+animation::saveHTML({
+    
+    for (k in 1:k) { #length(ind)) {
+        dev.hold()
+        plot(NA, xlim = range(PRED, na.rm = TRUE), ylim = c(0, M) + 0.5,
+             xlab = "Arrival Time", xaxt = "n", ylab = "Stop #", yaxs = "i", yaxt = "n")
+        abline(h = 2:M - 0.5, lty = 3, col = "#cccccc")
+        axis(2, at = 1:M, las = 1, tick = FALSE)
+        for (j in 2:M) {
+>>>>>>> cbd436c5bad90949124f572244aee801fd11d901
             ## Scheduled
             points(PRED[j,,k,1], rep(j - 0.5, N), pch = 19, cex = 0.2)
             points(PRED[j,,k,2], rep(j - 0.3, N), pch = 19, cex = 0.2, col = "#990000")
@@ -709,7 +728,10 @@ animation::saveHTML({
         legend("bottomright", legend = rev(c("Schedule", "Schedule Deviation", "Vehicle State", "Traffic State")),
                col = rev(c("black", "#990000", "#009900", "#000099")), pch = 19, cex = 0.8, bty = "n")
         dev.flush()
+<<<<<<< HEAD
 
+=======
+>>>>>>> cbd436c5bad90949124f572244aee801fd11d901
     }
     
 }, "arrival_time_predictions", ani.width = 900, ani.height = 600)
