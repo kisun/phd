@@ -72,6 +72,44 @@
         @endforeach
       ];
 
+      // Convert AT shape to Google Snap-to-roads:
+      var pathValues = [];
+      for (var i = 0; i < data.length; i++) {
+        pathValues.push(data[i].lat + ',' + data[i].lng);
+      }
+      // every 100 obs:
+      var snappedPath = [];
+      var M = Math.ceil(data.length / 99);
+      for (var i = 0; i < M; i++) {
+        // overlap: 0-99; 99-198; 198-297; ...
+        $.ajax({
+          url: 'https://roads.googleapis.com/v1/snapToRoads',
+          data: {
+            interpolate: true,
+            key: "{{ env('GOOGLE_API_KEY') }}",
+            path: pathValues.slice(99 * i, 99 * (i + 1) + 1).join('|')
+          },
+          success: function(data) {
+            for (j = 0; j < data.snappedPoints.length; j++) {
+              snappedPath.push({lat: data.snappedPoints[j].location.latitude,
+                                lng: data.snappedPoints[j].location.longitude});
+            }
+          },
+          async: false
+        });
+      }
+
+      var csvContent = "data:text/csv;charset=utf-8,";
+      for (i = 0; i < snappedPath.length; i++) {
+        csvContent += snappedPath[i].lat + ',' + snappedPath[i].lng + '\n';
+      }
+      var encodedUri = encodeURI(csvContent);
+      var link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "shape.csv");
+      document.body.appendChild(link);
+      link.click();
+
       var stops = {!! $stops->toJson() !!};
 
       var pos = {
@@ -100,6 +138,15 @@
         strokeWeight: 2
       });
       shapePath.setMap(map);
+
+      var shapeSnapPath = new google.maps.Polyline({
+        path: snappedPath,
+        geodesic: true,
+        strokeColor: "#990000",
+        strokeOpacity: 1.0,
+        strokeWeight: 2
+      });
+      shapeSnapPath.setMap(map);
 
       var infoWindow = new google.maps.InfoWindow,
           stopmarkers = [];

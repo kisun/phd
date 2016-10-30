@@ -51,7 +51,6 @@
         @endforeach
       ];
 
-
       var pos = {
         lat: {{ $trip->vehicle_position->position_latitude }},
         lng: {{ $trip->vehicle_position->position_longitude }}
