@@ -588,9 +588,6 @@ infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
     fromJSON(sprintf("http://130.216.50.187:8000/api/shape_schedule/%s", ID), flatten = TRUE)
 })
 names(infoList) <- unique(vps$trip_id[ind])
-for (i in 2:length(infoList))
-    infoList[[i]]$schedule$pivot.shape_dist_traveled <-
-        infoList[[1]]$schedule$pivot.shape_dist_traveled
 
 N <- 500
 shape <- infoList[[1]]$shape
