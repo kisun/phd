@@ -54,3 +54,6 @@ Route::get('/delays', function() {
             ->get()
     , 200, [], JSON_NUMERIC_CHECK);
 });
+
+
+Route::post('/intersections', 'IntersectionController@create');
