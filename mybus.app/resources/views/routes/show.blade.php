@@ -7,62 +7,25 @@
     <hr>
     <div id="map" style="height:70vh"></div>
     <hr>
+    <form action="{{ url('/api/intersections') }}" method="post" class="form-inline">
+      <button class="btn btn-primary" id="addSegments">
+        <span class="glyphicon glyphicon-plus"></span>
+        Add Intersections</button>
+      <select class="form-control" name="" id="">
+        <option value="traffic_lights">Traffic Lights</option>
+        <option value="pedestrian">Pedestrian Crossing</option>
+        <option value="roundabout">Roundabout</option>
+        <option value="uncontrolled">Other (uncontrolled)</option>
+      </select>
 
-    {{-- <p>
-      @foreach (["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as $dow)
-        <button type="button" class="btn btn-default btn-xs"
-                v-bind:class="{ 'btn-success': dow == '{{ $dow }}' }"
-                v-on:click="changeDay('{{ $dow }}')">
-          {{ $dow }}
-        </button>
-      @endforeach
-    </p>
-
-    <p>
-      <a v-for="trip in trips" href="@{{ trip.url }}" class="btn btn-link"
-         v-if="(dow == 'Monday' && trip.monday) ||
-               (dow == 'Tuesday' && trip.tuesday) ||
-               (dow == 'Wednesday' && trip.wednesday) ||
-               (dow == 'Thursday' && trip.thursday) ||
-               (dow == 'Friday' && trip.friday) ||
-               (dow == 'Saturday' && trip.saturday) ||
-               (dow == 'Sunday' && trip.sunday)">
-        @{{ trip.time }}
-      </a>
-    </p> --}}
+      {{ csrf_field() }}
+    </form>
   </div>
 @endsection
 
 @section('endmatter')
   <script>
-    {{-- new Vue({
-      el: '.page',
-
-      data: {
-        dow: 'Monday',
-        trips: [
-          @foreach ($route->trips as $trip)
-            {
-              url: "{{ url('/trips/' . $trip->trip_id ) }}",
-              time: "{{ \Carbon\Carbon::createFromFormat('H:i:s', $trip->departure_time)->format('g:i a') }}",
-              monday: "{{ $trip->monday or 0 }}" == 1,
-              tuesday: "{{ $trip->tuesday }}" == 1,
-              wednesday: "{{ $trip->wednesday }}" == 1,
-              thursday: "{{ $trip->thursday }}" == 1,
-              friday: "{{ $trip->friday }}" == 1,
-              saturday: "{{ $trip->saturday }}" == 1,
-              sunday: "{{ $trip->sunday }}" == 1,
-            },
-          @endforeach
-        ]
-      },
-
-      methods: {
-        changeDay: function(day) {
-          this.dow = day
-        }
-      }
-    }); --}}
+    var map;
 
     function initMap() {
 
@@ -125,17 +88,19 @@
           + 0) / {{ count($shape) }}
       };
 
-      var map = new google.maps.Map(document.getElementById('map'), {
+      map = new google.maps.Map(document.getElementById('map'), {
         center: pos,
         zoom: 12,
-        disableDefaultUI: true
+        disableDefaultUI: true,
+        mapTypeId: 'hybrid'
       });
+      map.setTilt(0);
       var shapePath = new google.maps.Polyline({
         path: data,
         geodesic: true,
         strokeColor: '{{ ($route->color) ? $route->color : "#000099" }}',
         strokeOpacity: 1.0,
-        strokeWeight: 2
+        strokeWeight: 5
       });
       shapePath.setMap(map);
 
@@ -147,41 +112,6 @@
       //   strokeWeight: 2
       // });
       // shapeSnapPath.setMap(map);
-
-      // Get "directions":
-      // https://maps.googleapis.com/maps/api/directions/json?origin=-36.84447856002873,174.768216991521&destination=-36.9080104104803,174.75875468490406&key=AIzaSyD9mbTafx7_v5gY7F4JqmnqSz5mrZkFx2Y&waypoints=
-      var direct = new google.maps.DirectionsService();
-      // need 8 waypoints!
-      var Ns = stops.length;
-      var wps = [];
-      if (Ns <= 10) {
-        for (i = 1; i < Ns - 1; i++) {
-          wps.push(stops[i].stop.lat + ',' + stops[i].stop.lon);
-        }
-      } else {
-        for (i = 1; i <= 8; i++) {
-          si = Math.round((Ns - 2) / 8 * i);
-          wps.push({
-            location: new google.maps.LatLng(parseFloat(stops[si].stop.lat),
-                                             parseFloat(stops[si].stop.lon)),
-            stopover: true
-          });
-        }
-      }
-      direct.route({
-        origin: data[0],
-        destination: data[data.length - 1],
-        travelMode: 'DRIVING',
-        waypoints: wps
-      }, function(result, status) {
-        if (status == "OK") {
-          console.log(result);
-          // var geowps = result.geocoded_waypoints;
-          var display = new google.maps.DirectionsRenderer();
-          display.setMap(map);
-          display.setDirections(result);
-        }
-      });
 
       var infoWindow = new google.maps.InfoWindow,
           stopmarkers = [];
@@ -274,7 +204,43 @@
         });
       }
       updateMap(true);
-      setInterval(updateMap, 10000);
+      // setInterval(updateMap, 10000);
+
+      var shape_click;
+      function segmentRoute() {
+        // var direct = new google.maps.DirectionsService();
+
+        $("#addSegments").html('<span class="glyphicon glyphicon-ok"></span> Done')
+          .removeClass('btn-primary').addClass('btn-success');
+
+        var count = 0;
+        shape_click = shapePath.addListener('click', function(e) {
+          $("form").append('<input type="hidden" name="intersections['+count+'][lat]" value='
+                           + e.latLng.lat() + '>');
+          $("form").append('<input type="hidden" name="intersections['+count+'][lon]" value='
+                           + e.latLng.lng() + '>');
+          $("form").append('<input type="hidden" name="intersections['+count+'][type]" value='
+                           + $("form select").val() + '>');
+          count++;
+          // wps.push({
+          //   lat: e.latLng.lat(),
+          //   lon: e.latLng.lng(),
+          //   type: $("form select").val()
+          // });
+        });
+
+      }
+      $("#addSegments").on('click', function(e) {
+        e.preventDefault();
+        if ($(this).hasClass('btn-success')) {
+          $("form").submit();
+          // google.maps.event.removeListener(shape_click);
+          // $(this).addClass('btn-primary').removeClass('btn-success')
+          //   .html('<span class="glyphicon glyphicon-plus"></span> Add Intersections');
+        } else {
+          segmentRoute();
+        }
+      });
     }
   </script>
   <script async defer
