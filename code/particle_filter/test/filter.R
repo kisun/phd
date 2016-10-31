@@ -608,9 +608,12 @@ BHist <- list(mean = speed$B, var = cbind(diag(speed$P)), t = speed$t)
 MAX.speed <- 60 * 1000 / 60^2
 MIN.speed <- 10 * 1000 / 60^2
 
+
+## DELETE PARTICLES!!!!!
+del <- dbGetQuery(con, "DELETE FROM particles")
 k <- 0
 pb <- txtProgressBar(0, length(ind), style = 3)
-for (k in max(k, 1):length(ind)) {
+for (k in (k+1):length(ind)) {
     setTxtProgressBar(pb, k)
     ## update the speed KF:
     if (vps[ind[k], "timestamp"] > speed$t + speed$delta) {
@@ -664,9 +667,13 @@ drawSegments(shape, schedule, BHist, MAX.speed = MAX.speed)
 
 arrivaltimes <- dbGetQuery(con2, sprintf("select distinct trip_id, stop_sequence, stop_id, arrival_delay, departure_delay from trip_updates as tu, stop_time_updates as stu where tu.oid=stu.trip_update_id and timestamp between %s and %s order by trip_id, stop_sequence", min(vps[ind, "timestamp"]), max(vps[ind, "timestamp"])))
 
+o <- with(vps[ind, ], tapply(trip_start_time, trip_id, unique))
+ORD <- order(factor(vps$trip_id[ind], levels = names(o)[order(o)]), vps$timestamp[ind])
+
+
 animation::saveHTML({
     
-    for (k in 1:400) {
+    for (k in ORD) {
         dev.hold()
         plot(NA, xlim = c(0, 90 * 60), ylim = c(0, M) + 0.5,
              xlab = "Arrival Time (min after trip start)", xaxs = "i", xaxt = "n",

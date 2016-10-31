@@ -45,7 +45,8 @@ class RouteController extends Controller
             'route' => $route,
             'shape' => $route->trips[0]->getShape(),
             'stops' => $route->trips[0]->stop_times()->with('stop')->get(),
-            'dows' => ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            'dows' => ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            'intersections' => \App\Intersection::all()
         ]);
     }
 }

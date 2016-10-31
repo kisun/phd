@@ -35,44 +35,6 @@
         @endforeach
       ];
 
-      // Convert AT shape to Google Snap-to-roads:
-      // var pathValues = [];
-      // for (var i = 0; i < data.length; i++) {
-      //   pathValues.push(data[i].lat + ',' + data[i].lng);
-      // }
-      // every 100 obs:
-      // var snappedPath = [];
-      // var M = Math.ceil(data.length / 99);
-      // for (var i = 0; i < M; i++) {
-      //   // overlap: 0-99; 99-198; 198-297; ...
-      //   $.ajax({
-      //     url: 'https://roads.googleapis.com/v1/snapToRoads',
-      //     data: {
-      //       interpolate: true,
-      //       key: "{{ env('GOOGLE_API_KEY') }}",
-      //       path: pathValues.slice(99 * i, 99 * (i + 1) + 1).join('|')
-      //     },
-      //     success: function(data) {
-      //       for (j = 0; j < data.snappedPoints.length; j++) {
-      //         snappedPath.push({lat: data.snappedPoints[j].location.latitude,
-      //                           lng: data.snappedPoints[j].location.longitude});
-      //       }
-      //     },
-      //     async: false
-      //   });
-      // }
-
-      // var csvContent = "data:text/csv;charset=utf-8,";
-      // for (i = 0; i < snappedPath.length; i++) {
-      //   csvContent += snappedPath[i].lat + ',' + snappedPath[i].lng + '\n';
-      // }
-      // var encodedUri = encodeURI(csvContent);
-      // var link = document.createElement("a");
-      // link.setAttribute("href", encodedUri);
-      // link.setAttribute("download", "shape.csv");
-      // document.body.appendChild(link);
-      // link.click();
-
       var stops = {!! $stops->toJson() !!};
 
       var pos = {
@@ -104,17 +66,9 @@
       });
       shapePath.setMap(map);
 
-      // var shapeSnapPath = new google.maps.Polyline({
-      //   path: snappedPath,
-      //   geodesic: true,
-      //   strokeColor: "#990000",
-      //   strokeOpacity: 1.0,
-      //   strokeWeight: 2
-      // });
-      // shapeSnapPath.setMap(map);
-
       var infoWindow = new google.maps.InfoWindow,
-          stopmarkers = [];
+          stopmarkers = [],
+          intersectionMarkers = [];
 
       for (var i = 0; i < stops.length; i++) {
         pos = new google.maps.LatLng(parseFloat(stops[i].stop.lat),
@@ -130,6 +84,69 @@
           zIndex: 1
         });
       }
+
+      var intersections = [
+        @foreach ($intersections as $int)
+          {
+            id: {{ $int->id }},
+            pos: new google.maps.LatLng({{ $int->lat }}, {{ $int->lon }}),
+            type: "{{ $int->type }}",
+          },
+        @endforeach
+      ];
+      for (var i = 0; i < intersections.length; i++) {
+        var lbl;
+        switch (intersections[i].type) {
+          case 'traffic_lights':
+            lbl = 'A';
+            break;
+          case 'pedestrian':
+            lbl = 'B';
+            break;
+          case 'roundabout':
+            lbl = 'C';
+            break;
+          case 'uncontrolled':
+            lbl = 'D';
+        }
+        intersectionMarkers[i] = new google.maps.Marker({
+          position: intersections[i].pos,
+          map: map,
+          label: lbl,
+          info: {
+            id: intersections[i].id,
+            type: intersections[i].type
+          }
+        });
+        google.maps.event.addListener(intersectionMarkers[i], 'click', function() {
+          var clicked = this;
+          $.ajax({
+            url: "{{ url('/api/intersections') }}/" + this.info.id,
+            type: 'PUT',
+            data: {
+              type: $("form select").val()
+            },
+            success: function(result) {
+              var lbl;
+              switch (result.type) {
+                case 'traffic_lights':
+                  lbl = 'A';
+                  break;
+                case 'pedestrian':
+                  lbl = 'B';
+                  break;
+                case 'roundabout':
+                  lbl = 'C';
+                  break;
+                case 'uncontrolled':
+                  lbl = 'D';
+              }
+              clicked.setLabel(lbl);
+            }
+          })
+        });
+      }
+
 
       var markers = [],
           infowindow = new google.maps.InfoWindow();
@@ -186,16 +203,11 @@
               pos = new google.maps.LatLng(vehicle.position_latitude, vehicle.position_longitude);
               markers[i] = new google.maps.Marker({
                 position: pos,
-                //icon: "{{ url('img/bus.png') }}",
                 map: map,
                 info: vehicle,
                 optimized: false,
-                // zIndex: 5
               });
               google.maps.event.addListener(markers[i], 'click', infopanel);
-              //google.maps.event.addListener(markers[i], 'mouseover', lastStop);
-              //google.maps.event.addListener(markers[i], 'mouseout', clearStop);
-              //bounds.extend(pos);
             }
             if (set) {
               // map.fitBounds(bounds);
@@ -209,7 +221,6 @@
       var shape_click;
       function segmentRoute() {
         // var direct = new google.maps.DirectionsService();
-
         $("#addSegments").html('<span class="glyphicon glyphicon-ok"></span> Done')
           .removeClass('btn-primary').addClass('btn-success');
 
@@ -222,21 +233,18 @@
           $("form").append('<input type="hidden" name="intersections['+count+'][type]" value='
                            + $("form select").val() + '>');
           count++;
-          // wps.push({
-          //   lat: e.latLng.lat(),
-          //   lon: e.latLng.lng(),
-          //   type: $("form select").val()
-          // });
-        });
 
+          new google.maps.Marker({
+            position: e.latLng,
+            map: map
+          });
+        });
       }
+
       $("#addSegments").on('click', function(e) {
         e.preventDefault();
         if ($(this).hasClass('btn-success')) {
           $("form").submit();
-          // google.maps.event.removeListener(shape_click);
-          // $(this).addClass('btn-primary').removeClass('btn-success')
-          //   .html('<span class="glyphicon glyphicon-plus"></span> Add Intersections');
         } else {
           segmentRoute();
         }
