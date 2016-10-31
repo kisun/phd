@@ -19,6 +19,7 @@
       </select>
 
       {{ csrf_field() }}
+      <button class="btn btn-success" type="button" id="segmentRoute">Segment Route</button>
     </form>
   </div>
 @endsection
@@ -26,6 +27,22 @@
 @section('endmatter')
   <script>
     var map;
+
+    function rad(x) {
+      return x * Math.PI / 180;
+    };
+
+    function getDistance(p1, p2) {
+      var R = 6378137; // Earth’s mean radius in meter
+      var dLat = rad(p2.lat() - p1.lat());
+      var dLong = rad(p2.lng() - p1.lng());
+      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(rad(p1.lat())) * Math.cos(rad(p2.lat())) *
+        Math.sin(dLong / 2) * Math.sin(dLong / 2);
+      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      var d = R * c;
+      return d; // returns the distance in meters
+    }
 
     function initMap() {
 
@@ -219,7 +236,7 @@
       // setInterval(updateMap, 10000);
 
       var shape_click;
-      function segmentRoute() {
+      function addIntersections() {
         // var direct = new google.maps.DirectionsService();
         $("#addSegments").html('<span class="glyphicon glyphicon-ok"></span> Done')
           .removeClass('btn-primary').addClass('btn-success');
@@ -246,8 +263,59 @@
         if ($(this).hasClass('btn-success')) {
           $("form").submit();
         } else {
-          segmentRoute();
+          addIntersections();
         }
+      });
+
+      $("#segmentRoute").on('click', function(e) {
+        e.preventDefault();
+        // Do segmentation:
+        var direct = new google.maps.DirectionsService();
+
+        var Ns = intersections.length;
+
+        // only want intersections "on" the route:
+        for (var i = 0; i < Ns; i++) {
+          var dist = 1000;
+          for (var j = 0; j < data.length; j++) {
+            d = getDistance(new google.maps.LatLng(parseFloat(data[j].lat), parseFloat(data[j].lng)),
+                            intersections[i].pos);
+            dist = Math.min(dist, d);
+          }
+          if (dist > 50) {
+            intersectionMarkers[i].setMap(null);
+          }
+        }
+
+        // var wps = [];
+        // if (Ns <= 10) {
+        //   for (i = 1; i < Ns - 1; i++) {
+        //     wps.push(stops[i].stop.lat + ',' + stops[i].stop.lon);
+        //   }
+        // } else {
+        //   for (i = 1; i <= 8; i++) {
+        //     si = Math.round((Ns - 2) / 8 * i);
+        //     wps.push({
+        //       location: new google.maps.LatLng(parseFloat(stops[si].stop.lat),
+        //                                        parseFloat(stops[si].stop.lon)),
+        //       stopover: true
+        //     });
+        //   }
+        // }
+        // direct.route({
+        //   origin: data[0],
+        //   destination: data[data.length - 1],
+        //   travelMode: 'DRIVING',
+        //   waypoints: wps
+        // }, function(result, status) {
+        //   if (status == "OK") {
+        //     console.log(result);
+        //     // var geowps = result.geocoded_waypoints;
+        //     var display = new google.maps.DirectionsRenderer();
+        //     display.setMap(map);
+        //     display.setDirections(result);
+        //   }
+        // });
       });
     }
   </script>

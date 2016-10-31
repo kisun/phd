@@ -672,7 +672,7 @@ ORD <- order(factor(vps$trip_id[ind], levels = names(o)[order(o)]), vps$timestam
 
 
 animation::saveHTML({
-    
+    pb <- txtProgressBar(0, length(ind), style = 3)
     for (k in ORD) {
         dev.hold()
         plot(NA, xlim = c(0, 90 * 60), ylim = c(0, M) + 0.5,
@@ -713,6 +713,7 @@ animation::saveHTML({
         legend("bottomright", legend = rev(c("Schedule", "Schedule Deviation", "Vehicle State", "Traffic State")),
                col = rev(c("black", "#990000", "#009900", "#000099")), pch = 19, cex = 0.8, bty = "n")
         dev.flush()
+        setTxtProgressBar(pb, which(ORD == k))
     }
-    
+    close(pb)
 }, "arrival_time_predictions", ani.width = 900, ani.height = 600)
