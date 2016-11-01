@@ -60,7 +60,7 @@
 
       var data = [
         @foreach ($shape as $point)
-          { lat: {{ $point->lat }}, lng: {{ $point->lon }} },
+          { lat: {{ $point->lat }}, lng: {{ $point->lon }}, dist: {{ $point->dist_traveled }} },
         @endforeach
       ];
 
@@ -297,74 +297,92 @@
 
         // only want intersections "on" the route - do that later ...
         for (var i = 0; i < Ns; i++) {
-          (function(i){
-            setTimeout(function(){
-              console.log("========================= " + i)
-              var dist = 1000;
-              var p = intersections[i].pos;
-              map.setCenter(p);
-              for (var j = 0; j < data.length - 1; j++) {
-                if (j < data.length) {
-                  if (Data[j].lat() == Data[j+1].lat() &
-                      Data[j].lng() == Data[j+1].lng()) {
-                    continue;
-                  }
-                }
-                var q1 = Data[j];
-                var q2 = Data[j + 1];
+          var dist = 1000;
+          var p = intersections[i].pos;
+          var dit;
 
-                var Delta1 = getBearing(q1, p) - getBearing(q1, q2);
-                var Delta2 = getBearing(q2, p) - getBearing(q2, q1);
-                // if (Math.abs(Delta1) < 90 & Math.abs(Delta2) < 90) {
-                  var r = Math.asin(Math.sin(getDistance(q1, p) / R) *
-                                    Math.sin(Delta1)) * R;
-                  // var d = Math.acos(Math.cos(getDistance(q1, p) / R) / Math.cos(r / R)) * R;
-                  dist = Math.min(dist, Math.abs(r));
-                // }
+          for (var j = 0; j < data.length - 1; j++) {
+            if (j < data.length) {
+              if (Data[j].lat() == Data[j+1].lat() &
+                  Data[j].lng() == Data[j+1].lng()) {
+                continue;
               }
-              console.log(dist);
-              // if (dist < 10 & dist < getDistance()) {
-              //   intersectionMarkers[i].setMap(null);
-              // }
-            }, 1000 * i);
-          }(i));
-        }
-        map.setZoom(12);
-        // var legs = [];
-        // var display = new google.maps.DirectionsRenderer();
-        // display.setMap(map);
-        // for (var i = 0; i <= Ns; i++) {
-        //   (function(i){
-        //     setTimeout(function() {
-        //       direct.route({
-        //         origin: (i == 0) ? Data[0] : intersections[i - 1].pos,
-        //         destination: (i == Ns) ? Data[Data.length-1] : intersections[i].pos,
-        //         travelMode: 'DRIVING'
-        //       }, function(result, status) {
-        //         if (status == "OK") {
-        //           console.log(result);
-        //           display.setDirections(result);
-        //         } else {
-        //           console.log(status);
-        //         }
-        //       });
-        //     }, 1000 * i);
-        //   }(i));
-        // }
+            }
+            var q1 = Data[j];
+            var q2 = Data[j + 1];
 
-        // direct.route({
-        //   origin: data[0],
-        //   destination: data[data.length - 1],
-        //   travelMode: 'DRIVING',
-        //   waypoints: wps
-        // }, function(result, status) {
-        //   if (status == "OK") {
-        //     console.log(result);
-        //     // var geowps = result.geocoded_waypoints;
-        //
-        //     display.setDirections(result);
+            var Delta1 = getBearing(q1, p) - getBearing(q1, q2);
+            var Delta2 = getBearing(q2, p) - getBearing(q2, q1);
+            var r = 1000, d = 0, dx;
+            if (Math.abs(Delta1) < 90 & Math.abs(Delta2) < 90) {
+              // between q1 and q2
+              r = Math.asin(Math.sin(getDistance(q1, p) / R) *
+                                Math.sin(Delta1)) * R;
+              d = Math.acos(Math.cos(getDistance(q1, p) / R) / Math.cos(r / R)) * R;
+              dx = data[j].dist + d;
+            } else if (Math.abs(Delta1) >= 90 & Math.abs(Delta2) < 90) {
+              // before q1
+              r = getDistance(q1, p);
+              dx = data[j].dist;
+            } else {
+              // after q2
+              r = getDistance(q2, p);
+              dx = data[j+1].dist;
+            }
+
+            if (Math.abs(r) < dist) {
+              dist = r;
+              dit = dx;
+            }
+          }
+          if (dist > 30) {
+            intersectionMarkers[i].setMap(null);
+          } else {
+            intersections[i].dist = dit;
+          }
+        }
+
+        intersections.sort(function(a, b) {
+          return a.dist - b.dist;
+        });
+        var wps = [];
+        for (var i = 0; i < intersections.length; i++) {
+          if ("dist" in intersections[i]) {
+            wps.push(intersections[i]);
+          }
+        }
+        var Ns = wps.length;
+        var legs = [[]];
+        var j = 0;
+        for (var i=0; i<data.length-1; i++) {
+          if (wps[Math.min(Ns-1, j)].dist > data[i].dist | j == Ns) {
+            legs[j].push({
+              lat: data[i].lat, lon: data[i].lng, dist: data[i].dist
+            });
+          } else {
+            // at a cross roads!
+            legs[j].push({
+              lat: wps[j].pos.lat(), lon: wps[j].pos.lng(), dist: wps[j].dist
+            });
+            j++;
+            legs.push([]); // add a new entry to legs
+            legs[j].push({
+              lat: wps[j-1].pos.lat(), lon: wps[j-1].pos.lng(), dist: wps[j-1].dist
+            });
+          }
+        }
+        console.log(legs);
+
+        // $.ajax({
+        //   url: "{{ url('/api/route_shapes/' . $route->id) }}",
+        //   type: "POST",
+        //   data: {
+        //     legs: legs
+        //   },
+        //   success: function(response) {
+        //     console.log(response);
         //   }
-        // });
+        // })
       });
     }
   </script>

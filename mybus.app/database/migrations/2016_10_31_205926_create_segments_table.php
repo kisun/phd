@@ -14,11 +14,13 @@ class CreateSegmentsTable extends Migration
     public function up()
     {
         Schema::create('segments', function (Blueprint $table) {
-            $table->increments('id');
+            $table->integer('id');
             $table->string('lat');
             $table->string('lon');
             $table->integer('pt_sequence')->unsigned();
             $table->float('dist_traveled')->nullable();
+
+            $table->primary(['id', 'pt_sequence']);
         });
     }
 

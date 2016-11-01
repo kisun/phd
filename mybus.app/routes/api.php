@@ -58,3 +58,5 @@ Route::get('/delays', function() {
 
 Route::post('/intersections', 'IntersectionController@create');
 Route::put('/intersections/{intersection}', 'IntersectionController@update');
+
+Route::post('/route_shapes/{route}', 'SegmentShapeController@create');

@@ -22,9 +22,6 @@ class CreateSegmentShapesTable extends Migration
             $table->integer('version_id');
 
             $table->primary(['id', 'leg']);
-            $table->foreign('segment_id')
-                  ->references('id')->on('segments')
-                  ->onDelete('cascade');
             $table->foreign('version_id')
                   ->references('id')->on('gtfs_versions')
                   ->onDelete('cascade');
