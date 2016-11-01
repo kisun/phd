@@ -16,10 +16,11 @@
         <option value="pedestrian">Pedestrian Crossing</option>
         <option value="roundabout">Roundabout</option>
         <option value="uncontrolled">Other (uncontrolled)</option>
+        <option value="DELETE">Delete</option>
       </select>
 
       {{ csrf_field() }}
-      <button class="btn btn-success" type="button" id="segmentRoute">Segment Route</button>
+      {{-- <button class="btn btn-success" type="button" id="segmentRoute">Segment Route</button> --}}
     </form>
   </div>
 @endsection
@@ -28,12 +29,15 @@
   <script>
     var map;
 
+    var R = 6378137; // Earth’s mean radius in meter
     function rad(x) {
       return x * Math.PI / 180;
     };
+    function deg(x) {
+      return x * 180 / Math.PI;
+    }
 
     function getDistance(p1, p2) {
-      var R = 6378137; // Earth’s mean radius in meter
       var dLat = rad(p2.lat() - p1.lat());
       var dLong = rad(p2.lng() - p1.lng());
       var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -42,6 +46,14 @@
       var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       var d = R * c;
       return d; // returns the distance in meters
+    }
+    function getBearing(p1, p2) {
+      var y = Math.sin(rad(p2.lng()) - rad(p1.lng())) * Math.cos(rad(p2.lat()));
+      var x = Math.cos(rad(p1.lat())) * Math.sin(rad(p2.lat())) -
+                Math.sin(rad(p1.lat())) * Math.cos(rad(p2.lat())) * Math.cos(rad(p2.lng()) - rad(p1.lng()));
+      var brng = deg(Math.atan2(y, x));
+
+      return (brng + 360) % 360;
     }
 
     function initMap() {
@@ -71,7 +83,7 @@
         center: pos,
         zoom: 12,
         disableDefaultUI: true,
-        mapTypeId: 'hybrid'
+        // mapTypeId: 'hybrid'
       });
       map.setTilt(0);
       var shapePath = new google.maps.Polyline({
@@ -144,6 +156,10 @@
               type: $("form select").val()
             },
             success: function(result) {
+              if (result == 'DELETED') {
+                clicked.setMap(null);
+              }
+
               var lbl;
               switch (result.type) {
                 case 'traffic_lights':
@@ -269,39 +285,61 @@
 
       $("#segmentRoute").on('click', function(e) {
         e.preventDefault();
+        return;
+
+
         // Do segmentation:
         var direct = new google.maps.DirectionsService();
 
         var Ns = intersections.length;
-
-        // only want intersections "on" the route:
-        for (var i = 0; i < Ns; i++) {
-          var dist = 1000;
-          for (var j = 0; j < data.length; j++) {
-            d = getDistance(new google.maps.LatLng(parseFloat(data[j].lat), parseFloat(data[j].lng)),
-                            intersections[i].pos);
-            dist = Math.min(dist, d);
-          }
-          if (dist > 50) {
-            intersectionMarkers[i].setMap(null);
-          }
+        var Data = [];
+        for (j = 0; j < data.length; j++) {
+          Data[j] = new google.maps.LatLng(parseFloat(data[j].lat), parseFloat(data[j].lng));
         }
 
-        // var wps = [];
-        // if (Ns <= 10) {
-        //   for (i = 1; i < Ns - 1; i++) {
-        //     wps.push(stops[i].stop.lat + ',' + stops[i].stop.lon);
+        // only want intersections "on" the route - do that later ...
+        // for (var i = 0; i < Ns; i++) {
+        //   console.log("========================= " + i)
+        //   var dist = 1000;
+        //   var p = intersections[i].pos;
+        //   for (var j = 0; j < data.length - 1; j++) {
+        //     console.log("--------------- " + j);
+        //     var q1 = Data[j];
+        //     var q2 = Data[j + 1];
+        //
+        //     var r = Math.asin(Math.sin(getDistance(q1, p) / R) *
+        //                       Math.sin(getBearing(q1, p) - getBearing(q1, q2))) * R;
+        //     var d = Math.acos(Math.cos(getDistance(q1, p) / R) / Math.cos(r / R)) * R;
+        //     console.log(Math.abs(r) + ", " + d);
+        //     // dist = Math.min(dist, Math.abs(r));
         //   }
-        // } else {
-        //   for (i = 1; i <= 8; i++) {
-        //     si = Math.round((Ns - 2) / 8 * i);
-        //     wps.push({
-        //       location: new google.maps.LatLng(parseFloat(stops[si].stop.lat),
-        //                                        parseFloat(stops[si].stop.lon)),
-        //       stopover: true
-        //     });
-        //   }
+        //   // if (dist < 10 & dist < getDistance()) {
+        //   //   intersectionMarkers[i].setMap(null);
+        //   // }
         // }
+
+        var legs = [];
+        var display = new google.maps.DirectionsRenderer();
+        display.setMap(map);
+        for (var i = 0; i <= Ns; i++) {
+          (function(i){
+            setTimeout(function() {
+              direct.route({
+                origin: (i == 0) ? Data[0] : intersections[i - 1].pos,
+                destination: (i == Ns) ? Data[Data.length-1] : intersections[i].pos,
+                travelMode: 'DRIVING'
+              }, function(result, status) {
+                if (status == "OK") {
+                  console.log(result);
+                  display.setDirections(result);
+                } else {
+                  console.log(status);
+                }
+              });
+            }, 1000 * i);
+          }(i));
+        }
+
         // direct.route({
         //   origin: data[0],
         //   destination: data[data.length - 1],
@@ -311,8 +349,7 @@
         //   if (status == "OK") {
         //     console.log(result);
         //     // var geowps = result.geocoded_waypoints;
-        //     var display = new google.maps.DirectionsRenderer();
-        //     display.setMap(map);
+        //
         //     display.setDirections(result);
         //   }
         // });

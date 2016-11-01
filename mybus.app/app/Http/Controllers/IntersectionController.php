@@ -27,6 +27,10 @@ class IntersectionController extends Controller
 
     public function update(Request $request, Intersection $intersection)
     {
+        if ($request->type == "DELETE") {
+            $intersection->delete();
+            return response()->json('DELETED');
+        }
         $intersection->type = $request->type;
         $intersection->save();
         return response()->json($intersection);

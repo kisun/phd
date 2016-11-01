@@ -659,8 +659,10 @@ for (k in (k+1):length(ind)) {
 }; close(pb)
 
 ## save(PRED, file = "predictions.rda")
+## save(BHist, file = "speed_history.rda")
 
 ## load("predictions.rda")
+## load("speed_history.rda")
 
 
 drawSegments(shape, schedule, BHist, MAX.speed = MAX.speed)
