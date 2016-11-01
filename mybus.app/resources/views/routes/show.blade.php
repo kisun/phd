@@ -20,7 +20,7 @@
       </select>
 
       {{ csrf_field() }}
-      {{-- <button class="btn btn-success" type="button" id="segmentRoute">Segment Route</button> --}}
+      <button class="btn btn-success" type="button" id="segmentRoute">Segment Route</button>
     </form>
   </div>
 @endsection
@@ -29,7 +29,7 @@
   <script>
     var map;
 
-    var R = 6378137; // Earth’s mean radius in meter
+    var R = 6371e3; // Earth’s mean radius in meter
     function rad(x) {
       return x * Math.PI / 180;
     };
@@ -83,7 +83,7 @@
         center: pos,
         zoom: 12,
         disableDefaultUI: true,
-        // mapTypeId: 'hybrid'
+        mapTypeControl: true
       });
       map.setTilt(0);
       var shapePath = new google.maps.Polyline({
@@ -285,8 +285,6 @@
 
       $("#segmentRoute").on('click', function(e) {
         e.preventDefault();
-        return;
-
 
         // Do segmentation:
         var direct = new google.maps.DirectionsService();
@@ -298,47 +296,61 @@
         }
 
         // only want intersections "on" the route - do that later ...
-        // for (var i = 0; i < Ns; i++) {
-        //   console.log("========================= " + i)
-        //   var dist = 1000;
-        //   var p = intersections[i].pos;
-        //   for (var j = 0; j < data.length - 1; j++) {
-        //     console.log("--------------- " + j);
-        //     var q1 = Data[j];
-        //     var q2 = Data[j + 1];
-        //
-        //     var r = Math.asin(Math.sin(getDistance(q1, p) / R) *
-        //                       Math.sin(getBearing(q1, p) - getBearing(q1, q2))) * R;
-        //     var d = Math.acos(Math.cos(getDistance(q1, p) / R) / Math.cos(r / R)) * R;
-        //     console.log(Math.abs(r) + ", " + d);
-        //     // dist = Math.min(dist, Math.abs(r));
-        //   }
-        //   // if (dist < 10 & dist < getDistance()) {
-        //   //   intersectionMarkers[i].setMap(null);
-        //   // }
-        // }
-
-        var legs = [];
-        var display = new google.maps.DirectionsRenderer();
-        display.setMap(map);
-        for (var i = 0; i <= Ns; i++) {
+        for (var i = 0; i < Ns; i++) {
           (function(i){
-            setTimeout(function() {
-              direct.route({
-                origin: (i == 0) ? Data[0] : intersections[i - 1].pos,
-                destination: (i == Ns) ? Data[Data.length-1] : intersections[i].pos,
-                travelMode: 'DRIVING'
-              }, function(result, status) {
-                if (status == "OK") {
-                  console.log(result);
-                  display.setDirections(result);
-                } else {
-                  console.log(status);
+            setTimeout(function(){
+              console.log("========================= " + i)
+              var dist = 1000;
+              var p = intersections[i].pos;
+              map.setCenter(p);
+              for (var j = 0; j < data.length - 1; j++) {
+                if (j < data.length) {
+                  if (Data[j].lat() == Data[j+1].lat() &
+                      Data[j].lng() == Data[j+1].lng()) {
+                    continue;
+                  }
                 }
-              });
+                var q1 = Data[j];
+                var q2 = Data[j + 1];
+
+                var Delta1 = getBearing(q1, p) - getBearing(q1, q2);
+                var Delta2 = getBearing(q2, p) - getBearing(q2, q1);
+                // if (Math.abs(Delta1) < 90 & Math.abs(Delta2) < 90) {
+                  var r = Math.asin(Math.sin(getDistance(q1, p) / R) *
+                                    Math.sin(Delta1)) * R;
+                  // var d = Math.acos(Math.cos(getDistance(q1, p) / R) / Math.cos(r / R)) * R;
+                  dist = Math.min(dist, Math.abs(r));
+                // }
+              }
+              console.log(dist);
+              // if (dist < 10 & dist < getDistance()) {
+              //   intersectionMarkers[i].setMap(null);
+              // }
             }, 1000 * i);
           }(i));
         }
+        map.setZoom(12);
+        // var legs = [];
+        // var display = new google.maps.DirectionsRenderer();
+        // display.setMap(map);
+        // for (var i = 0; i <= Ns; i++) {
+        //   (function(i){
+        //     setTimeout(function() {
+        //       direct.route({
+        //         origin: (i == 0) ? Data[0] : intersections[i - 1].pos,
+        //         destination: (i == Ns) ? Data[Data.length-1] : intersections[i].pos,
+        //         travelMode: 'DRIVING'
+        //       }, function(result, status) {
+        //         if (status == "OK") {
+        //           console.log(result);
+        //           display.setDirections(result);
+        //         } else {
+        //           console.log(status);
+        //         }
+        //       });
+        //     }, 1000 * i);
+        //   }(i));
+        // }
 
         // direct.route({
         //   origin: data[0],
