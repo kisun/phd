@@ -79,6 +79,42 @@
           + 0) / {{ count($shape) }}
       };
 
+      // regenerate the shape, nicer!
+      // Convert AT shape to Google Snap-to-roads:
+      var pathValues = [];
+      for (var i = 0; i < data.length; i++) {
+        pathValues.push(data[i].lat + ',' + data[i].lng);
+      }
+      // every 100 obs:
+      var snappedPath = [];
+      var M = Math.ceil(data.length / 99);
+      for (var i = 0; i < M; i++) {
+        // overlap: 0-99; 99-198; 198-297; ...
+        $.ajax({
+          url: 'https://roads.googleapis.com/v1/snapToRoads',
+          data: {
+            interpolate: true,
+            key: "{{ env('GOOGLE_API_KEY') }}",
+            path: pathValues.slice(99 * i, 99 * (i + 1) + 1).join('|')
+          },
+          success: function(data) {
+            for (j = 0; j < data.snappedPoints.length; j++) {
+              snappedPath.push({lat: data.snappedPoints[j].location.latitude,
+                                lng: data.snappedPoints[j].location.longitude});
+            }
+          },
+          async: false
+        });
+      }
+      var data = [], cdist = 0;
+      for (var i = 0; i < snappedPath.length; i++) {
+        data[i] = {lat: snappedPath[i].lat, lng: snappedPath[i].lng, dist: cdist};
+        if (i > 0) {
+          cdist += getDistance(new google.maps.LatLng(data[i-1].lat, data[i-1].lng),
+                               new google.maps.LatLng(data[i].lat, data[i].lng));
+        }
+      }
+
       map = new google.maps.Map(document.getElementById('map'), {
         center: pos,
         zoom: 12,
@@ -258,7 +294,7 @@
           .removeClass('btn-primary').addClass('btn-success');
 
         var count = 0;
-        shape_click = shapePath.addListener('click', function(e) {
+        shape_click = map.addListener('click', function(e) {
           $("form").append('<input type="hidden" name="intersections['+count+'][lat]" value='
                            + e.latLng.lat() + '>');
           $("form").append('<input type="hidden" name="intersections['+count+'][lon]" value='
@@ -291,7 +327,7 @@
 
         var Ns = intersections.length;
         var Data = [];
-        for (j = 0; j < data.length; j++) {
+        for (j = 0; j < snappedPath.length; j++) {
           Data[j] = new google.maps.LatLng(parseFloat(data[j].lat), parseFloat(data[j].lng));
         }
 
@@ -317,7 +353,7 @@
             if (Math.abs(Delta1) < 90 & Math.abs(Delta2) < 90) {
               // between q1 and q2
               r = Math.asin(Math.sin(getDistance(q1, p) / R) *
-                                Math.sin(Delta1)) * R;
+                            Math.sin(Delta1)) * R;
               d = Math.acos(Math.cos(getDistance(q1, p) / R) / Math.cos(r / R)) * R;
               dx = data[j].dist + d;
             } else if (Math.abs(Delta1) >= 90 & Math.abs(Delta2) < 90) {
@@ -335,43 +371,68 @@
               dit = dx;
             }
           }
-          if (dist > 30) {
+          if (dist > 20) {
             intersectionMarkers[i].setMap(null);
           } else {
             intersections[i].dist = dit;
           }
         }
 
-        intersections.sort(function(a, b) {
-          return a.dist - b.dist;
-        });
         var wps = [];
         for (var i = 0; i < intersections.length; i++) {
           if ("dist" in intersections[i]) {
             wps.push(intersections[i]);
           }
         }
+
+        wps.sort(function(a, b) {
+          return a.dist - b.dist;
+        });
+
         var Ns = wps.length;
         var legs = [[]];
         var j = 0;
         for (var i=0; i<data.length-1; i++) {
-          if (wps[Math.min(Ns-1, j)].dist > data[i].dist | j == Ns) {
-            legs[j].push({
-              lat: data[i].lat, lon: data[i].lng, dist: data[i].dist
-            });
-          } else {
+          if (wps[Math.min(Ns-1, j)].dist < data[i].dist & j != Ns) {
             // at a cross roads!
+            // need to "create" an intermediate point:
+            var dr = wps[j].dist - data[i-1].dist;
+            var th = getBearing(Data[i-1], Data[i]);
+            var phi = Math.asin(Math.sin(rad(Data[i-1].lat())) * Math.cos(dr / R) +
+                                Math.cos(rad(Data[i-1].lat())) * Math.sin(dr / R) * Math.cos(th));
+            var lam = rad(Data[i-1].lng()) +
+                      Math.atan2(Math.sin(th) * Math.sin(dr / R) * Math.cos(rad(Data[i-1].lat())),
+                                 Math.cos(dr / R) - Math.sin(rad(Data[i-1].lat())) * Math.sin(phi));
             legs[j].push({
-              lat: wps[j].pos.lat(), lon: wps[j].pos.lng(), dist: wps[j].dist
+              lat: deg(phi), lon: deg(lam), dist: wps[j].dist, intersection_id: wps[j].id
             });
             j++;
             legs.push([]); // add a new entry to legs
             legs[j].push({
-              lat: wps[j-1].pos.lat(), lon: wps[j-1].pos.lng(), dist: wps[j-1].dist
+              lat: deg(phi), lon: deg(lam), dist: wps[j-1].dist, intersection_id: wps[j-1].id
             });
           }
+          legs[j].push({
+            lat: data[i].lat, lon: data[i].lng, dist: data[i].dist, intersection_id: ''
+          });
         }
-        console.log(legs);
+
+        shapePath.setMap(null);
+        var legPaths = [];
+        for (var i=0;i<legs.length;i++) {
+          var dat = [];
+          for (var j=0;j<legs[i].length;j++) {
+            dat[j] = {lat: legs[i][j].lat, lng: legs[i][j].lon};
+          }
+          legPaths[i] = new google.maps.Polyline({
+            path: dat,
+            geodesic: true,
+            strokeColor: (i % 2 == 0) ? "#990000" : "#000099",
+            strokeOpacity: 1.0,
+            strokeWeight: 5
+          });
+          legPaths[i].setMap(map);
+        }
 
         // $.ajax({
         //   url: "{{ url('/api/route_shapes/' . $route->id) }}",

@@ -14,6 +14,7 @@ class CreateSegmentShapesTable extends Migration
     public function up()
     {
         Schema::create('segment_shapes', function (Blueprint $table) {
+            $table->increments('oid');
             $table->string('id');
             $table->string('shape_id');
             $table->integer('leg')->unsigned();
@@ -21,7 +22,6 @@ class CreateSegmentShapesTable extends Migration
             $table->float('dist_traveled')->nullable();
             $table->integer('version_id');
 
-            $table->primary(['id', 'leg']);
             $table->foreign('version_id')
                   ->references('id')->on('gtfs_versions')
                   ->onDelete('cascade');
