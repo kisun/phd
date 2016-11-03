@@ -22,6 +22,8 @@ class CreateSegmentShapesTable extends Migration
             $table->float('dist_traveled')->nullable();
             $table->integer('version_id');
 
+            $table->foreign('segment_id')
+                  ->references('id')->on('segment_infos');
             $table->foreign('version_id')
                   ->references('id')->on('gtfs_versions')
                   ->onDelete('cascade');

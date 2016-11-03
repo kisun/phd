@@ -64,8 +64,14 @@ class Trip extends Model
      */
     public function getShape()
     {
-        $shape = \App\Shape::where('id', $this->shape_id)->orderBy('pt_sequence');
-        return $shape->get();
+        $shape = \App\SegmentShape::where('id', $this->shape_id)->orderBy('leg');
+        if (count($shape)) {
+            return $shape->with('segment_info.shape_points')->get();
+        } else {
+            return $shape = \App\Shape::where('id', $this->shape_id)->orderBy('pt_sequence')->get();
+        }
+        // $shape = \App\Shape::where('id', $this->shape_id)->orderBy('pt_sequence');
+        // return $shape->get();
     }
 
     /**

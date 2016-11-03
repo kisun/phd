@@ -31,41 +31,6 @@
     var map;
 
     var R = 6371e3; // Earth’s mean radius in meter
-    // function rad(x) {
-    //   return x * Math.PI / 180;
-    // };
-    // function deg(x) {
-    //   return x * 180 / Math.PI;
-    // }
-    //
-    // function getDistance(p1, p2) {
-    //   var dLat = rad(p2.lat() - p1.lat());
-    //   var dLong = rad(p2.lng() - p1.lng());
-    //   var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    //     Math.cos(rad(p1.lat())) * Math.cos(rad(p2.lat())) *
-    //     Math.sin(dLong / 2) * Math.sin(dLong / 2);
-    //   var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    //   var d = R * c;
-    //   return d; // returns the distance in meters
-    // }
-    // function getBearing(p1, p2) {
-    //   var y = Math.sin(rad(p2.lng()) - rad(p1.lng())) * Math.cos(rad(p2.lat()));
-    //   var x = Math.cos(rad(p1.lat())) * Math.sin(rad(p2.lat())) -
-    //             Math.sin(rad(p1.lat())) * Math.cos(rad(p2.lat())) * Math.cos(rad(p2.lng()) - rad(p1.lng()));
-    //   var brng = deg(Math.atan2(y, x));
-    //
-    //   return (brng + 360) % 360;
-    // }
-    // function getDestination(q1, theta, d) {
-    //   // q1 is a lat/lng
-    //   var phi1 = rad(q1.lat()),
-    //       lam1 = rad(q1.lng());
-    //   var phi = Math.asin(Math.sin(phi1) * Math.cos(d / R) +
-    //                       Math.cos(phi1) * Math.sin(d / R) * Math.cos(theta));
-    //   var lam = lam1 + Math.atan2(Math.sin(theta) * Math.sin(d / R) * Math.cos(phi1),
-    //                               Math.cos(d / R) - Math.sin(phi1) * Math.sin(phi));
-    //   return new google.maps.LatLng(deg(phi), deg(lam));
-    // }
 
     function initMap() {
 
@@ -146,21 +111,6 @@
       var infoWindow = new google.maps.InfoWindow,
           stopmarkers = [],
           intersectionMarkers = [];
-
-      // for (var i = 0; i < stops.length; i++) {
-      //   pos = new google.maps.LatLng(parseFloat(stops[i].stop.lat),
-      //                                parseFloat(stops[i].stop.lon));
-      //   stopmarkers[i] = new google.maps.Marker({
-      //     position: pos,
-      //     icon: {
-      //       path: google.maps.SymbolPath.CIRCLE,
-      //       scale: 4
-      //     },
-      //     draggable: false,
-      //     map: map,
-      //     zIndex: 1
-      //   });
-      // }
 
       var intersections = [
         @foreach ($intersections as $int)
