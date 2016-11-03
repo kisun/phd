@@ -581,7 +581,8 @@ for ( i in 1:length(trips)) {
 
 
 
-### Latest 
+### Latest
+### BIG UPDATE: using SEGMENTS instead ...
 
 ind <- which(vps$trip_start_date == "2016-10-26")
 infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
@@ -591,12 +592,24 @@ names(infoList) <- unique(vps$trip_id[ind])
 
 N <- 500
 shape <- infoList[[1]]$shape
-shape$segment <-
-    sapply(shape$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
+if ("segment_info.id" %in% names(shape)) {
+    Shape <- shape$segment_info.shape_points
+    dmax <- cumsum(c(0, sapply(Shape, function(x) max(x$dist_traveled))))
+    invisible(lapply(1:length(Shape), function(i) {
+        Shape[[i]]$dist_traveled <<- Shape[[i]]$dist_traveled + dmax[i]
+        Shape[[i]]$leg <<- i
+    }))
+    shape <- do.call(rbind, Shape)
+    rm(Shape)
+} else {
+    shape$segment <-
+        sapply(shape$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
+}
 schedule <- infoList[[1]]$schedule
-M <- nrow(schedule)
+M <- length(unique(shape$segment_id))
+L <- nrow(schedule) ## number of STOPS
 kf.t <- vps[ind[1], "timestamp"]
-ds <- schedule$pivot.shape_dist_traveled
+ds <- schedule$pivot.shape_dist_traveled # stop distances
 B0 <- matrix(rep(10, M), ncol = 1)
 P0 <- 10 * diag(M)
 A <- diag(M)
@@ -607,6 +620,11 @@ PRED <- array(NA, dim = c(M, 500, length(ind), 4))
 BHist <- list(mean = speed$B, var = cbind(diag(speed$P)), t = speed$t)
 MAX.speed <- 60 * 1000 / 60^2
 MIN.speed <- 10 * 1000 / 60^2
+
+library(iNZightMaps)
+mobj <- iNZightMap(~lat, ~lon, data = shape)
+plot(mobj, pch = NA, lwd = 3, colby = factor(shape$segment_id, levels = sample(unique(shape$segment_id))), join = TRUE,
+     varnames = list(colby = "segment"))
 
 
 ## DELETE PARTICLES!!!!!

@@ -13,31 +13,17 @@ use App\Shape;
 
 class SegmentShapeController extends Controller
 {
-    // public function new(Request $request, Route $route, SegmentInfo $segment_info)
-    // {
-    //     return response()->json($request);
-    //     foreach ($route->trips as $trip) {
-    //         SegmentShape::where('id', $trip->shape_id)->delete();
-    //         $shapeInfo = $trip->getShape()[0];
-    //         $shape = SegmentShape::create([
-    //             'id' => $shapeInfo->id,
-    //             'shape_id' => $shapeInfo->shape_id,
-    //             'leg' => $j + 1,
-    //             'segment_id' => $segment->id,
-    //             'dist_traveled' => $leg[0]['dist'],
-    //             'version_id' => $shapeInfo->version_id
-    //         ]);
-    //     }
-    // }
-
-    public function destroy(Request $request, Route $route)
+    public function destroy(Request $request, $route_id)
     {
-        foreach ($route->trips as $trip) {
-            SegmentShape::where('id', $trip->shape_id)->delete();
+        $routes = Route::where('route_id', $route_id)->get();
+        foreach ($routes as $route) {
+            foreach ($route->trips as $trip) {
+                SegmentShape::where('id', $trip->shape_id)->delete();
+            }
         }
     }
 
-    public function create(Request $request, Route $route)
+    public function create(Request $request, $route_id)
     {
         $leg = $request->leg;
         if (!is_numeric($leg[0]['intersection_id'])) {
@@ -76,16 +62,19 @@ class SegmentShapeController extends Controller
         }
 
         // only distinct shape_ids
-        foreach ($route->trips()->select('shape_id')->distinct()->get() as $shape_id) {
-            $shp = Shape::where('id', $shape_id->shape_id)->first();
-            $shape = SegmentShape::create([
-                'id' => $shp->id,
-                'shape_id' => $shp->shape_id,
-                'leg' => $request->seq,
-                'segment_id' => $segment->id,
-                'dist_traveled' => $leg[0]['dist'],
-                'version_id' => $shp->version_id
-            ]);
+        $routes = Route::where('route_id', $route_id)->get();
+        foreach ($routes as $route) {
+            foreach ($route->trips()->select('shape_id')->distinct()->get() as $shape_id) {
+                $shp = Shape::where('id', $shape_id->shape_id)->first();
+                $shape = SegmentShape::create([
+                    'id' => $shp->id,
+                    'shape_id' => $shp->shape_id,
+                    'leg' => $request->seq,
+                    'segment_id' => $segment->id,
+                    'dist_traveled' => $leg[0]['dist'],
+                    'version_id' => $shp->version_id
+                ]);
+            }
         }
 
         return response()->json([

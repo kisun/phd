@@ -419,14 +419,14 @@
 
         // Delete old shapes:
         $.ajax({
-          url: "{{ url('/api/route_shapes/' . $route->id) }}",
+          url: "{{ url('/api/route_shapes/' . $route->route_id) }}",
           type: "DELETE",
           async: false
         });
         // Create each LEG
         for (var i = 0; i < legs.length; i++) {
           $.ajax({
-            url: "{{ url('/api/route_shapes/' . $route->id) }}",
+            url: "{{ url('/api/route_shapes/' . $route->route_id) }}",
             type: "POST",
             data: {
               leg: legs[i],

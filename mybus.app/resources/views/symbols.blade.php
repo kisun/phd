@@ -12,10 +12,10 @@
 
       <p class="small">
         \( i = 1, \ldots, N \) is the particle index<br>
-        \( j = 1, \ldots, M \) is the stop/sequence index for a given route<br>
+        \( j = 1, \ldots, M \) is the sequence index for a given route<br>
         \( k = 0, 1, \ldots \) is the observation counter
         (note that 0 indicates intial or prior value, e.g., \( v_0 \sim \mathcal{U}(0,30) \))<br>
-        \( \ell \) identifies unique stops
+        \( \ell \) identifies unique stops (total of \(L\) stops in a given route)
       </p>
 
       <div class="col-md-4">
@@ -66,7 +66,7 @@
             <tr>
               <td>\(\mathbf{X}_k\)</td>
               <td>the state vector, at time \(k\)<br>
-                \( \mathbf{X}_k = \begin{bmatrix} d_k & v_k & s_k & A_{s_k} & D_{s_k} \end{bmatrix}^T \)
+                \( \mathbf{X}_k = \begin{bmatrix} d_k & v_k & s_k & A_{s_k} & D_{s_k} & r_k \end{bmatrix}^T \)
               </td>
             </tr>
 
@@ -82,27 +82,32 @@
 
             <tr>
               <td>\(s_k\)</td>
-              <td>route segment/stop sequence</td>
+              <td>stop sequence</td>
             </tr>
 
             <tr>
-              <td>\( A_j \)</td>
-              <td>Arrival time at stop \(j\) (UNIX timestamp)</td>
+              <td>\( A_\ell \)</td>
+              <td>Arrival time at stop \(\ell\) (UNIX timestamp)</td>
             </tr>
 
             <tr>
-              <td>\( D_j \)</td>
-              <td>Departure time from stop \(j\) (UNIX timestamp)</td>
+              <td>\( D_\ell \)</td>
+              <td>Departure time from stop \(\ell\) (UNIX timestamp)</td>
             </tr>
 
             <tr>
-              <td>\( \tilde A_j \)</td>
-              <td>Arrival time delay at stop \(j\) (\(s\))</td>
+              <td>\( \tilde A_\ell \)</td>
+              <td>Arrival time delay at stop \(\ell\) (\(s\))</td>
             </tr>
 
             <tr>
-              <td>\( \tilde D_j \)</td>
-              <td>Departure time delay from stop \(j\) (\(s\))</td>
+              <td>\( \tilde D_\ell \)</td>
+              <td>Departure time delay from stop \(\ell\) (\(s\))</td>
+            </tr>
+
+            <tr>
+              <td>\( r_k \)</td>
+              <td>Route segment identifier</td>
             </tr>
 
             <tr>
@@ -111,13 +116,13 @@
             </tr>
 
             <tr class="danger">
-              <td>\( p_j \)</td>
-              <td>binary indicator that the vehicle stopped at stop \( j \)</td>
+              <td>\( p_\ell \)</td>
+              <td>binary indicator that the vehicle stopped at stop \( \ell \)</td>
             </tr>
 
             <tr class="danger">
-              <td>\( \bar t_j \)</td>
-              <td>dwell time at stop \( j \) (\(s\))</td>
+              <td>\( \bar t_\ell \)</td>
+              <td>dwell time at stop \( \ell \) (\(s\))</td>
             </tr>
 
             {{-- <tr>
@@ -162,35 +167,35 @@
             </tr>
 
             <tr>
-              <td>\( T^a_j \)</td>
-              <td>arrival time (UNIX timestamp) at stop \( j \)</td>
+              <td>\( T^a_\ell \)</td>
+              <td>arrival time (UNIX timestamp) at stop \( \ell \)</td>
             </tr>
 
             <tr>
-              <td>\( T^d_j \)</td>
-              <td>departure time (UNIX timestamp) at stop \( j \)</td>
+              <td>\( T^d_\ell \)</td>
+              <td>departure time (UNIX timestamp) at stop \( \ell \)</td>
             </tr>
 
             <tr>
-              <td>\( \tilde T^a_j \)</td>
-              <td>arrival delay (\( s \)) at stop \( j \)</td>
+              <td>\( \tilde T^a_\ell \)</td>
+              <td>arrival delay (\( s \)) at stop \( \ell \)</td>
             </tr>
 
             <tr>
-              <td>\( {\tilde T}^d_j \)</td>
-              <td>departure time delay (\( s \)) at stop \( j \)</td>
+              <td>\( {\tilde T}^d_\ell \)</td>
+              <td>departure time delay (\( s \)) at stop \( \ell \)</td>
             </tr>
 
             <tr>
               <td>\( \mathbf{S}^t \)</td>
               <td>scheduled arrival** times at route's stops<br>
-                \( \mathbf{S}^t = \{ S^t_j : j = 1, \ldots, M \} \)
+                \( \mathbf{S}^t = \{ S^t_\ell : \ell = 1, \ldots, L \} \)
               </td>
 
             <tr>
               <td>\( \mathbf{S}^d \)</td>
               <td>distance of stop \(j\) into route<br>
-                \( \mathbf{S}^d = \{ S^d_j : j = 1, \ldots, M \} \)
+                \( \mathbf{S}^d = \{ S^d_\ell : \ell = 1, \ldots, L \} \)
               </td>
             </tr>
           </tbody>
@@ -204,7 +209,7 @@
     <p class="small">
       <ul class="list-unstyled">
         <li><strong>*</strong> for a single given vehicle</li>
-        <li><strong>**</strong> For the first stop (\(j=1\)) and any layover stops, \(S_j\) is the departure time</li>
+        <li><strong>**</strong> For the first stop (\(\ell=1\)) and any layover stops, \(S_\ell\) is the departure time</li>
       </ul>
     </p>
   </div>
