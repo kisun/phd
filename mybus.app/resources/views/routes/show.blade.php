@@ -26,35 +26,46 @@
 @endsection
 
 @section('endmatter')
+  <script src="http://cdn.rawgit.com/chrisveness/geodesy/v1.1.1/latlon-spherical.js"></script>
   <script>
     var map;
 
     var R = 6371e3; // Earth’s mean radius in meter
-    function rad(x) {
-      return x * Math.PI / 180;
-    };
-    function deg(x) {
-      return x * 180 / Math.PI;
-    }
-
-    function getDistance(p1, p2) {
-      var dLat = rad(p2.lat() - p1.lat());
-      var dLong = rad(p2.lng() - p1.lng());
-      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(rad(p1.lat())) * Math.cos(rad(p2.lat())) *
-        Math.sin(dLong / 2) * Math.sin(dLong / 2);
-      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      var d = R * c;
-      return d; // returns the distance in meters
-    }
-    function getBearing(p1, p2) {
-      var y = Math.sin(rad(p2.lng()) - rad(p1.lng())) * Math.cos(rad(p2.lat()));
-      var x = Math.cos(rad(p1.lat())) * Math.sin(rad(p2.lat())) -
-                Math.sin(rad(p1.lat())) * Math.cos(rad(p2.lat())) * Math.cos(rad(p2.lng()) - rad(p1.lng()));
-      var brng = deg(Math.atan2(y, x));
-
-      return (brng + 360) % 360;
-    }
+    // function rad(x) {
+    //   return x * Math.PI / 180;
+    // };
+    // function deg(x) {
+    //   return x * 180 / Math.PI;
+    // }
+    //
+    // function getDistance(p1, p2) {
+    //   var dLat = rad(p2.lat() - p1.lat());
+    //   var dLong = rad(p2.lng() - p1.lng());
+    //   var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    //     Math.cos(rad(p1.lat())) * Math.cos(rad(p2.lat())) *
+    //     Math.sin(dLong / 2) * Math.sin(dLong / 2);
+    //   var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    //   var d = R * c;
+    //   return d; // returns the distance in meters
+    // }
+    // function getBearing(p1, p2) {
+    //   var y = Math.sin(rad(p2.lng()) - rad(p1.lng())) * Math.cos(rad(p2.lat()));
+    //   var x = Math.cos(rad(p1.lat())) * Math.sin(rad(p2.lat())) -
+    //             Math.sin(rad(p1.lat())) * Math.cos(rad(p2.lat())) * Math.cos(rad(p2.lng()) - rad(p1.lng()));
+    //   var brng = deg(Math.atan2(y, x));
+    //
+    //   return (brng + 360) % 360;
+    // }
+    // function getDestination(q1, theta, d) {
+    //   // q1 is a lat/lng
+    //   var phi1 = rad(q1.lat()),
+    //       lam1 = rad(q1.lng());
+    //   var phi = Math.asin(Math.sin(phi1) * Math.cos(d / R) +
+    //                       Math.cos(phi1) * Math.sin(d / R) * Math.cos(theta));
+    //   var lam = lam1 + Math.atan2(Math.sin(theta) * Math.sin(d / R) * Math.cos(phi1),
+    //                               Math.cos(d / R) - Math.sin(phi1) * Math.sin(phi));
+    //   return new google.maps.LatLng(deg(phi), deg(lam));
+    // }
 
     function initMap() {
 
@@ -109,9 +120,10 @@
       var data = [], cdist = 0;
       for (var i = 0; i < snappedPath.length; i++) {
         data[i] = {lat: snappedPath[i].lat, lng: snappedPath[i].lng, dist: cdist};
-        if (i > 0) {
-          cdist += getDistance(new google.maps.LatLng(data[i-1].lat, data[i-1].lng),
-                               new google.maps.LatLng(data[i].lat, data[i].lng));
+        if (i < snappedPath.length - 1) {
+          var p1 = new LatLon(snappedPath[i].lat, snappedPath[i].lng);
+          var p2 = new LatLon(snappedPath[i+1].lat, snappedPath[i+1].lng);
+          cdist += p1.distanceTo(p2);
         }
       }
 
@@ -135,20 +147,20 @@
           stopmarkers = [],
           intersectionMarkers = [];
 
-      for (var i = 0; i < stops.length; i++) {
-        pos = new google.maps.LatLng(parseFloat(stops[i].stop.lat),
-                                     parseFloat(stops[i].stop.lon));
-        stopmarkers[i] = new google.maps.Marker({
-          position: pos,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 4
-          },
-          draggable: false,
-          map: map,
-          zIndex: 1
-        });
-      }
+      // for (var i = 0; i < stops.length; i++) {
+      //   pos = new google.maps.LatLng(parseFloat(stops[i].stop.lat),
+      //                                parseFloat(stops[i].stop.lon));
+      //   stopmarkers[i] = new google.maps.Marker({
+      //     position: pos,
+      //     icon: {
+      //       path: google.maps.SymbolPath.CIRCLE,
+      //       scale: 4
+      //     },
+      //     draggable: false,
+      //     map: map,
+      //     zIndex: 1
+      //   });
+      // }
 
       var intersections = [
         @foreach ($intersections as $int)
@@ -323,8 +335,6 @@
         e.preventDefault();
 
         // Do segmentation:
-        var direct = new google.maps.DirectionsService();
-
         var Ns = intersections.length;
         var Data = [];
         for (j = 0; j < snappedPath.length; j++) {
@@ -334,9 +344,9 @@
         // only want intersections "on" the route - do that later ...
         for (var i = 0; i < Ns; i++) {
           var dist = 1000;
-          var p = intersections[i].pos;
+          var p = new LatLon(intersections[i].pos.lat(), intersections[i].pos.lng());
           var dit;
-
+          var wj = 0;
           for (var j = 0; j < data.length - 1; j++) {
             if (j < data.length) {
               if (Data[j].lat() == Data[j+1].lat() &
@@ -344,37 +354,46 @@
                 continue;
               }
             }
-            var q1 = Data[j];
-            var q2 = Data[j + 1];
+            var q1 = new LatLon(Data[j].lat(), Data[j].lng());
+            var q2 = new LatLon(Data[j + 1].lat(), Data[j + 1].lng());
 
-            var Delta1 = getBearing(q1, p) - getBearing(q1, q2);
-            var Delta2 = getBearing(q2, p) - getBearing(q2, q1);
+            var Delta1 = q1.bearingTo(p) - q1.bearingTo(q2);
+            var Delta2 = q2.bearingTo(p) - q2.bearingTo(q1);
+
             var r = 1000, d = 0, dx;
             if (Math.abs(Delta1) < 90 & Math.abs(Delta2) < 90) {
               // between q1 and q2
-              r = Math.asin(Math.sin(getDistance(q1, p) / R) *
-                            Math.sin(Delta1)) * R;
-              d = Math.acos(Math.cos(getDistance(q1, p) / R) / Math.cos(r / R)) * R;
+              r = p.crossTrackDistanceTo(q1, q2);
+              d = Math.acos(Math.cos(q1.distanceTo(p) / R) / Math.cos(Math.abs(r) / R)) * R;
               dx = data[j].dist + d;
+
+              // console.log("(" + j + ":" + data[j].dist + ") between ... " + r + " -> " + d);
             } else if (Math.abs(Delta1) >= 90 & Math.abs(Delta2) < 90) {
               // before q1
-              r = getDistance(q1, p);
+              r = q1.distanceTo(p);
               dx = data[j].dist;
+
+              // console.log("(" + j + ":" + data[j].dist + ") before ..." + r);
             } else {
               // after q2
-              r = getDistance(q2, p);
+              r = q2.distanceTo(p);
               dx = data[j+1].dist;
+
+              // console.log("(" + j + ":" + data[j].dist + ") after ..." + r);
             }
 
-            if (Math.abs(r) < dist) {
-              dist = r;
+            if (Math.abs(r) <= dist) {
+              dist = Math.abs(r);
               dit = dx;
+              wj = j;
             }
           }
-          if (dist > 20) {
+          if (Math.abs(dist) > 20) {
             intersectionMarkers[i].setMap(null);
           } else {
             intersections[i].dist = dit;
+            intersections[i].segment = wj;
+            intersections[i].resid = dist;
           }
         }
 
@@ -389,33 +408,46 @@
           return a.dist - b.dist;
         });
 
+
         var Ns = wps.length;
         var legs = [[]];
         var j = 0;
+        for (var i=0; i<intersectionMarkers.length; i++) {
+          intersectionMarkers[i].setMap(null);
+        }
+        // intersectionMarkers = [];
+
         for (var i=0; i<data.length-1; i++) {
-          if (wps[Math.min(Ns-1, j)].dist < data[i].dist & j != Ns) {
-            // at a cross roads!
-            // need to "create" an intermediate point:
-            var dr = wps[j].dist - data[i-1].dist;
-            var th = getBearing(Data[i-1], Data[i]);
-            var phi = Math.asin(Math.sin(rad(Data[i-1].lat())) * Math.cos(dr / R) +
-                                Math.cos(rad(Data[i-1].lat())) * Math.sin(dr / R) * Math.cos(th));
-            var lam = rad(Data[i-1].lng()) +
-                      Math.atan2(Math.sin(th) * Math.sin(dr / R) * Math.cos(rad(Data[i-1].lat())),
-                                 Math.cos(dr / R) - Math.sin(rad(Data[i-1].lat())) * Math.sin(phi));
-            legs[j].push({
-              lat: deg(phi), lon: deg(lam), dist: wps[j].dist, intersection_id: wps[j].id
-            });
-            j++;
-            legs.push([]); // add a new entry to legs
-            legs[j].push({
-              lat: deg(phi), lon: deg(lam), dist: wps[j-1].dist, intersection_id: wps[j-1].id
-            });
-          }
           legs[j].push({
             lat: data[i].lat, lon: data[i].lng, dist: data[i].dist, intersection_id: ''
           });
+          if (j == Ns) {
+            continue;
+          }
+          if (wps[j].dist < data[i+1].dist) {
+            // if the intersection is along the next segment:
+            var q1 = new LatLon(Data[i].lat(), Data[i].lng()),
+                q2 = new LatLon(Data[i+1].lat(), Data[i+1].lng()),
+                d = wps[j].dist - data[i].dist;
+
+            // we generate a point on the line:
+            var pt = q1.destinationPoint(d, q1.bearingTo(q2));
+            // intersectionMarkers.push(new google.maps.Marker({
+            //   position: {lat: pt.lat, lng: pt.lon},
+            //   map: map
+            // }));
+            legs[j].push({
+              lat: pt.lat, lon: pt.lon, dist: wps[j].dist, intersection_id: wps[j].id
+            });
+            j++;
+            legs.push([]);
+            legs[j].push({
+              lat: pt.lat, lon: pt.lon, dist: wps[j-1].dist, intersection_id: wps[j-1].id
+            });
+          }
+
         }
+
 
         shapePath.setMap(null);
         var legPaths = [];
@@ -434,16 +466,26 @@
           legPaths[i].setMap(map);
         }
 
-        // $.ajax({
-        //   url: "{{ url('/api/route_shapes/' . $route->id) }}",
-        //   type: "POST",
-        //   data: {
-        //     legs: legs
-        //   },
-        //   success: function(response) {
-        //     console.log(response);
-        //   }
-        // })
+        // Delete old shapes:
+        $.ajax({
+          url: "{{ url('/api/route_shapes/' . $route->id) }}",
+          type: "DELETE",
+          async: false
+        });
+        // Create each LEG
+        for (var i = 0; i < legs.length; i++) {
+          $.ajax({
+            url: "{{ url('/api/route_shapes/' . $route->id) }}",
+            type: "POST",
+            data: {
+              leg: legs[i],
+              seq: i
+            },
+            success: function(response) {
+              console.log(response);
+            }
+          });
+        }
       });
     }
   </script>
