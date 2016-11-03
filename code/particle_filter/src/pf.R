@@ -39,6 +39,7 @@ pf <- function(con, vid, N = 500,
     colnames(schedule) <- gsub("pivot.", "", colnames(schedule))
     shape <- info$shape
     Sd <- schedule$shape_dist_traveled
+    Rd <- tapply(shape$dist_traveled, shape$leg, min)
     
     sx <- (deg2rad(shape$lon) - deg2rad(vp$position_longitude)) * cos(deg2rad(vp$position_latitude))
     sy <- deg2rad(shape$lat) - deg2rad(vp$position_latitude)
@@ -61,8 +62,8 @@ pf <- function(con, vid, N = 500,
                                 velocity = runif(N, 0, 16))            
         
         ## determine which segment of the route each particle is on
-        particles$segment <- 1# sapply(particles$distance_into_trip,
-                              #      function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
+        particles$segment <- sapply(particles$distance_into_trip,
+                                    function(x) which(Rd > x)[1L] - 1)
         if (!missing(speed)) 
             particles$velocity <- msm::rtnorm(N, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
                                               lower = 0, upper = 16)        
@@ -85,7 +86,7 @@ pf <- function(con, vid, N = 500,
                 msm::rtnorm(nrow(particles), particles$velocity, sd = 5, lower = 2, upper = 16)
 
         particles$segment <- sapply(particles$distance_into_trip,
-                                    function(x) which(schedule$shape_dist_traveled > x)[1L] - 1)
+                                    function(x) which(shape$shape_dist_traveled > x)[1L] - 1)
         particles$arrival_time <- particles$departure_time <- NaN
     } else {
         delta <- vp$timestamp - particles$timestamp[1L]

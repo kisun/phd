@@ -586,45 +586,45 @@ for ( i in 1:length(trips)) {
 
 ind <- which(vps$trip_start_date == "2016-10-26")
 infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
-    fromJSON(sprintf("http://130.216.50.187:8000/api/shape_schedule/%s", ID), flatten = TRUE)
+    res <- fromJSON(sprintf("http://130.216.50.187:8000/api/shape_schedule/%s", ID), flatten = TRUE)
+    shape <- res$shape
+    if ("segment_info.id" %in% names(shape)) {
+        Shape <- shape$segment_info.shape_points
+        dmax <- cumsum(c(0, sapply(Shape, function(x) max(x$dist_traveled))))
+        invisible(lapply(1:length(Shape), function(i) {
+            Shape[[i]]$dist_traveled <<- Shape[[i]]$dist_traveled + dmax[i]
+            Shape[[i]]$leg <<- i
+        }))
+        shape <- do.call(rbind, Shape)
+        rm(Shape)
+    } else {
+        shape$segment <-
+            sapply(shape$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
+    }
+    res$shape <- shape
+    res
 })
 names(infoList) <- unique(vps$trip_id[ind])
 
 N <- 500
 shape <- infoList[[1]]$shape
-if ("segment_info.id" %in% names(shape)) {
-    Shape <- shape$segment_info.shape_points
-    dmax <- cumsum(c(0, sapply(Shape, function(x) max(x$dist_traveled))))
-    invisible(lapply(1:length(Shape), function(i) {
-        Shape[[i]]$dist_traveled <<- Shape[[i]]$dist_traveled + dmax[i]
-        Shape[[i]]$leg <<- i
-    }))
-    shape <- do.call(rbind, Shape)
-    rm(Shape)
-} else {
-    shape$segment <-
-        sapply(shape$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
-}
 schedule <- infoList[[1]]$schedule
 M <- length(unique(shape$segment_id))
 L <- nrow(schedule) ## number of STOPS
 kf.t <- vps[ind[1], "timestamp"]
 ds <- schedule$pivot.shape_dist_traveled # stop distances
+dr <- tapply(shape$dist_traveled, shape$leg, min)
 B0 <- matrix(rep(10, M), ncol = 1)
 P0 <- 10 * diag(M)
 A <- diag(M)
 H <- diag(M)
 delta <- 5 * 60
 speed <- list(B = B0, P = P0, N = N, M = M, A = A, H = H, t = kf.t, delta = delta)
-PRED <- array(NA, dim = c(M, 500, length(ind), 4))
+PRED <- NULL ## a simple CSV file ... but one for each iteration
 BHist <- list(mean = speed$B, var = cbind(diag(speed$P)), t = speed$t)
 MAX.speed <- 60 * 1000 / 60^2
 MIN.speed <- 10 * 1000 / 60^2
 
-library(iNZightMaps)
-mobj <- iNZightMap(~lat, ~lon, data = shape)
-plot(mobj, pch = NA, lwd = 3, colby = factor(shape$segment_id, levels = sample(unique(shape$segment_id))), join = TRUE,
-     varnames = list(colby = "segment"))
 
 
 ## DELETE PARTICLES!!!!!
@@ -643,37 +643,37 @@ for (k in (k+1):length(ind)) {
     }
     res <- pf(con, vps[ind[k], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[k], ], speed = speed,
               info = infoList[[vps[ind[k], "trip_id"]]], SPEED.range = c(MIN.speed, MAX.speed))
-    if (res <= 0) {
-        dat <- dbGetQuery(con,
-                          sprintf("SELECT distance_into_trip, velocity, arrival_time, departure_time, segment FROM particles WHERE vehicle_id = '%s' AND active",
-                                  vps[ind[k], "vehicle_id"]))
-        sk <- dat$segment
-        St <- as.numeric(as.POSIXct(paste(vps$trip_start_date[1],
-                                          infoList[[vps[ind[k], "trip_id"]]]$schedule$pivot.arrival_time)))
-        tstart <- min(St)
-        St <- St - tstart
-        invisible(sapply(1:length(sk), function(i) {
-            if (sk[i] < M) {
-                PRED[-(1:sk[i]), i, k, 1] <<- St[-(1:sk[i])]
-                PRED[-(1:sk[i]), i,  k, 2] <<-
-                    St[-(1:sk[i])] + (ifelse(is.na(dat$departure_time[i]),
-                                             dat$arrival_time[i], dat$departure_time[i]) - St[sk[i]]) - tstart
-                PRED[-(1:sk[i]), i, k, 3] <<-
-                    vps[ind[k], "timestamp"] + (ds[-(1:sk[i])] - dat$distance_into_trip[i]) / dat$velocity[i] +
-                    cumsum(rbinom(M - sk[i], 1, 0.5) * (6 + rexp(M - sk[i], 1 / 5))) - tstart
-                PRED[-(1:sk[i]), i, k, 4] <<-
-                    vps[ind[k], "timestamp"] +
-                    (ds[sk[i] + 1] - dat$distance_into_trip[i]) / msm::rtnorm(1, speed$B[sk[i]],
-                                                                              diag(speed$P)[sk[i]],
-                                                                              MIN.speed, MAX.speed) +
-                    cumsum((ds[(sk[i]+1):M] - ds[sk[i]:(M-1)]) /
-                           msm::rtnorm(M - sk[i], speed$B[sk[i]:M],
-                                       diag(speed$P)[sk[i]:M], MIN.speed, MAX.speed)) +
-                    cumsum(rbinom(M - sk[i], 1, 0.5) * (6 + rexp(M - sk[i], 1 / 5))) - tstart
-            }
-            NULL
-        }))
-    }
+    ## if (res <= 0) {
+    ##     dat <- dbGetQuery(con,
+    ##                       sprintf("SELECT distance_into_trip, velocity, arrival_time, departure_time, segment FROM particles WHERE vehicle_id = '%s' AND active",
+    ##                               vps[ind[k], "vehicle_id"]))
+    ##     sk <- dat$segment
+    ##     St <- as.numeric(as.POSIXct(paste(vps$trip_start_date[1],
+    ##                                       infoList[[vps[ind[k], "trip_id"]]]$schedule$pivot.arrival_time)))
+    ##     tstart <- min(St)
+    ##     St <- St - tstart
+    ##     invisible(sapply(1:length(sk), function(i) {
+    ##         if (sk[i] < M) {
+    ##             PRED[-(1:sk[i]), i, k, 1] <<- St[-(1:sk[i])]
+    ##             PRED[-(1:sk[i]), i,  k, 2] <<-
+    ##                 St[-(1:sk[i])] + (ifelse(is.na(dat$departure_time[i]),
+    ##                                          dat$arrival_time[i], dat$departure_time[i]) - St[sk[i]]) - tstart
+    ##             PRED[-(1:sk[i]), i, k, 3] <<-
+    ##                 vps[ind[k], "timestamp"] + (ds[-(1:sk[i])] - dat$distance_into_trip[i]) / dat$velocity[i] +
+    ##                 cumsum(rbinom(M - sk[i], 1, 0.5) * (6 + rexp(M - sk[i], 1 / 5))) - tstart
+    ##             PRED[-(1:sk[i]), i, k, 4] <<-
+    ##                 vps[ind[k], "timestamp"] +
+    ##                 (ds[sk[i] + 1] - dat$distance_into_trip[i]) / msm::rtnorm(1, speed$B[sk[i]],
+    ##                                                                           diag(speed$P)[sk[i]],
+    ##                                                                           MIN.speed, MAX.speed) +
+    ##                 cumsum((ds[(sk[i]+1):M] - ds[sk[i]:(M-1)]) /
+    ##                        msm::rtnorm(M - sk[i], speed$B[sk[i]:M],
+    ##                                    diag(speed$P)[sk[i]:M], MIN.speed, MAX.speed)) +
+    ##                 cumsum(rbinom(M - sk[i], 1, 0.5) * (6 + rexp(M - sk[i], 1 / 5))) - tstart
+    ##         }
+    ##         NULL
+    ##     }))
+    ## }
 }; close(pb)
 
 ## save(PRED, file = "predictions.rda")
