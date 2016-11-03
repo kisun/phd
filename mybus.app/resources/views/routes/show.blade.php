@@ -35,25 +35,25 @@
     function initMap() {
 
       var data = [
-        @foreach ($shape as $point)
-          { lat: {{ $point->lat }}, lng: {{ $point->lon }}, dist: {{ $point->dist_traveled }} },
+        @foreach ($shape as $segment)
+          @if (get_class($segment) == "App\SegmentShape")
+            @foreach ($segment->segment_info->shape_points as $point)
+              { lat: {{ $point->lat }}, lng: {{ $point->lon }}, dist: {{ $point->dist_traveled }} },
+            @endforeach
+          @else
+            { lat: {{ $segment->lat }}, lng: {{ $segment->lon }}, dist: {{ $segment->dist_traveled }} },
+          @endif
         @endforeach
       ];
 
       var stops = {!! $stops->toJson() !!};
 
-      var pos = {
-        lat: (
-          @foreach($shape as $point)
-            {{ $point->lat }} +
-          @endforeach
-          + 0) / {{ count($shape) }},
-        lng: (
-          @foreach($shape as $point)
-            {{ $point->lon }} +
-          @endforeach
-          + 0) / {{ count($shape) }}
-      };
+      var latSum = 0, lonSum = 0;
+      for (var i = 0; i < data.length; i++) {
+        latSum += data[i].lat;
+        lonSum += data[i].lng;
+      }
+      var pos = { lat: latSum / data.length, lng: lonSum / data.length };
 
       // regenerate the shape, nicer!
       // Convert AT shape to Google Snap-to-roads:
@@ -98,6 +98,7 @@
         disableDefaultUI: true,
         mapTypeControl: true
       });
+
       map.setTilt(0);
       var shapePath = new google.maps.Polyline({
         path: data,
