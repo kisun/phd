@@ -606,6 +606,20 @@ infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
 })
 names(infoList) <- unique(vps$trip_id[ind])
 
+
+## library(iNZightMaps)
+
+## mobj <- iNZightMap(~lat, ~lon, data = infoList[[1]]$shape)
+## plot(mobj, join = TRUE, pch = NA, lwd = 4)
+## with(infoList[[1]]$schedule, addPoints(lat, lon, pch = 19, gpar = list(col = "#990000", cex = 0.5)))
+## res <- invisible({
+##     sapply(infoList[[1]]$schedule$pivot.shape_dist_traveled, function(x) {
+##         y <- h(x, infoList[[1]]$shape)
+##         addPoints(y[1], y[2], pch = 19, gpar = list(cex = 0.3))
+##     })
+## })
+
+
 N <- 500
 shape <- infoList[[1]]$shape
 schedule <- infoList[[1]]$schedule
@@ -620,7 +634,7 @@ A <- diag(M)
 H <- diag(M)
 delta <- 5 * 60
 speed <- list(B = B0, P = P0, N = N, M = M, A = A, H = H, t = kf.t, delta = delta)
-PRED <- NULL ## a simple CSV file ... but one for each iteration
+PRED <- function(m, t) sprintf("predictions/method_%d/%d.csv", m, t)
 BHist <- list(mean = speed$B, var = cbind(diag(speed$P)), t = speed$t)
 MAX.speed <- 60 * 1000 / 60^2
 MIN.speed <- 10 * 1000 / 60^2
@@ -641,8 +655,12 @@ for (k in (k+1):length(ind)) {
         BHist$var <- cbind(BHist$var, diag(speed$P))
         BHist$t <- c(BHist$t, speed$t)
     }
+    
+    k <- k+1
     res <- pf(con, vps[ind[k], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[k], ], speed = speed,
-              info = infoList[[vps[ind[k], "trip_id"]]], SPEED.range = c(MIN.speed, MAX.speed))
+              info = infoList[[vps[ind[k], "trip_id"]]], SPEED.range = c(MIN.speed, MAX.speed), draw = TRUE)
+
+    
     ## if (res <= 0) {
     ##     dat <- dbGetQuery(con,
     ##                       sprintf("SELECT distance_into_trip, velocity, arrival_time, departure_time, segment FROM particles WHERE vehicle_id = '%s' AND active",

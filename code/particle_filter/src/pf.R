@@ -59,11 +59,12 @@ pf <- function(con, vid, N = 500,
         }
         particles <- data.frame(vehicle_id = rep(vid, N),
                                 distance_into_trip = runif(N, min(sh.near$dist_traveled), max(sh.near$dist_traveled)),
-                                velocity = runif(N, 0, 16))            
+                                velocity =  runif(N, 2, 16))            
         
         ## determine which segment of the route each particle is on
-        particles$segment <- sapply(particles$distance_into_trip,
-                                    function(x) which(Rd > x)[1L] - 1)
+        particles$stop_index <- sapply(particles$distance_into_trip, function(x) which(Rd > x)[1L] - 1)
+        particles$segment_index <- sapply(particles$distance_into_trip, function(x) which(Sd > x)[1L] - 1)
+        
         if (!missing(speed)) 
             particles$velocity <- msm::rtnorm(N, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
                                               lower = 0, upper = 16)        
@@ -85,8 +86,9 @@ pf <- function(con, vid, N = 500,
         particles$velocity <- 
                 msm::rtnorm(nrow(particles), particles$velocity, sd = 5, lower = 2, upper = 16)
 
-        particles$segment <- sapply(particles$distance_into_trip,
-                                    function(x) which(shape$shape_dist_traveled > x)[1L] - 1)
+        particles$stop_index <- sapply(particles$distance_into_trip, function(x) which(Rd > x)[1L] - 1)
+        particles$segment_index <- sapply(particles$distance_into_trip, function(x) which(Sd > x)[1L] - 1)
+
         particles$arrival_time <- particles$departure_time <- NaN
     } else {
         delta <- vp$timestamp - particles$timestamp[1L]
@@ -125,19 +127,6 @@ pf <- function(con, vid, N = 500,
                   gpar = list(col = "lightblue", alpha = 0.9, cex = 0.1))
     }
 
-    ## theta <- seq(0, 2 * pi, length.out = 101L)
-    ## xx <- sig.xy * cos(theta)
-    ## yy <- sig.xy * sin(theta)
-
-    if (draw) {
-        addPoints(pts[1L, wi], pts[2L, wi], pch = 19,
-                  gpar = list(col = "orangered", alpha = 0.8, cex = 0.5))
-        with(vp, addPoints(position_latitude, position_longitude, pch = 19,
-                           gpar = list(col = "green", cex = 0.3)))
-    }
-
-
-    #llhood <- dmvnorm(cbind(px, py), c(0, 0), diag(2L) * sig.xy^2, log = TRUE)
     llhood <- - 1 / (2 * sig.xy^2) * ( px^2 + py^2 )
     #if (!missing(speed))
     #    llhood <- llhood + dnorm(particles$velocity,
@@ -151,19 +140,25 @@ pf <- function(con, vid, N = 500,
     wi <- sample(nrow(particles), N, replace = TRUE, prob = wt)
     parents <- particles$id[wi]
     particles <- particles[wi, ]
+    if (draw) {
+        addPoints(pts[1L, wi], pts[2L, wi], pch = 19,
+                  gpar = list(col = "orangered", alpha = 0.8, cex = 0.5))
+        with(vp, addPoints(position_latitude, position_longitude, pch = 19,
+                           gpar = list(col = "green", cex = 0.3)))
+    }
 
     ## set old particles to inactive
     dbGetQuery(con, sprintf("UPDATE particles SET active=FALSE WHERE vehicle_id='%s' AND active=TRUE", vid))
 
     qry <- paste0(
-        "INSERT INTO particles (vehicle_id, distance_into_trip, velocity, segment, arrival_time, ",
-        "departure_time, parent, lat, lon, trip_id, timestamp, active) VALUES ",
+        "INSERT INTO particles (vehicle_id, distance_into_trip, velocity, stop_index, arrival_time, ",
+        "departure_time, parent, lat, lon, trip_id, timestamp, active, segment_index) VALUES ",
         with(particles, paste0("('", vehicle_id, "',", round(distance_into_trip, 2L),
-                               ",", round(velocity, 3L), ",", segment, ",",
+                               ",", round(velocity, 3L), ",", stop_index, ",",
                                ifelse(is.na(arrival_time), 'NULL', round(arrival_time)), ",",
                                ifelse(is.na(departure_time), 'NULL', round(departure_time)),
                                ",", if (NEW) 'NULL' else parents, ",", pts[1L, wi], ",", pts[2L, wi], ",'",
-                               vp$trip_id, "',", vp$timestamp, ",TRUE)",
+                               vp$trip_id, "',", vp$timestamp, ",TRUE,", segment_index, ")",
                                collapse = ", ")))
     dbGetQuery(con, qry)
 
@@ -184,9 +179,10 @@ transitionC <- function(p, e = parent.frame()) {
     result <- .C("transition",
                  d = p$distance_into_trip,
                  v = p$velocity,
-                 s = as.integer(p$segment),
+                 s = as.integer(p$stop_index),
                  A = ifelse(is.na(p$arrival_time), NaN, p$arrival_time),
                  D = ifelse(is.na(p$departure_time), NaN, p$departure_time),
+                 r = as.integer(p$segment_index),
                  ts = p$timestamp,
                  N = as.integer(nrow(p)),
                  delta = e$delta, gamma = e$gamma, pi = e$pi, tau = e$tau, rho = e$rho, upsilon = e$upsilon,
@@ -197,9 +193,10 @@ transitionC <- function(p, e = parent.frame()) {
 
     p$distance_into_trip <- result$d
     p$velocity <- result$v
-    p$segment <- result$s
+    p$stop_index <- result$s
     p$arrival_time <- result$A
     p$departure_time <- result$D
+    p$segment_index <- result$r
 
     invisible(p)
 }

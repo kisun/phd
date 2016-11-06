@@ -18,7 +18,7 @@ double rexp(double mean)
 }
 
 
-void transition(double *d, double *v, int *s, double *A, double *D, double *ts, int *N,
+void transition(double *d, double *v, int *s, double *A, double *D, int *r, double *ts, int *N,
 		double *delta, double *gamma, double *pi, double *tau, double *rho, double *upsilon,
 		int *M, double *nu, double *xi, double *Sd,
 		double *sMAX, double *sMIN,
@@ -98,12 +98,13 @@ void transition(double *d, double *v, int *s, double *A, double *D, double *ts, 
 	  // still time left --- drive off!
 	  D[i] = A[i] + tbar;
 	  // adjust speed for the new segment
-	  double speedProposal = truncated_normal_ab_sample(v[i], 6, *sMIN, *sMAX, &seed[i]);
+	  /*double speedProposal = truncated_normal_ab_sample(v[i], 6, *sMIN, *sMAX, &seed[i]);
 	  double alpha = truncated_normal_ab_pdf(speedProposal, nu[s[i]], xi[s[i]], *sMIN, *sMAX) /
 	    truncated_normal_ab_pdf(v[i], nu[s[i]-1], xi[s[i]-1], *sMIN, *sMAX);
 	  if (runif() < alpha) {
 	    v[i] = speedProposal;
-	  }
+	    }*/
+	  
 	}
             
       } else {
