@@ -43,6 +43,17 @@ Route::get('/shape_schedule/{trip}', function(App\Trip $trip) {
     ], 200, [], JSON_NUMERIC_CHECK);
 });
 
+Route::put('/stop_times/{trip}/{stop_sequence}', function(Request $request, App\Trip $trip, $stop_sequence) {
+    $route = $trip->route;
+    if (!is_null($request->shape_dist_traveled)) {
+        $qry = "UPDATE stop_times SET shape_dist_traveled = " . $request->shape_dist_traveled .
+                      " WHERE trip_id IN (SELECT id FROM trips WHERE route_id IN " .
+                      " (SELECT id FROM routes WHERE route_id='" . $route->route_id .
+                      "')) AND stop_sequence=" . $stop_sequence;
+        DB::statement($qry);
+        return response()->json('OK');
+    }
+});
 
 
 Route::get('/delays', function() {

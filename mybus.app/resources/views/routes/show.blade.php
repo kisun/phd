@@ -82,6 +82,22 @@
           async: false
         });
       }
+      // directions?
+      // var directionsService = new google.maps.DirectionsService(),
+      //     directionsDisplay = new google.maps.DirectionsRenderer();
+      // directionsService.route({
+      //   origin: { lat: data[0].lat, lng: data[0].lng },
+      //   destination: { lat: data[data.length - 1].lat, lng: data[data.length - 1].lng },
+      //   travelMode: 'DRIVING'
+      // }, function(result, status) {
+      //   if (status == 'OK') {
+      //     console.log('OK');
+      //     directionsDisplay.setDirections(result);
+      //   } else {
+      //     console.log(status);
+      //   }
+      // });
+
       var data = [], cdist = 0;
       for (var i = 0; i < snappedPath.length; i++) {
         data[i] = {lat: snappedPath[i].lat, lng: snappedPath[i].lng, dist: cdist};
@@ -317,20 +333,14 @@
               r = p.crossTrackDistanceTo(q1, q2);
               d = Math.acos(Math.cos(q1.distanceTo(p) / R) / Math.cos(Math.abs(r) / R)) * R;
               dx = data[j].dist + d;
-
-              // console.log("(" + j + ":" + data[j].dist + ") between ... " + r + " -> " + d);
             } else if (Math.abs(Delta1) >= 90 & Math.abs(Delta2) < 90) {
               // before q1
               r = q1.distanceTo(p);
               dx = data[j].dist;
-
-              // console.log("(" + j + ":" + data[j].dist + ") before ..." + r);
             } else {
               // after q2
               r = q2.distanceTo(p);
               dx = data[j+1].dist;
-
-              // console.log("(" + j + ":" + data[j].dist + ") after ..." + r);
             }
 
             if (Math.abs(r) <= dist) {
@@ -380,13 +390,8 @@
             var q1 = new LatLon(Data[i].lat(), Data[i].lng()),
                 q2 = new LatLon(Data[i+1].lat(), Data[i+1].lng()),
                 d = wps[j].dist - data[i].dist;
-
             // we generate a point on the line:
             var pt = q1.destinationPoint(d, q1.bearingTo(q2));
-            // intersectionMarkers.push(new google.maps.Marker({
-            //   position: {lat: pt.lat, lng: pt.lon},
-            //   map: map
-            // }));
             legs[j].push({
               lat: pt.lat, lon: pt.lon, dist: wps[j].dist, intersection_id: wps[j].id
             });
@@ -433,9 +438,63 @@
               seq: i
             },
             success: function(response) {
-              console.log(response);
+
             }
           });
+        }
+
+        // Fix stop distance_into_trip:
+        var stopMarkers = [];
+        for (var i = 0; i < stops.length; i++) {
+          var p = new LatLon(parseFloat(stops[i].stop.lat), parseFloat(stops[i].stop.lon));
+          var dist = 1000, dit = 0, wj = 0;
+
+          stopMarkers[i] = new google.maps.Marker({
+            position: {lat: p.lat, lng: p.lon},
+            map: map
+          });
+
+          for (var j = 0; j < data.length - 1; j++) {
+            if (Data[j].lat() == Data[j+1].lat() &
+                Data[j].lng() == Data[j+1].lng()) {
+              continue;
+            }
+
+            var q1 = new LatLon(Data[j].lat(), Data[j].lng());
+            var q2 = new LatLon(Data[j + 1].lat(), Data[j + 1].lng());
+
+            var Delta1 = q1.bearingTo(p) - q1.bearingTo(q2);
+            var Delta2 = q2.bearingTo(p) - q2.bearingTo(q1);
+
+            var r = 1000, d = 0, dx;
+            if (Math.abs(Delta1) < 90 & Math.abs(Delta2) < 90) {
+              // between q1 and q2
+              r = p.crossTrackDistanceTo(q1, q2);
+              d = Math.acos(Math.cos(q1.distanceTo(p) / R) / Math.cos(Math.abs(r) / R)) * R;
+              dx = data[j].dist + d;
+            } else if (Math.abs(Delta1) >= 90 & Math.abs(Delta2) < 90) {
+              // before q1
+              r = q1.distanceTo(p);
+              dx = data[j].dist;
+            } else {
+              // after q2
+              r = q2.distanceTo(p);
+              dx = data[j+1].dist;
+            }
+
+            if (Math.abs(r) <= dist) {
+              dist = Math.abs(r);
+              dit = dx;
+              wj = j;
+            }
+          }
+          $.ajax({
+            url: "{{ url('/api/stop_times') }}" + "/" + stops[i].trip_id + "/" + stops[i].stop_sequence,
+            type: "PUT",
+            data: { shape_dist_traveled: dit },
+            success: function(data) { console.log(data); }
+          })
+          console.log("Stop " + stops[i].stop_sequence + ": " + dit + "m");
         }
       });
     }
