@@ -62,15 +62,16 @@ The vehicle state is
   \label{eq:vehicle_state}
   \bX_k = 
   \begin{bmatrix}
-    d_k \\ v_k \\ s_k \\ T_{s_k} \\ D_{s_k}
+    d_k \\ v_k \\ s_k \\ A_{s_k} \\ D_{s_k} \\ r_k
   \end{bmatrix} =
   \left[
     \begin{array}{l}
       \text{distance into trip (m)} \\
       \text{velocity (speed) of the vehicle } (ms^{-1}) \\
-      \text{(route) segment identifier / last stop} \\
+      \text{stop index} \\
       \text{arrival time at the last stop} \\
-      \text{departure time from the last stop}
+      \text{departure time from the last stop} \\
+      \text{segment index}
     \end{array}
   \right].
 \end{equation}
