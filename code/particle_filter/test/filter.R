@@ -1,5 +1,5 @@
 setwd(file.path(gsub(".code.particle_filter.+", "", getwd()),
-              "code", "particle_filter")); getwd()
+                "code", "particle_filter")); getwd()
 .libPaths("../../.Rlibrary")
 
 library(RPostgreSQL)
@@ -648,19 +648,17 @@ pb <- txtProgressBar(0, length(ind), style = 3)
 for (k in (k+1):length(ind)) {
     setTxtProgressBar(pb, k)
     ## update the speed KF:
-    if (vps[ind[k], "timestamp"] > speed$t + speed$delta) {
-        speed <- update(speed, q = 1)
-        if (any(diag(speed$P) < 0.000001)) diag(speed$P) <- pmax(0.000001, diag(speed$P))
-        BHist$mean <- cbind(BHist$mean, speed$B)
-        BHist$var <- cbind(BHist$var, diag(speed$P))
-        BHist$t <- c(BHist$t, speed$t)
-    }
-    
-    k <- k+1
+    ## if (vps[ind[k], "timestamp"] > speed$t + speed$delta) {
+    ##     speed <- update(speed, q = 1)
+    ##     if (any(diag(speed$P) < 0.000001)) diag(speed$P) <- pmax(0.000001, diag(speed$P))
+    ##     BHist$mean <- cbind(BHist$mean, speed$B)
+    ##     BHist$var <- cbind(BHist$var, diag(speed$P))
+    ##     BHist$t <- c(BHist$t, speed$t)
+    ## }
+    dev.hold()
     res <- pf(con, vps[ind[k], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[k], ], speed = speed,
               info = infoList[[vps[ind[k], "trip_id"]]], SPEED.range = c(MIN.speed, MAX.speed), draw = TRUE)
-
-    
+    dev.flush()
     ## if (res <= 0) {
     ##     dat <- dbGetQuery(con,
     ##                       sprintf("SELECT distance_into_trip, velocity, arrival_time, departure_time, segment FROM particles WHERE vehicle_id = '%s' AND active",

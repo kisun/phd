@@ -12,7 +12,7 @@ double runif()
 }
 
 double rexp(double mean)
-{  
+{
   double u = runif();
   return - log(u) * mean;
 }
@@ -27,20 +27,20 @@ void transition(double *d, double *v, int *s, double *A, double *D, int *r, doub
   srand((unsigned) seed[0]);
 
   //puts("\n\nStarting loop ...\n");
-  
+
   for (int i=0;i<*N;i++) {
     //printf("\nIteration %d: ", i);
     if (s[i] >= *M) continue;
     double tr = *delta;
-    
+
     // first off, the bus might be stuck at lights or at a stop
     //printf("A ");
     double wait = 0;
     if (isnan(D[i]) && !isnan(A[i])) {
       // The bus is at a stop.
       if (*ts - A[i] < *gamma) {
-	// must wait AT LEAST gamma seconds:
-	wait += *gamma - *ts + A[i];
+      	// must wait AT LEAST gamma seconds:
+      	wait += *gamma - *ts + A[i];
       }
 
       // sample random dwell time
@@ -48,7 +48,7 @@ void transition(double *d, double *v, int *s, double *A, double *D, int *r, doub
       tr -= wait;
 
       if (tr <= 0) {
-	continue;
+      	continue;
       }
 
       // bus has left: update departure time:
@@ -57,9 +57,9 @@ void transition(double *d, double *v, int *s, double *A, double *D, int *r, doub
       // The bus is not at a stop ...
       wait += (runif() < *rho ? 1 : 0) * rexp(*upsilon);
       tr -= wait;
-    
+
       if (tr <= 0) {
-	continue;
+      	continue;
       }
     }
 
@@ -75,42 +75,42 @@ void transition(double *d, double *v, int *s, double *A, double *D, int *r, doub
 
       //printf("D ");
       if (tr > eta) {
-	tr -= eta;
-	// Bus will reach the next stop; dwell time!
-	d[i] = ds;
-	s[i] = s[i] + 1;
-	if (isnan(D[i])) {
-	  A[i] = *ts + eta;
-	} else {
-	  A[i] = (*ts > D[i] ? *ts : D[i]) + eta;
-	}
-	D[i] = 0.0 / 0.0;
+      	tr -= eta;
+      	// Bus will reach the next stop; dwell time!
+      	d[i] = ds;
+      	s[i] = s[i] + 1;
+      	if (isnan(D[i])) {
+      	  A[i] = *ts + eta;
+      	} else {
+      	  A[i] = (*ts > D[i] ? *ts : D[i]) + eta;
+      	}
+      	D[i] = 0.0 / 0.0;
 
-	if (s[i] >= *M) {
-	  break;
-	}
-      
-	// DWELL time
-	double tbar = (runif() < *pi ? 1 : 0) * (*gamma + rexp(*tau));
-	tr -= tbar;
-      
-	if (tr > 0) {
-	  // still time left --- drive off!
-	  D[i] = A[i] + tbar;
-	  // adjust speed for the new segment
-	  /*double speedProposal = truncated_normal_ab_sample(v[i], 6, *sMIN, *sMAX, &seed[i]);
-	  double alpha = truncated_normal_ab_pdf(speedProposal, nu[s[i]], xi[s[i]], *sMIN, *sMAX) /
-	    truncated_normal_ab_pdf(v[i], nu[s[i]-1], xi[s[i]-1], *sMIN, *sMAX);
-	  if (runif() < alpha) {
-	    v[i] = speedProposal;
-	    }*/
-	  
-	}
-            
+      	if (s[i] >= *M) {
+      	  break;
+      	}
+
+      	// DWELL time
+      	double tbar = (runif() < *pi ? 1 : 0) * (*gamma + rexp(*tau));
+      	tr -= tbar;
+
+      	if (tr > 0) {
+      	  // still time left --- drive off!
+      	  D[i] = A[i] + tbar;
+      	  // adjust speed for the new segment
+      	  /*double speedProposal = truncated_normal_ab_sample(v[i], 6, *sMIN, *sMAX, &seed[i]);
+      	  double alpha = truncated_normal_ab_pdf(speedProposal, nu[s[i]], xi[s[i]], *sMIN, *sMAX) /
+      	    truncated_normal_ab_pdf(v[i], nu[s[i]-1], xi[s[i]-1], *sMIN, *sMAX);
+      	  if (runif() < alpha) {
+      	    v[i] = speedProposal;
+      	    }*/
+
+      	}
+
       } else {
-	// Bus isn't going to reach it ... stop wherever it gets to
-	d[i] += tr * v[i];
-	tr = 0.0;
+      	// Bus isn't going to reach it ... stop wherever it gets to
+      	d[i] += tr * v[i];
+      	tr = 0.0;
       }
     }
   }

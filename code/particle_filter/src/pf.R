@@ -58,15 +58,19 @@ pf <- function(con, vid, N = 500,
             return(3)
         }
         particles <- data.frame(vehicle_id = rep(vid, N),
-                                distance_into_trip = runif(N, min(sh.near$dist_traveled), max(sh.near$dist_traveled)),
+                                distance_into_trip =
+                                    runif(N, min(sh.near$dist_traveled), max(sh.near$dist_traveled)),
                                 velocity =  runif(N, 2, 16))            
         
         ## determine which segment of the route each particle is on
-        particles$stop_index <- sapply(particles$distance_into_trip, function(x) which(Rd > x)[1L] - 1)
-        particles$segment_index <- sapply(particles$distance_into_trip, function(x) which(Sd > x)[1L] - 1)
+        particles$stop_index <- sapply(particles$distance_into_trip,
+                                       function(x) if (max(Rd) <= x) length(Rd) else which(Rd > x)[1L] - 1)
+        particles$segment_index <- sapply(particles$distance_into_trip,
+                                          function(x) if (max(Sd) <= x) length(Sd) else which(Sd > x)[1L] - 1)
         
         if (!missing(speed)) 
-            particles$velocity <- msm::rtnorm(N, speed$B[particles$segment], sqrt(diag(speed$P)[particles$segment]),
+            particles$velocity <- msm::rtnorm(N, speed$B[particles$segment],
+                                              sqrt(diag(speed$P)[particles$segment]),
                                               lower = 0, upper = 16)        
         particles$arrival_time <- vp$timestamp
         particles$departure_time <- NaN
@@ -82,12 +86,15 @@ pf <- function(con, vid, N = 500,
             return(3)
         }
         
-        particles$distance_into_trip <- runif(nrow(particles), min(sh.near$dist_traveled), max(sh.near$dist_traveled))
+        particles$distance_into_trip <-
+            runif(nrow(particles), min(sh.near$dist_traveled), max(sh.near$dist_traveled))
         particles$velocity <- 
                 msm::rtnorm(nrow(particles), particles$velocity, sd = 5, lower = 2, upper = 16)
 
-        particles$stop_index <- sapply(particles$distance_into_trip, function(x) which(Rd > x)[1L] - 1)
-        particles$segment_index <- sapply(particles$distance_into_trip, function(x) which(Sd > x)[1L] - 1)
+        particles$stop_index <- sapply(particles$distance_into_trip,
+                                       function(x) if (max(Rd) <= x) length(Rd) else which(Rd >= x)[1L] - 1)
+        particles$segment_index <- sapply(particles$distance_into_trip,
+                                          function(x) if (max(Sd) <= x) length(Sd) else which(Sd >= x)[1L] - 1)
 
         particles$arrival_time <- particles$departure_time <- NaN
     } else {
@@ -98,7 +105,6 @@ pf <- function(con, vid, N = 500,
         particles <- transitionC(particles)
     }
 
-
     if (draw) {
         wi <- which(dist < 1000)
         if (length(wi) == 0) {
@@ -106,13 +112,30 @@ pf <- function(con, vid, N = 500,
             wi <- 1:length(dist)
         }
         sh.near <- shape[min(wi):max(wi), ]
-        mobj <- iNZightMap(~lat, ~lon, data = shape)
+
+        grid.newpage()
+        pushViewport(viewport(layout = grid.layout(2, 1, heights = unit(c(0.2, 0.8), "npc"))))
+
+        
+        #mobj <- iNZightMap(~lat, ~lon, data = shape)
         e <- environment()
-        plot(mobj, join = TRUE, pch = NA, lwd = 2, col.line = "#333333",
-             xlim = range(sh.near$lon), ylim = range(sh.near$lat), env = e)
-        with(schedule, addPoints(lat, lon, gpar = list(col = "#333333", cex = 0.5), pch = 19))
-        with(vp, addPoints(position_latitude, position_longitude, pch = 19,
-                           gpar = list(col = "#cc3333", cex = 0.3)))
+
+        pushViewport(viewport(layout.pos.row = 1, xscale = extendrange(range(shape$dist_traveled)),
+                              yscale = 0:1, name = "p1"))
+        grid.rect()
+        grid.lines(unit(range(shape$dist_traveled), "native"), c(0.5, 0.5))
+        with(schedule, grid.points(unit(shape_dist_traveled, "native"), rep(0.5, nrow(schedule)),
+                                   pch = 19, gp = gpar(col = "#333333", cex = 0.3)))
+        upViewport()
+        
+        pushViewport(viewport(layout.pos.row = 2, xscale = extendrange(range(shape$lon)),
+                              yscale = extendrange(range(shape$lat)), name = "p2"))
+        grid.rect()
+        with(shape, grid.polyline(lon, lat, default.units = "native"))
+        with(schedule, grid.points(lon, lat, gp = gpar(col = "#333333", cex = 0.5), pch = 19))
+        with(vp, grid.points(position_longitude, position_longitude, pch = 19,
+                             gp = gpar(col = "#cc3333", cex = 0.3)))
+        upViewport()
     }
 
     ## resampling step
@@ -123,8 +146,15 @@ pf <- function(con, vid, N = 500,
     py <- deg2rad(pts[1L, ]) - deg2rad(vp$position_latitude)
 
     if (draw) {
-        addPoints(pts[1L,], pts[2L,], pch = 19,
-                  gpar = list(col = "lightblue", alpha = 0.9, cex = 0.1))
+        seekViewport("p1")
+        grid.points(particles$distance_into_trip, rep(0.55, nrow(particles)),
+                    pch = 19, gp = gpar(col = "lightblue", alpha = 0.9, cex = 0.1))
+        upViewport()
+
+        seekViewport("p2")
+        grid.points(pts[2L,], pts[1L,], pch = 19,
+                  gp = gpar(col = "lightblue", alpha = 0.9, cex = 0.1))
+        upViewport()
     }
 
     llhood <- - 1 / (2 * sig.xy^2) * ( px^2 + py^2 )
@@ -141,10 +171,17 @@ pf <- function(con, vid, N = 500,
     parents <- particles$id[wi]
     particles <- particles[wi, ]
     if (draw) {
-        addPoints(pts[1L, wi], pts[2L, wi], pch = 19,
-                  gpar = list(col = "orangered", alpha = 0.8, cex = 0.5))
-        with(vp, addPoints(position_latitude, position_longitude, pch = 19,
-                           gpar = list(col = "green", cex = 0.3)))
+        seekViewport("p1")
+        grid.points(particles$distance_into_trip, rep(0.6, nrow(particles)),
+                    pch = 19, gp = gpar(col = "orangered", cex = 0.3))
+        upViewport()
+
+        seekViewport("p2")
+        grid.points(pts[2L, wi], pts[1L, wi], pch = 19,
+                    gp = gpar(col = "orangered", alpha = 0.8, cex = 0.5))
+        with(vp, grid.points(position_longitude, position_latitude, pch = 19,
+                             gp = gpar(col = "green", cex = 0.3)))
+        upViewport()
     }
 
     ## set old particles to inactive
