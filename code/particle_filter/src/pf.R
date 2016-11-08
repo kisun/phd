@@ -39,7 +39,7 @@ pf <- function(con, vid, N = 500,
     colnames(schedule) <- gsub("pivot.", "", colnames(schedule))
     shape <- info$shape
     Sd <- schedule$shape_dist_traveled
-    Rd <- tapply(shape$dist_traveled, shape$leg, min)
+    Rd <- c(0, tapply(shape$dist_traveled, shape$leg, max))
 
     sx <- (deg2rad(shape$lon) - deg2rad(vp$position_longitude)) * cos(deg2rad(vp$position_latitude))
     sy <- deg2rad(shape$lat) - deg2rad(vp$position_latitude)

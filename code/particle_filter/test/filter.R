@@ -623,11 +623,11 @@ source("src/pf.R"); system("make pf.so")
 N <- 500
 shape <- infoList[[1]]$shape
 schedule <- infoList[[1]]$schedule
-M <- length(unique(shape$segment_id))
+M <- max(shape$leg)
 L <- nrow(schedule) ## number of STOPS
 kf.t <- vps[ind[1], "timestamp"]
 ds <- schedule$pivot.shape_dist_traveled # stop distances
-dr <- tapply(shape$dist_traveled, shape$leg, min)
+dr <- c(0, tapply(shape$dist_traveled, shape$leg, max))
 B0 <- matrix(rep(10, M), ncol = 1)
 P0 <- 10 * diag(M)
 A <- diag(M)

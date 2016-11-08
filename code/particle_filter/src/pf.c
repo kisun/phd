@@ -52,7 +52,7 @@ void transition(double *d, double *v, int *s, double *A, double *D, int *r, doub
   srand((unsigned) seed[0]);
 
   for (int i=0;i<*N;i++) {
-    if (r[i] >= *M | s[i] >= *L) {
+    if (r[i] >= *M | s[i] >= *L - 1) {
       continue;
     }
     double tr = *delta;
@@ -115,7 +115,7 @@ void transition(double *d, double *v, int *s, double *A, double *D, int *r, doub
         	}
         	D[i] = 0.0 / 0.0; // set departute time to NaN
 
-          if (s[i] >= *L) {
+          if (s[i] >= *L - 1) {
             // we're at the end of the line!
         	  break;
         	}
