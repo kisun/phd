@@ -19,7 +19,7 @@ pf <- function(con, vid, N = 500,
                rho = 0.1,       ## probability particle stops !due to bus stop,
                upsilon = 20,    ## average time a bus is stopped at "lights"
                draw = FALSE,
-               speed,         ## a 'speed' object, with a mean vecotr B and covariance matrix P for segment speeds
+               speed,           ## a 'speed' object, with a mean vector B and covariance matrix P
                SPEED.range = c(0, 110 * 1000 / 60^2),
                info = NULL,
                vp = dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE vehicle_id='%s'", vid))) {
@@ -44,7 +44,8 @@ pf <- function(con, vid, N = 500,
     sx <- (deg2rad(shape$lon) - deg2rad(vp$position_longitude)) * cos(deg2rad(vp$position_latitude))
     sy <- deg2rad(shape$lat) - deg2rad(vp$position_latitude)
     dist <- distance(cbind(sx, sy))
-    particles <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE vehicle_id='%s' AND active=TRUE", vid))
+    particles <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE vehicle_id='%s' AND active=TRUE",
+                                         vid))
 
 
     NEW <- FALSE

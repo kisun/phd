@@ -28,4 +28,15 @@ class SegmentInfo extends Model
     {
         return $this->hasMany('App\Segment', 'segment_id', 'id');
     }
+
+
+    /**
+     * Get the speeds for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function speed_history()
+    {
+        return $this->hasMany('App\SegmentSpeed');
+    }
 }
