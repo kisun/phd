@@ -40,12 +40,12 @@ pf <- function(con, vid, N = 500,
     shape <- info$shape
     Sd <- schedule$shape_dist_traveled
     Rd <- tapply(shape$dist_traveled, shape$leg, min)
-    
+
     sx <- (deg2rad(shape$lon) - deg2rad(vp$position_longitude)) * cos(deg2rad(vp$position_latitude))
     sy <- deg2rad(shape$lat) - deg2rad(vp$position_latitude)
     dist <- distance(cbind(sx, sy))
     particles <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE vehicle_id='%s' AND active=TRUE", vid))
-    
+
 
     NEW <- FALSE
     if (nrow(particles) == 0L) {
@@ -60,41 +60,41 @@ pf <- function(con, vid, N = 500,
         particles <- data.frame(vehicle_id = rep(vid, N),
                                 distance_into_trip =
                                     runif(N, min(sh.near$dist_traveled), max(sh.near$dist_traveled)),
-                                velocity =  runif(N, 2, 16))            
-        
+                                velocity =  runif(N, 2, 16))
+
         ## determine which segment of the route each particle is on
         particles$stop_index <- sapply(particles$distance_into_trip,
                                        function(x) if (max(Rd) <= x) length(Rd) else which(Rd > x)[1L] - 1)
         particles$segment_index <- sapply(particles$distance_into_trip,
                                           function(x) if (max(Sd) <= x) length(Sd) else which(Sd > x)[1L] - 1)
-        
-        if (!missing(speed)) 
+
+        if (!missing(speed))
             particles$velocity <- msm::rtnorm(N, speed$B[particles$segment],
                                               sqrt(diag(speed$P)[particles$segment]),
-                                              lower = 0, upper = 16)        
+                                              lower = 0, upper = 16)
         particles$arrival_time <- vp$timestamp
         particles$departure_time <- NaN
     } else if (particles$trip_id[1] != vp$trip_id) {
         delta <- vp$timestamp - particles$timestamp[1L]
 
         if (delta <= 0) return(invisible(-1))
-        
+
         ## "new trip"
         ## initial proposal
         sh.near <- shape[which(dist < 200), ]
         if (nrow(sh.near) == 0) {
             return(3)
         }
-        
+
         particles$distance_into_trip <-
             runif(nrow(particles), min(sh.near$dist_traveled), max(sh.near$dist_traveled))
-        particles$velocity <- 
+        particles$velocity <-
                 msm::rtnorm(nrow(particles), particles$velocity, sd = 5, lower = 2, upper = 16)
 
-        particles$stop_index <- sapply(particles$distance_into_trip,
-                                       function(x) if (max(Rd) <= x) length(Rd) else which(Rd >= x)[1L] - 1)
-        particles$segment_index <- sapply(particles$distance_into_trip,
-                                          function(x) if (max(Sd) <= x) length(Sd) else which(Sd >= x)[1L] - 1)
+        particles$stop_index <- sapply(particles$distance_into_trip, function(x) sum(Sd <= x) - 1)
+                                      #  function(x) if (max(Rd) <= x) length(Rd) else which(Rd >= x)[1L] - 1)
+        particles$segment_index <- sapply(particles$distance_into_trip, function(x) sum(Rd <= x) - 1)
+                                          # function(x) if (max(Sd) <= x) length(Sd) else which(Sd >= x)[1L] - 1)
 
         particles$arrival_time <- particles$departure_time <- NaN
     } else {
@@ -104,6 +104,8 @@ pf <- function(con, vid, N = 500,
         ## --- move each particle
         particles <- transitionC(particles)
     }
+    cat("\n")
+    print(head(particles))
 
     if (draw) {
         wi <- which(dist < 1000)
@@ -115,23 +117,24 @@ pf <- function(con, vid, N = 500,
 
         grid.newpage()
         pushViewport(viewport(layout = grid.layout(2, 1, heights = unit(c(0.2, 0.8), "npc"))))
-
-        
-        #mobj <- iNZightMap(~lat, ~lon, data = shape)
         e <- environment()
 
         pushViewport(viewport(layout.pos.row = 1, xscale = extendrange(range(shape$dist_traveled)),
                               yscale = 0:1, name = "p1"))
         grid.rect()
         grid.lines(unit(range(shape$dist_traveled), "native"), c(0.5, 0.5))
+        grid.polyline(rep(Rd, each = 2), rep(0:1, length(Rd)), default.units = "native",
+                      id.lengths = rep(2, length(Rd)),
+                      gp = gpar(col = "#cccccc"))
         with(schedule, grid.points(unit(shape_dist_traveled, "native"), rep(0.5, nrow(schedule)),
                                    pch = 19, gp = gpar(col = "#333333", cex = 0.3)))
         upViewport()
-        
+
         pushViewport(viewport(layout.pos.row = 2, xscale = extendrange(range(shape$lon)),
                               yscale = extendrange(range(shape$lat)), name = "p2"))
         grid.rect()
-        with(shape, grid.polyline(lon, lat, default.units = "native"))
+        with(shape, grid.polyline(lon, lat, default.units = "native", id = leg,
+                                  gp = gpar(col = ifelse(1:M %% 2 == 0, "black", "purple"))))
         with(schedule, grid.points(lon, lat, gp = gpar(col = "#333333", cex = 0.5), pch = 19))
         with(vp, grid.points(position_longitude, position_longitude, pch = 19,
                              gp = gpar(col = "#cc3333", cex = 0.3)))
@@ -164,6 +167,7 @@ pf <- function(con, vid, N = 500,
     #                             diag(speed$P)[particles$segment], log = TRUE)
     lhood <- exp(llhood)
     wt <- lhood / sum(lhood)
+    print(wt[1:10])
     wt[is.na(wt)] <- 0
     if (sum(wt) == 0) return(2)
 
@@ -223,7 +227,8 @@ transitionC <- function(p, e = parent.frame()) {
                  ts = p$timestamp,
                  N = as.integer(nrow(p)),
                  delta = e$delta, gamma = e$gamma, pi = e$pi, tau = e$tau, rho = e$rho, upsilon = e$upsilon,
-                 M = length(e$speed$B), nu.hat = e$speed$B, xi.hat = diag(e$speed$P), Sd = e$Sd,
+                 M = length(e$speed$B), L = nrow(e$schedule),
+                 nu.hat = e$speed$B, xi.hat = diag(e$speed$P), Sd = e$Sd, Rd = e$Rd,
                  sMAX = e$SPEED.range[2], sMIN = e$SPEED.range[1],
                  seed = as.integer(seed),
                  NAOK = TRUE)

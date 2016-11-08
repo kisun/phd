@@ -583,8 +583,7 @@ for ( i in 1:length(trips)) {
 
 ### Latest
 ### BIG UPDATE: using SEGMENTS instead ...
-
-ind <- which(vps$trip_start_date == "2016-10-26")
+ind <- which(vps$trip_start_date == "2016-10-26" & vps$vehicle_id == "3A99")
 infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
     res <- fromJSON(sprintf("http://130.216.50.187:8000/api/shape_schedule/%s", ID), flatten = TRUE)
     shape <- res$shape
@@ -620,6 +619,7 @@ names(infoList) <- unique(vps$trip_id[ind])
 ## })
 
 
+source("src/pf.R"); system("make pf.so")
 N <- 500
 shape <- infoList[[1]]$shape
 schedule <- infoList[[1]]$schedule
@@ -645,6 +645,7 @@ MIN.speed <- 10 * 1000 / 60^2
 del <- dbGetQuery(con, "DELETE FROM particles")
 k <- 0
 pb <- txtProgressBar(0, length(ind), style = 3)
+#pdf("figures_1/trial1.pdf", width = 6, height = 10)
 for (k in (k+1):length(ind)) {
     setTxtProgressBar(pb, k)
     ## update the speed KF:
@@ -655,10 +656,9 @@ for (k in (k+1):length(ind)) {
     ##     BHist$var <- cbind(BHist$var, diag(speed$P))
     ##     BHist$t <- c(BHist$t, speed$t)
     ## }
-    dev.hold()
     res <- pf(con, vps[ind[k], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[k], ], speed = speed,
               info = infoList[[vps[ind[k], "trip_id"]]], SPEED.range = c(MIN.speed, MAX.speed), draw = TRUE)
-    dev.flush()
+    grid.locator()
     ## if (res <= 0) {
     ##     dat <- dbGetQuery(con,
     ##                       sprintf("SELECT distance_into_trip, velocity, arrival_time, departure_time, segment FROM particles WHERE vehicle_id = '%s' AND active",
@@ -690,7 +690,7 @@ for (k in (k+1):length(ind)) {
     ##         NULL
     ##     }))
     ## }
-}; close(pb)
+}; close(pb);# dev.off()
 
 ## save(PRED, file = "predictions.rda")
 ## save(BHist, file = "speed_history.rda")
