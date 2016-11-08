@@ -68,9 +68,7 @@ Route::get('/delays', function() {
 
 Route::get('/segment_speeds/{trip}', function(App\Trip $trip) {
     return response()->json($trip->load(['segments' => function ($query) {
-        $query->orderBy('leg')->with(['segment_info' => function($q) {
-            $q->with('current_speed');
-        }]);
+        $query->orderBy('leg')->with('segment_info');
     }]), 200, [], JSON_NUMERIC_CHECK);
 });
 

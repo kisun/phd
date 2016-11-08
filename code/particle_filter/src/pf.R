@@ -45,7 +45,7 @@ pf <- function(con, vid, N = 500,
     dist <- distance(cbind(sx, sy))
     particles <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE vehicle_id='%s' AND active=TRUE",
                                          vid))
-   
+
     speed <- shapeSpeeds(vp$trip_id)
     console.log()
 
@@ -214,7 +214,7 @@ distance <- function(x) sqrt(x[, 1L]^2 + x[, 2L]^2) * R
 
 shapeSpeeds <- function(trip_id) {
     qry <- sprintf("http://130.216.50.187:8000/api/segment_speeds/%s", trip_id)
-    info <- fromJSON(qry)
+    info <- fromJSON(qry, flatten = TRUE)
     info$segments
 }
 

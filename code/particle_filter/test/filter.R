@@ -639,13 +639,6 @@ delta <- 5 * 60
 MAX.speed <- 60 * 1000 / 60^2
 MIN.speed <- 10 * 1000 / 60^2
 
-## initialise speed on ALL segments ...
-segs <- dbGetQuery(con, "SELECT id FROM segment_infos")$id
-invisible(sapply(segs, function(s) {
-    dbGetQuery(con, sprintf("INSERT INTO segment_speeds (segment_id, speed_mean, speed_var, timestamp, current) VALUES ('%d', 10, 10, %d, TRUE)",
-                            s, vps[ind[1], "timestamp"]))
-}))
-
 
 
 ## DELETE PARTICLES!!!!!
