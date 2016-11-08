@@ -149,7 +149,7 @@ void transition(double *d, double *v, int *s, double *A, double *D, int *r, doub
             }
 
             // need to adjust speed for the new segment!
-            // v[i] = ?
+            v[i] = truncated_normal_ab_sample(v[i], 6, *sMIN, *sMAX, &seed[i]);
 
           }
         } else {

@@ -224,7 +224,7 @@ transitionC <- function(p, e = parent.frame()) {
                  ts = p$timestamp,
                  N = as.integer(nrow(p)),
                  delta = e$delta, gamma = e$gamma, pi = e$pi, tau = e$tau, rho = e$rho, upsilon = e$upsilon,
-                 M = length(e$speed$B), L = nrow(e$schedule),
+                 M = length(e$Rd), L = length(e$Sd),
                  nu.hat = e$speed$B, xi.hat = diag(e$speed$P), Sd = e$Sd, Rd = e$Rd,
                  sMAX = e$SPEED.range[2], sMIN = e$SPEED.range[1],
                  seed = as.integer(seed),
