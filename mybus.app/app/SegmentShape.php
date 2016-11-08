@@ -20,5 +20,4 @@ class SegmentShape extends Model
         return $this->belongsTo('App\SegmentInfo', 'segment_id', 'id');
     }
 
-
 }

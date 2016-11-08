@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class SegmentSpeed extends Model
 {
+    
+    public $timestamps = false;
+
+
     /**
      * Get the segment_info that owns the model.
      *

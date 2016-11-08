@@ -19,7 +19,6 @@ pf <- function(con, vid, N = 500,
                rho = 0.1,       ## probability particle stops !due to bus stop,
                upsilon = 20,    ## average time a bus is stopped at "lights"
                draw = FALSE,
-               speed,           ## a 'speed' object, with a mean vector B and covariance matrix P
                SPEED.range = c(0, 110 * 1000 / 60^2),
                info = NULL,
                vp = dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE vehicle_id='%s'", vid))) {
@@ -46,7 +45,7 @@ pf <- function(con, vid, N = 500,
     dist <- distance(cbind(sx, sy))
     particles <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE vehicle_id='%s' AND active=TRUE",
                                          vid))
-
+    speed <- shapeSpeeds(vp$trip_id)
 
     NEW <- FALSE
     if (nrow(particles) == 0L) {
@@ -210,6 +209,11 @@ rad2deg <- function(rad) rad * 180 / pi
 R <- 6371 * 1000
 distance <- function(x) sqrt(x[, 1L]^2 + x[, 2L]^2) * R
 
+
+shapeSpeeds <- function(trip_id) {
+    qry <- sprintf("http://130.216.50.187:8000/api/shape_speeds/%s", trip_id)
+    info <- fromJSON(qry)
+}
 
 
 transitionC <- function(p, e = parent.frame()) {

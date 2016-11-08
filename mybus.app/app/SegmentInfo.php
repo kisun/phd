@@ -37,6 +37,18 @@ class SegmentInfo extends Model
      */
     public function speed_history()
     {
-        return $this->hasMany('App\SegmentSpeed');
+        return $this->hasMany('App\SegmentSpeed', 'segment_id', 'id');
+    }
+
+    /**
+     * Get the latest speed record associated with the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne
+     */
+    public function current_speed()
+    {
+        return $this->hasMany('App\SegmentSpeed', 'segment_id', 'id')
+                ->where('current', true)
+                ->orderBy('timestamp', 'desc')->limit(1);
     }
 }

@@ -66,6 +66,13 @@ Route::get('/delays', function() {
     , 200, [], JSON_NUMERIC_CHECK);
 });
 
+Route::get('/segment_speeds/{trip}', function(App\Trip $trip) {
+    return response()->json($trip->load(['segments' => function ($query) {
+        $query->orderBy('leg')->with(['segment_info' => function($q) {
+            $q->with('current_speed');
+        }]);
+    }]), 200, [], JSON_NUMERIC_CHECK);
+});
 
 Route::post('/intersections', 'IntersectionController@create');
 Route::put('/intersections/{intersection}', 'IntersectionController@update');

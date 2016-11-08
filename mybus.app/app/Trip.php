@@ -106,4 +106,15 @@ class Trip extends Model
         return $this->hasOne('App\TripUpdate');
     }
 
+
+    /**
+     * Get the segments for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function segments()
+    {
+        return $this->hasMany('App\SegmentShape', 'id', 'shape_id');
+    }
+
 }
