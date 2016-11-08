@@ -52,7 +52,7 @@ void transition(double *d, double *v, int *s, double *A, double *D, int *r, doub
   srand((unsigned) seed[0]);
 
   for (int i=0;i<*N;i++) {
-    if (r[i] >= M | s[i] >= L) {
+    if (r[i] >= *M | s[i] >= *L) {
       continue;
     }
     double tr = *delta;
@@ -138,13 +138,13 @@ void transition(double *d, double *v, int *s, double *A, double *D, int *r, doub
           tr -= eta;
           if (runif() < *rho) {
             // yep, the bus gets caught at the intersection!
-            d[i] = max(d[i], dr - runif() * 50); // within 50m of intersection
+            d[i] = fmax(d[i], dr - runif() * 50); // within 50m of intersection
             tr -= rexp(*upsilon);
           } else {
             d[i] = dr;
             r[i]++; // move on to next segment
 
-            if (r[i] >= M) {
+            if (r[i] >= *M) {
               break;
             }
 

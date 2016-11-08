@@ -104,8 +104,6 @@ pf <- function(con, vid, N = 500,
         ## --- move each particle
         particles <- transitionC(particles)
     }
-    cat("\n")
-    print(head(particles))
 
     if (draw) {
         wi <- which(dist < 1000)
@@ -167,7 +165,6 @@ pf <- function(con, vid, N = 500,
     #                             diag(speed$P)[particles$segment], log = TRUE)
     lhood <- exp(llhood)
     wt <- lhood / sum(lhood)
-    print(wt[1:10])
     wt[is.na(wt)] <- 0
     if (sum(wt) == 0) return(2)
 

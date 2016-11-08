@@ -645,7 +645,7 @@ MIN.speed <- 10 * 1000 / 60^2
 del <- dbGetQuery(con, "DELETE FROM particles")
 k <- 0
 pb <- txtProgressBar(0, length(ind), style = 3)
-#pdf("figures_1/trial1.pdf", width = 6, height = 10)
+pdf("figures_1/trial1.pdf", width = 6, height = 10)
 for (k in (k+1):length(ind)) {
     setTxtProgressBar(pb, k)
     ## update the speed KF:
@@ -657,7 +657,8 @@ for (k in (k+1):length(ind)) {
     ##     BHist$t <- c(BHist$t, speed$t)
     ## }
     res <- pf(con, vps[ind[k], "vehicle_id"], 500, sig.gps = 5, vp = vps[ind[k], ], speed = speed,
-              info = infoList[[vps[ind[k], "trip_id"]]], SPEED.range = c(MIN.speed, MAX.speed), draw = TRUE)
+              info = infoList[[vps[ind[k], "trip_id"]]], SPEED.range = c(MIN.speed, MAX.speed), draw = TRUE,
+              rho = 0.5)
     grid.locator()
     ## if (res <= 0) {
     ##     dat <- dbGetQuery(con,
@@ -690,7 +691,7 @@ for (k in (k+1):length(ind)) {
     ##         NULL
     ##     }))
     ## }
-}; close(pb);# dev.off()
+}; close(pb); dev.off()
 
 ## save(PRED, file = "predictions.rda")
 ## save(BHist, file = "speed_history.rda")
