@@ -49,6 +49,6 @@ class SegmentInfo extends Model
     {
         return $this->hasMany('App\SegmentSpeed', 'segment_id', 'id')
                 ->where('current', true)
-                ->orderBy('timestamp', 'desc')->limit(1);
+                ->orderBy('timestamp', 'desc');
     }
 }

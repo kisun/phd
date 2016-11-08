@@ -628,16 +628,23 @@ L <- nrow(schedule) ## number of STOPS
 kf.t <- vps[ind[1], "timestamp"]
 ds <- schedule$pivot.shape_dist_traveled # stop distances
 dr <- c(0, tapply(shape$dist_traveled, shape$leg, max))
-B0 <- matrix(rep(10, M), ncol = 1)
-P0 <- 10 * diag(M)
+## B0 <- matrix(rep(10, M), ncol = 1)
+## P0 <- 10 * diag(M)
 A <- diag(M)
 H <- diag(M)
 delta <- 5 * 60
-speed <- list(B = B0, P = P0, N = N, M = M, A = A, H = H, t = kf.t, delta = delta)
-PRED <- function(m, t) sprintf("predictions/method_%d/%d.csv", m, t)
-BHist <- list(mean = speed$B, var = cbind(diag(speed$P)), t = speed$t)
+## speed <- list(B = B0, P = P0, N = N, M = M, A = A, H = H, t = kf.t, delta = delta)
+## PRED <- function(m, t) sprintf("predictions/method_%d/%d.csv", m, t)
+## BHist <- list(mean = speed$B, var = cbind(diag(speed$P)), t = speed$t)
 MAX.speed <- 60 * 1000 / 60^2
 MIN.speed <- 10 * 1000 / 60^2
+
+## initialise speed on ALL segments ...
+segs <- dbGetQuery(con, "SELECT id FROM segment_infos")$id
+invisible(sapply(segs, function(s) {
+    dbGetQuery(con, sprintf("INSERT INTO segment_speeds (segment_id, speed_mean, speed_var, timestamp, current) VALUES ('%d', 10, 10, %d, TRUE)",
+                            s, vps[ind[1], "timestamp"]))
+}))
 
 
 
@@ -660,8 +667,7 @@ for (k in (k+1):length(ind)) {
                  vps[ind[k], "vehicle_id"], vps[ind[k], "timestamp"]),
          width = 600, height = 1000)
     res <- pf(con, vps[ind[k], "vehicle_id"], 500, sig.gps = 5,
-              vp = vps[ind[k], ], speed = speed,
-              info = infoList[[vps[ind[k], "trip_id"]]],
+              vp = vps[ind[k], ],  info = infoList[[vps[ind[k], "trip_id"]]],
               SPEED.range = c(MIN.speed, MAX.speed), draw = TRUE,
               rho = 0.5)
     dev.off()
