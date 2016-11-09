@@ -1,0 +1,140 @@
+\documentclass[10pt,t]{beamer}
+
+\usetheme[progressbar=frametitle]{metropolis}
+
+\usepackage{booktabs}
+\usepackage{natbib}
+\usepackage[scale=2]{ccicons}
+\usepackage{lmodern}
+
+
+
+%\usepackage{xspace}
+%\newcommand{\themename}{\textbf{\textsc{metropolis}}\xspace}
+%\renewcommand\textbullet{\ensuremath{\bullet}}
+
+\newcommand{\bX}{\mathbf{X}}
+\newcommand{\bY}{\mathbf{Y}}
+\newcommand{\mat}[1]{\mathbf{#1}}
+\renewcommand{\vec}[1]{\boldsymbol{#1}}
+
+
+\title{Real-time prediction of bus arrival using joint models for vehicle and road}
+%\subtitle{}
+\author{Tom Elliott}
+\date{}
+\institute{Supervisor: Professor Thomas Lumley\\[2em]}
+%\includegraphics[height=1.5cm,width=3.8cm]{stat-logo.png}}
+
+%Department of Statistics\\University of Auckland}
+%\titlegraphic{\hfill\includegraphics[height=1.5cm]{stat-logo.png}}
+
+\begin{document}
+
+\maketitle
+
+
+\begin{frame}
+  \frametitle{Overview}
+  
+  \begin{enumerate}
+  \item A quick motivation
+    
+  \item Two recursive models: vehicle (particle filter) \& road (Kalman filter)
+    
+  \item Predicting arrival times
+  \end{enumerate}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{What's wrong with the current\footnote{Auckland Transport} system?}
+  
+  \begin{itemize}
+  \item Prediction inaccuracy
+    
+  \item Prone to errors
+    
+  \item Statistical model?
+  \end{itemize}
+\end{frame}
+
+
+\section{Vehicle State Model}
+
+\begin{frame}
+  \frametitle{Vehicle State Model}
+  
+  \textbf{Goal:} use observations of bus location (GPS) \ldots
+  \begin{equation*}
+    \bY_k = 
+    \begin{bmatrix}
+      \phi_k \\ \lambda_k \\ t_k
+    \end{bmatrix} =
+    \begin{bmatrix}
+      \text{latitude (degrees)} \\
+      \text{longitude (degrees)} \\
+      \text{timestamp}
+    \end{bmatrix}
+  \end{equation*}
+  \ldots to infer \textbf{unobservable vehicle state} \ldots
+  \begin{equation*}
+    \bX_k =
+    \begin{bmatrix}
+      d_k \\ v_k \\ s_k \\ \vdots
+    \end{bmatrix} =
+    \begin{bmatrix}
+      \text{distance into trip (meters)} \\
+      \text{velocity/speed ($ms^{-1}$)} \\
+      \text{last visisted stop} \\
+      \vdots
+    \end{bmatrix}
+  \end{equation*}
+  \ldots in real time.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Vehicle State Model}
+  
+[image of data location] $\Rightarrow$
+[images of vehicle state - distance into trip]
+
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Vehicle State Model: Particle Filter}
+  
+  \begin{itemize}
+  \item Flexible modeling framework, fewer assumptions
+    
+  \item Proposals cover more plausible states
+    
+  \item Easy to compute likelihood
+  \end{itemize}
+  
+  
+  \textbf{Step 1}: predict new state (for each particle independently)
+  \begin{equation*}
+    \bX_k^{(i)} = f(\bX_{k-1}^{(i)}, \sigma_v^2, \ldots)
+  \end{equation*}
+  {\small$f$: transition function; $\sigma_v^2$: process noise; shape information, \ldots}
+  
+  
+  \textbf{Step 2}: resample particles based on likelihood
+  \begin{equation*}
+    \bY_k = h(\bX_k) + e_k
+  \end{equation*}
+  {\small$f$: measurement function; $e_k$ measurement (GPS) error}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Vehicle State Model: Particle Filter}
+  
+  
+\end{frame}
+
+
+
+\end{document}
