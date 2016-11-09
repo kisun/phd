@@ -619,7 +619,7 @@ names(infoList) <- unique(vps$trip_id[ind])
 ## })
 
 
-source("src/pf.R"); system("make pf.so")
+source("src/pf.R";) system("make pf.so")
 N <- 500
 shape <- infoList[[1]]$shape
 schedule <- infoList[[1]]$schedule
@@ -628,16 +628,26 @@ L <- nrow(schedule) ## number of STOPS
 kf.t <- vps[ind[1], "timestamp"]
 ds <- schedule$pivot.shape_dist_traveled # stop distances
 dr <- c(0, tapply(shape$dist_traveled, shape$leg, max))
-## B0 <- matrix(rep(10, M), ncol = 1)
-## P0 <- 10 * diag(M)
-A <- diag(M)
-H <- diag(M)
-delta <- 5 * 60
+## speeds <- dbGetQuery(con, "SELECT * FROM segment_speeds WHERE current")
+## B0 <- matrix(speeds$speed_mean, ncol = 1)
+## P0 <- diag(speeds$speed_var)
+## A <- diag(nrow(speeds))
+## H <- diag(nrow(speeds))
+## delta <- 5 * 60
 ## speed <- list(B = B0, P = P0, N = N, M = M, A = A, H = H, t = kf.t, delta = delta)
-## PRED <- function(m, t) sprintf("predictions/method_%d/%d.csv", m, t)
+## ## PRED <- function(m, t) sprintf("predictions/method_%d/%d.csv", m, t)
 ## BHist <- list(mean = speed$B, var = cbind(diag(speed$P)), t = speed$t)
 MAX.speed <- 60 * 1000 / 60^2
 MIN.speed <- 10 * 1000 / 60^2
+
+## initialise speed on ALL segments ...
+## segs <- dbGetQuery(con, "SELECT id FROM segment_infos")$id
+## invisible(sapply(segs, function(s) {
+##     dbGetQuery(con, sprintf("INSERT INTO segment_speeds (segment_id, speed_mean, speed_var, timestamp, current) VALUES ('%d', 10, 10, %d, TRUE)",
+##                             s, vps[ind[1], "timestamp"]))
+## }))
+
+
 
 
 
@@ -646,16 +656,16 @@ del <- dbGetQuery(con, "DELETE FROM particles")
 k <- 0
 pb <- txtProgressBar(0, length(ind), style = 3)
 ##pdf("figures_1/trial1.pdf", width = 6, height = 10)
-for (k in (k+1):length(ind)) {
+for (k in (k+1):150){ #length(ind)) {
     setTxtProgressBar(pb, k)
     ## update the speed KF:
-    if (vps[ind[k], "timestamp"] > speed$t + speed$delta) {
-        speed <- update(speed, q = 1)
-        if (any(diag(speed$P) < 0.000001)) diag(speed$P) <- pmax(0.000001, diag(speed$P))
-        BHist$mean <- cbind(BHist$mean, speed$B)
-        BHist$var <- cbind(BHist$var, diag(speed$P))
-        BHist$t <- c(BHist$t, speed$t)
-    }
+    ## if (vps[ind[k], "timestamp"] > speed$t + speed$delta) {
+    ##     speed <- update(speed, q = 1)
+    ##     if (any(diag(speed$P) < 0.000001)) diag(speed$P) <- pmax(0.000001, diag(speed$P))
+    ##     BHist$mean <- cbind(BHist$mean, speed$B)
+    ##     BHist$var <- cbind(BHist$var, diag(speed$P))
+    ##     BHist$t <- c(BHist$t, speed$t)
+    ## }
     jpeg(sprintf("figures_1/r274_2016-10-26_v%s_t%d.jpg",
                  vps[ind[k], "vehicle_id"], vps[ind[k], "timestamp"]),
          width = 600, height = 1000)

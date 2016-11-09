@@ -46,8 +46,13 @@ pf <- function(con, vid, N = 500,
     particles <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE vehicle_id='%s' AND active=TRUE",
                                          vid))
 
-    speed <- shapeSpeeds(vp$trip_id)
-    console.log()
+    segs <- tapply(shape$segment_id, shape$leg, mean)
+    speeds <- dbGetQuery(con, sprintf("SELECT segment_id, speed_mean, speed_var, timestamp FROM segment_speeds WHERE current AND segment_id IN ('%s') ORDER BY segment_id DESC",
+                                      paste(segs, collapse="','")))
+    ## order correctly!
+    rownames(speeds) <- speeds$segment_id
+    speeds <- speeds[as.character(segs), ]
+    rownames(speeds) <- NULL
 
     NEW <- FALSE
     if (nrow(particles) == 0L) {
@@ -61,8 +66,7 @@ pf <- function(con, vid, N = 500,
         }
         particles <- data.frame(vehicle_id = rep(vid, N),
                                 distance_into_trip =
-                                    runif(N, min(sh.near$dist_traveled), max(sh.near$dist_traveled)),
-                                velocity =  runif(N, 2, 16))
+                                    runif(N, min(sh.near$dist_traveled), max(sh.near$dist_traveled)))
 
         ## determine which segment of the route each particle is on
         particles$stop_index <- sapply(particles$distance_into_trip,
@@ -70,10 +74,10 @@ pf <- function(con, vid, N = 500,
         particles$segment_index <- sapply(particles$distance_into_trip,
                                           function(x) if (max(Sd) <= x) length(Sd) else which(Sd > x)[1L] - 1)
 
-        if (!missing(speed))
-            particles$velocity <- msm::rtnorm(N, speed$B[particles$segment],
-                                              sqrt(diag(speed$P)[particles$segment]),
-                                              lower = 0, upper = 16)
+        particles$velocity <- msm::rtnorm(N, speeds$speed_mean[particles$segment_index],
+                                          sqrt(speeds$speed_var[particles$segment_index]),
+                                          lower = SPEED.range[1], upper = SPEED.range[2])
+
         particles$arrival_time <- vp$timestamp
         particles$departure_time <- NaN
     } else if (particles$trip_id[1] != vp$trip_id) {
@@ -90,14 +94,12 @@ pf <- function(con, vid, N = 500,
 
         particles$distance_into_trip <-
             runif(nrow(particles), min(sh.near$dist_traveled), max(sh.near$dist_traveled))
-        particles$velocity <-
-                msm::rtnorm(nrow(particles), particles$velocity, sd = 5, lower = 2, upper = 16)
+        particles$velocity <- msm::rtnorm(N, speeds$speed_mean[particles$segment_index],
+                                          sqrt(speeds$speed_var[particles$segment_index]),
+                                          lower = SPEED.range[1], upper = SPEED.range[2])
 
         particles$stop_index <- sapply(particles$distance_into_trip, function(x) sum(Sd <= x) - 1)
-                                      #  function(x) if (max(Rd) <= x) length(Rd) else which(Rd >= x)[1L] - 1)
         particles$segment_index <- sapply(particles$distance_into_trip, function(x) sum(Rd <= x) - 1)
-                                          # function(x) if (max(Sd) <= x) length(Sd) else which(Sd >= x)[1L] - 1)
-
         particles$arrival_time <- particles$departure_time <- NaN
     } else {
         delta <- vp$timestamp - particles$timestamp[1L]
@@ -212,13 +214,6 @@ R <- 6371 * 1000
 distance <- function(x) sqrt(x[, 1L]^2 + x[, 2L]^2) * R
 
 
-shapeSpeeds <- function(trip_id) {
-    qry <- sprintf("http://130.216.50.187:8000/api/segment_speeds/%s", trip_id)
-    info <- fromJSON(qry, flatten = TRUE)
-    info$segments
-}
-
-
 transitionC <- function(p, e = parent.frame()) {
     dyn.load("bin/pf.so")
     seed <- sample(2^30, nrow(p)) ## in future can do this through the parent C function.
@@ -233,7 +228,7 @@ transitionC <- function(p, e = parent.frame()) {
                  N = as.integer(nrow(p)),
                  delta = e$delta, gamma = e$gamma, pi = e$pi, tau = e$tau, rho = e$rho, upsilon = e$upsilon,
                  M = length(e$Rd), L = length(e$Sd),
-                 nu.hat = e$speed$B, xi.hat = diag(e$speed$P), Sd = e$Sd, Rd = e$Rd,
+                 nu.hat = e$speeds$speed_mean, xi.hat = e$speeds$speed_var, Sd = e$Sd, Rd = e$Rd,
                  sMAX = e$SPEED.range[2], sMIN = e$SPEED.range[1],
                  seed = as.integer(seed),
                  NAOK = TRUE)

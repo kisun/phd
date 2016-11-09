@@ -29,7 +29,7 @@ plotHistory <- function(hist) {
                    gp = gpar(lwd = 2))
         popViewport()
     }
-    
+
     pushViewport(viewport(xscale = xlim, yscale = c(M-1, 0)))
     tt <- as.POSIXct(hist$t, origin = "1970-01-01")
     tta <- pretty(tt, min.n = 6)
@@ -39,41 +39,45 @@ plotHistory <- function(hist) {
 }
 
 
-update <- function(res, q = 1) {
-    if (missing(res)) stop("Please specify prior")
-    N <- res$N
-    M <- res$M
-    t <- res$t
-    delta <- res$delta
-    
+updateSpeeds <- function(con, q = 1, A = diag(M), H = diag(M), t2 = as.integer(Sys.time())) {
+    res <- dbGetQuery(con, "SELECT segment_id, speed_mean, speed_var, timestamp FROM segment_speeds WHERE current")
+
+    M <- nrow(res)
+    t <- res$timestamp[1]
     obs <- dbGetQuery(
         con,
-        sprintf("SELECT segment_index AS segment, AVG(velocity) AS mean, VAR_SAMP(velocity) AS sd FROM particles WHERE timestamp BETWEEN %s AND %s GROUP BY segment",
-                t, t + delta))
-    Obs <- data.frame(segment = 1:M, mean = res$B, sd = rep(1e6, M))
-    Obs[Obs$segment %in% obs$segment, ] <- obs
+        sprintf("SELECT MAX(segment_shapes.segment_id) AS segment_id, AVG(velocity) AS mean, VAR_SAMP(velocity) AS sd FROM particles, trips, segment_shapes WHERE particles.trip_id=trips.id AND trips.shape_id=segment_shapes.id AND segment_shapes.leg=segment_index AND timestamp BETWEEN %s AND %s GROUP BY segment_index ORDER BY segment_index",
+                t, t2))
+    Obs <- data.frame(segment_id = res$segment_id, mean = res$speed_mean, sd = rep(1e6, M))
+    rownames(Obs) <- Obs$segment_id
+    Obs[as.character(obs$segment_id), ] <- obs
     Obs[is.na(Obs$sd), "sd"] <- 10
-    
-    B <- res$B
-    P <- res$P
+
+    B <- cbind(res$speed_mean)
+    P <- res$speed_var * diag(M)
     Q <- q * diag(M)
-    A <- res$A
-    H <- res$H
-    
+
     ## Predict
     Bk <- A %*% B
     Pk <- A %*% P %*% t(A) + Q
-    
+
     ## Update
     yk <- Obs$mean - H %*% Bk
     Rk <- diag(Obs$sd)
     Sk <- H %*% Pk %*% t(H) + Rk
     Kk <- Pk %*% t(H) %*% solve(Sk)
-    res$B <- Bk + Kk %*% yk
-    res$P <- (diag(M) - Kk %*% H) %*% Pk
 
-    res$t <- t + delta
-    return(res)
+    B <- Bk + Kk %*% yk
+    P <- (diag(M) - Kk %*% H) %*% Pk
+
+    ## do updates:
+    q1 <- dbGetQuery(con, "UPDATE segment_speeds SET current = FALSE")
+    q2 <- dbGetQuery(con, sprintf("INSERT INTO segment_speeds (segment_id, speed_mean, speed_var, timestamp, current) VALUES ('%s')",
+                                  paste0(res$segment_id, "','", B, "','", pmax(0.000001, diag(P)), "','",
+                                         t2, "','TRUE",
+                                         collapse="'),('")))
+
+    return(invisible(NULL))
 }
 plotSpeeds <- function(res, shape = NULL) {
     B <- res$B
@@ -102,38 +106,40 @@ plotSpeeds <- function(res, shape = NULL) {
 drawSegments <- function(shape, schedule, speeds, times, true, MAX.speed = 100 * 1000 / 60^2) {
     var <- NULL
     if (class(speeds) == "list") {
-        speeds <- BHist$mean
-        times <- BHist$t / 60
-        var <- BHist$var
+        segids <- unique(shape$segment_id)
+        speeds <- BHist$mean[as.character(segids), ]
+        times <- (BHist$t - min(BHist$t)) / 60
+        var <- BHist$var[as.character(segids), ]
     } else {
         speeds <- cbind(speeds)
         if (missing(times)) times <- seq(0, nrow(speeds), by = 1)
     }
-    Sd <- schedule$pivot.shape_dist_traveled
+    ## Sd <- schedule$pivot.shape_dist_traveled
+    Rd <- c(0, tapply(shape$dist_traveled, shape$leg, max))
     o <- par(mfrow = c(1, 1), bg = "#333333", fg = "#cccccc", col.axis = "#cccccc",
              col.lab = "#cccccc", col.main = "#cccccc")
-    plot(NA, type = "n", xlab = "Time (minutes)", ylab = "Segment", 
+    plot(NA, type = "n", xlab = "Time (minutes)", ylab = "Segment",
          xlim = range(times), xaxs = "i",
-         ylim = c(max(Sd), 0), yaxt = "n", yaxs = "i")
-    axis(2, at = Sd[-1] - diff(Sd) / 2, labels = 1:(length(Sd) - 1), las = 1, tick = FALSE, cex.axis = 0.8)
+         ylim = c(max(Rd), 0), yaxt = "n", yaxs = "i")
+    axis(2, at = Rd[-1] - diff(Rd) / 2, labels = 1:(length(Rd) - 1), las = 1, tick = FALSE, cex.axis = 0.8)
     spd <- round(speeds / MAX.speed * 10) + 1
     cols <- apply(spd, 1, function(x) RColorBrewer::brewer.pal(11, "RdYlGn")[x])
     cols <- if (is.null(dim(cols))) cbind(cols) else t(cols)
     for (i in 1:nrow(speeds)) {
-        rect(times[-length(times)], rep(Sd[i], length(times) - 1),
-             times[-1], rep(Sd[i + 1], length(times) - 1),
+        rect(times[-length(times)], rep(Rd[i], length(times) - 1),
+             times[-1], rep(Rd[i + 1], length(times) - 1),
              border = cols[i, ], col = cols[i, ])
         if (!is.null(var)) {
             polygon(c(times, rev(times)),
-                    c(Sd[i] + (Sd[i + 1] - Sd[i]) * (1 - pmin((speeds[i, ] + sqrt(var[i, ])) / MAX.speed, 1)),
-                      rev(Sd[i] + (Sd[i + 1] - Sd[i]) * (1 - pmax(0, (speeds[i, ] - sqrt(var[i, ])) / MAX.speed)))),
+                    c(Rd[i] + (Rd[i + 1] - Rd[i]) * (1 - pmin((speeds[i, ] + sqrt(var[i, ])) / MAX.speed, 1)),
+                      rev(Rd[i] + (Rd[i + 1] - Rd[i]) * (1 - pmax(0, (speeds[i, ] - sqrt(var[i, ])) / MAX.speed)))),
                     border = NULL, col = "#33333320")
-            lines(times, Sd[i] + (Sd[i + 1] - Sd[i]) * (1 - speeds[i, ] / MAX.speed), lwd = 1, col = "#333333")
+            lines(times, Rd[i] + (Rd[i + 1] - Rd[i]) * (1 - speeds[i, ] / MAX.speed), lwd = 1, col = "#333333")
         }
         if (!missing(true)) {
             lines(times, Sd[i] + (Sd[i + 1] - Sd[i]) * (1 - true[i, ] / MAX.speed), col = "#222222", lty = 2, type = "s")
         }
     }
-    abline(h = Sd[2:(length(Sd) - 1)], col = "#33333330")
+    abline(h = Rd[2:(length(Rd) - 1)], col = "#33333330")
     par(o)
 }
