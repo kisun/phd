@@ -6,8 +6,10 @@
 \usepackage{natbib}
 \usepackage[scale=2]{ccicons}
 \usepackage{lmodern}
-
-
+\usepackage{ulem}
+\renewcommand<>{\sout}[1]{
+  \alt#2{\beameroriginal{\sout}{#1}}{#1}
+}
 
 %\usepackage{xspace}
 %\newcommand{\themename}{\textbf{\textsc{metropolis}}\xspace}
@@ -17,14 +19,19 @@
 \newcommand{\bY}{\mathbf{Y}}
 \newcommand{\mat}[1]{\mathbf{#1}}
 \renewcommand{\vec}[1]{\boldsymbol{#1}}
+\newcommand{\bx}{\mathbf{x}}
+\newcommand{\bxi}{\bx^{(i)}}
+\newcommand{\bw}{\mathbf{w}}
+\newcommand{\bz}{\mathbf{z}}
+\newcommand{\bnu}{\boldsymbol{\nu}}
 
 
 \title{Real-time prediction of bus arrival using joint models for vehicle and road}
 %\subtitle{}
 \author{Tom Elliott}
 \date{}
-\institute{Supervisor: Professor Thomas Lumley\\[2em]}
-%\includegraphics[height=1.5cm,width=3.8cm]{stat-logo.png}}
+\institute{Supervisor: Professor Thomas Lumley\\[2em]
+\includegraphics[height=1.5cm,width=3.8cm]{stat-logo.png}}
 
 %Department of Statistics\\University of Auckland}
 %\titlegraphic{\hfill\includegraphics[height=1.5cm]{stat-logo.png}}
@@ -106,35 +113,294 @@
   \frametitle{Vehicle State Model: Particle Filter}
   
   \begin{itemize}
+  \item Represent $\bX_k$ by a \emph{sample} of point-estimates (particles) $\bxi$
+    
   \item Flexible modeling framework, fewer assumptions
     
-  \item Proposals cover more plausible states
+  \item Better coverage (\textbf{multimodality})
     
   \item Easy to compute likelihood
   \end{itemize}
   
   
-  \textbf{Step 1}: predict new state (for each particle independently)
-  \begin{equation*}
-    \bX_k^{(i)} = f(\bX_{k-1}^{(i)}, \sigma_v^2, \ldots)
-  \end{equation*}
-  {\small$f$: transition function; $\sigma_v^2$: process noise; shape information, \ldots}
+  \textbf{Step 1: predict}
+  
+  $\Rightarrow$ independently predict each particle 
+  
+  $\Rightarrow$ sample of plausible vehicle states
+  
+  % \
   
   
-  \textbf{Step 2}: resample particles based on likelihood
-  \begin{equation*}
-    \bY_k = h(\bX_k) + e_k
-  \end{equation*}
-  {\small$f$: measurement function; $e_k$ measurement (GPS) error}
+  \textbf{Step 2: update}
+  
+  $\Rightarrow$ compute likelihood of each particle
+  
+  $\Rightarrow$ weighted resample (with replacement)
+  % \begin{equation*}
+  %   \bY_k = h(\bX_k) + e_k
+  % \end{equation*}
+  % {\small$f$: measurement function; $e_k$ measurement (GPS) error}
 \end{frame}
 
 
 \begin{frame}
   \frametitle{Vehicle State Model: Particle Filter}
   
+  \textbf{Step 1: predict}
+  
+  \onslide<+->
+  \begin{itemize}
+  \item<+-> Start with ``known'' vehicle state, $\bX_{k-1} = \{\bxi_{k-1} : i=1, \ldots, N\}$
+    
+  \item<+-> \textbf{Transition} each particle independently
+    \begin{equation*}
+      \bxi_k = f(\bxi_{k-1}, \alert<4>{\sigma_v^2}, \ldots)
+    \end{equation*}
+    
+    \begin{enumerate}
+    \item<+-> Add system noise
+      \only<4>{
+      \begin{equation*}
+        v_k^{(i)} \sim \mathcal{N}_T(v_{k-1}^{(i)}, \alert<4>{\sigma^2_v}),
+        \qquad 0 \leq v_k^{(i)} \leq \mathbf{v}_{\text{max}}
+      \end{equation*}
+      $\mathbf{v}_{\text{max}} \approx$ road speed limit
+      }
+    \item<+-> Move particles along route \only<5>{(Law of Motion)}
+      \only<5-6>{
+      \begin{equation*}
+        d_k^{(i)} \alt<6->{\alert{\leq}}{=} d_{k-1}^{(i)} + (t_k - t_{k-1}) v_k^{(i)}
+      \end{equation*}
+      }
+    \item<6-> What about intermediate stop(s)?
+      \only<7->{
+      \begin{itemize}
+      \item<7-> Does the particle stop? $p_{s_k}^{(i)} \sim \mathrm{Bernoulli}(\pi_{s_k})$
+        
+      \item<8-> If so, for how long? $\bar t_{s_k} \sim \mathcal{E}(\tau_{s_k})$
+        
+      \item<9-> \textbf{Dwell time} $ = p_{s_k}^{(i)} \left(\gamma + \bar t_{s_k}\right)$
+        
+        {\scriptsize $\gamma$ = minimum dwell time (deccelerate/accelerate, open/close doors)}
+        
+        {\scriptsize $\bar t_{s_k}$ = passengers on/off}
+      \end{itemize}
+      }
+    \end{enumerate}
+  \end{itemize}
   
 \end{frame}
 
+\begin{frame}
+  \frametitle{Vehicle State Model: Particle Filter}
+  
+  \textbf{Step 1: predict}
+  
+  [[ IMG: particles with speeds ]]
+  >>
+  [[ IMG: add noise to speeds ]]
+  >>
+  [[ IMG: move forward, some stopping ]]
+\end{frame}
+
+\begin{frame}
+  \frametitle{Vehicle State Model: Particle Filter}
+  
+  \textbf{Step 2: update}
+  
+  \onslide<+->
+  \begin{itemize}
+   
+  \item<+-> Likelihood function 
+    \only<1-7>{$\ell(\bY_k | \bx_k^{(i)} \only<4-7>{,\alert<4>{h}} \only<5-7>{,\alert<5>{g}})$}
+    \only<3-7>{
+    \begin{itemize}
+      \only<3-7>{ 
+      \item Transform particles onto flat plane
+        \begin{equation*}
+          \bz_k^{(i)} = \alert<5>{g(}\alert<4>{h(\bxi_k)} \alert<5>{| \bY_k)}
+        \end{equation*}
+        
+        \only<4>{
+          \alert{$h$: measurement function} (distance into trip $\rightarrow$ lat/lon)
+        }
+        \only<5>{
+          \alert{$g(\cdot|\bY_k)$: projection}
+        
+          centered on $\bY_k$,  1~unit = 1~meter in all directions
+        }
+      }
+      
+      \only<6-7>{
+      \item Bivariate normal likelihood
+        \begin{align*}
+          \bY_k | \bz_k^{(i)} \sim \bz_k^{(i)} | \bY_k \sim \mathcal{N}_2 (\bY_k, \sigma_y^2 I_2)
+          \qquad
+          \text{(\scriptsize $\sigma_y^2$ = GPS error)}
+        \end{align*}        
+      }
+      
+      \only<7>{
+      \item For each particle
+        \begin{equation*}
+          \ell(\bY_k | \bxi_k, h, g) \propto 
+          e^{-\frac{1}{2\sigma^2}\left( (\bz_k^{(i)})^T \bz_k^{(i)} \right)}
+        \end{equation*}
+      }
+    \end{itemize}
+    }
+    
+    \only<8->{
+    \begin{equation*}
+      \ell(\bY_k | \bxi_k, h, g) \propto 
+      e^{-\frac{1}{2\sigma^2}\left( (\bz_k^{(i)})^T \bz_k^{(i)} \right)}
+    \end{equation*}
+    
+    
+    \item<8-> Compute weights
+      
+      \begin{equation*}
+        w_i = \frac{\ell(\bY_k | \bxi_k)}{\sum_{j=1}^N \ell(\bY_k | \bx_k^{(j)})}
+      \end{equation*}
+      
+    \item<9-> Weighted resample with replacement
+      
+      \onslide<10->{$\Rightarrow$ Cull the imaginary busses that are no longer plausible}
+    }
+    
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Vehicle State Model: Particle Filter}
+  
+  \textbf{Step 2: update}
+  
+  [[ IMG: continue from previous image ]]
+  >>
+  [[ IMG: projected onto flat plane ]]
+  >> 
+  [[ IMG: sizes proportional to weight ]]
+  >>
+  [[ IMG: after the cull ]]
+  >> 
+  [[ IMG: reverse projection - distance into trip ]]
+\end{frame}
+
+
+\section{Road State Model}
+
+\begin{frame}
+  \frametitle{Road State Model}
+  
+  \begin{enumerate}[<+->]
+  \item \sout<4>{Particle filter $\Rightarrow$ speed estimates for a given bus}
+    
+  \item Identify segments of road common to multiple routes
+    
+  \item Use speed information from \emph{all busses} to estimate
+    speed along a given road segment
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Road State Model}
+  
+  \begin{enumerate}
+  \item[2.] Identify segments of road common to multiple routes
+  \end{enumerate}
+  
+  
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Road State Model}
+  
+  \begin{enumerate}
+  \item[3.] Use speed information from \emph{all busses} to estimate
+    speed along a given road segment
+    
+    \pause
+    $\Rightarrow$ \textbf{Kalman filter}
+    
+  \end{enumerate}
+
+  \pause
+  \textbf{Road state:} mean speed for all $M$ road segments at time $t_\ell$
+    \begin{equation*}
+      \bnu_\ell = \left[ \nu_{1\ell}\ \nu_{2\ell}\ \cdots\ \nu_{M\ell} \right]^T
+    \end{equation*}
+  with associated covariance matrix
+  \begin{equation*}
+    \Xi_\ell =
+    \begin{bmatrix}
+    \xi_{1\ell} & 0 & \cdots & 0 \\
+    0 & \xi_{2\ell} & \cdots & 0 \\
+    \vdots & \vdots & \ddots & \vdots \\
+    0 & 0 & \cdots & \xi_{M\ell}
+  \end{bmatrix}
+  \end{equation*}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Road State Model: Kalman Filter}
+  
+  \textbf{Step 1: predict}
+  \pause
+  \begin{equation*}
+    \bnu_\ell = \only<4->{I_M}\only<1-3>{\alert<3>{\mat{A}}} \bnu_{\ell-1} + \alert<5>{\bw_\ell}
+  \end{equation*}
+  \pause
+  $\mat{A}$: \alert<3>{transition matrix} \pause $\Rightarrow$ Identity matrix $I_M$
+  
+  \pause
+  $\bw_\ell \sim \mathcal{N}(0, \mat{Q}_\ell)$: \alert<5>{Gaussian process noise},
+  $\mat{Q}_\ell = (t_\ell - t_{\ell - 1}) \sigma^2_\nu I_M$
+  
+  \vspace{1em}
+  \pause
+  \textbf{Step 2: update}
+  \pause
+  \begin{equation*}
+    \alert<11>{\mathbf{v}_\ell} = 
+    \only<9->{I_M}\only<7-8>{\alert<8>{\mat{H}}}\bnu_\ell + \alert<10>{\mathbf{r}_\ell}
+  \end{equation*}
+  \pause
+  $\mat{H}$: \alert<8>{measurement matrix} \pause $\Rightarrow$ Identity matrix $I_M$
+  
+  \pause
+  $\mathbf{r}_\ell \sim \mathcal{N}(0, \alert<12>{\mat{R}_\ell})$: \alert<10>{measurement error}
+  
+  \pause
+  \begin{itemize}[<+- | alert@+>]
+  \item $\mathbf{v}_\ell$: mean speed of all particles from $t_{\ell-1}$ to $t_\ell$
+    
+  \item $\mat{R}_\ell$: estimated from variance of particles
+  \end{itemize}
+  
+  \onslide<+->
+  Standard Kalman filter algorithm to obtain $\bnu_\ell$ and $\Xi_\ell$.
+  
+\end{frame}
+
+\begin{frame}
+  \frametitle{Road State Model: Kalman Filter}
+  
+  
+\end{frame}
+
+\section{Predicting Arrival Time}
+
+\begin{frame}
+  \frametitle{Predicting Arrival Time}
+  
+  \begin{itemize}
+  \item 
+  \end{itemize}
+\end{frame}
 
 
 \end{document}
