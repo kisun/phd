@@ -123,6 +123,7 @@
   \frametitle{Vehicle State Model}
   
   \textbf{Goal:} use observations of bus location (GPS) \ldots
+  \pause
   \begin{equation*}
     \bY_k = 
     \begin{bmatrix}
@@ -134,7 +135,9 @@
       \text{timestamp}
     \end{bmatrix}
   \end{equation*}
+  \pause
   \ldots to infer \textbf{unobservable vehicle state} \ldots
+  \pause
   \begin{equation*}
     \bX_k =
     \begin{bmatrix}
@@ -147,15 +150,21 @@
       \vdots
     \end{bmatrix}
   \end{equation*}
+  \pause
   \ldots in real time.
 \end{frame}
 
-\begin{frame}
+\begin{frame}[c]
   \frametitle{Vehicle State Model}
   
-[image of data location] $\Rightarrow$
-[images of vehicle state - distance into trip]
+  \centering
+  \hspace{2em}$\bY_k$\hspace{13em}$\bX_k$
+  
+  \vspace{-3em}
+  \includegraphics{figure/vehicle-state-1.pdf}
+  \includegraphics{figure/vehicle-state-2.pdf}
 
+  \scriptsize{Example: $d_k = 2000$}
 \end{frame}
 
 
@@ -173,6 +182,7 @@
   \end{itemize}
   
   
+  \pause
   \textbf{Step 1: predict}
   
   $\Rightarrow$ independently predict each particle 
@@ -182,6 +192,7 @@
   % \
   
   
+  \pause
   \textbf{Step 2: update}
   
   $\Rightarrow$ compute likelihood of each particle
@@ -247,11 +258,15 @@
   
   \textbf{Step 1: predict}
   
-  [[ IMG: particles with speeds ]]
-  >>
-  [[ IMG: add noise to speeds ]]
-  >>
-  [[ IMG: move forward, some stopping ]]
+  \vspace{-1em}
+  \begin{overprint}
+    \onslide<1>
+    \includegraphics{figure/predict-state-1.pdf}
+    \onslide<2>
+    \includegraphics{figure/predict-state-2.pdf}
+    \onslide<3>
+    \includegraphics{figure/predict-state-3.pdf}
+  \end{overprint}
 \end{frame}
 
 \begin{frame}
@@ -327,15 +342,27 @@
   
   \textbf{Step 2: update}
   
-  [[ IMG: continue from previous image ]]
-  >>
-  [[ IMG: projected onto flat plane ]]
-  >> 
-  [[ IMG: sizes proportional to weight ]]
-  >>
-  [[ IMG: after the cull ]]
-  >> 
-  [[ IMG: reverse projection - distance into trip ]]
+  \vspace{-1em}
+  \begin{overprint}
+    \onslide<1>
+    \centering
+    \includegraphics{figure/update-state-1.pdf}
+    \onslide<2>
+    \centering
+    \includegraphics{figure/update-state-2.pdf}
+    \onslide<3>
+    \centering
+    \includegraphics{figure/update-state-3.pdf}
+    \onslide<4>
+    \centering
+    \includegraphics{figure/update-state-4.pdf}
+    \onslide<5>
+    \centering
+    \includegraphics{figure/update-state-5.pdf}
+    \onslide<6>
+    \centering
+    \includegraphics{figure/update-state-6.pdf}
+  \end{overprint}
 \end{frame}
 
 
@@ -439,6 +466,7 @@
 \begin{frame}
   \frametitle{Road State Model: Kalman Filter}
   
+  [[ something else here \ldots ]]
   
 \end{frame}
 
@@ -447,10 +475,118 @@
 \begin{frame}
   \frametitle{Predicting Arrival Time}
   
+  
+  \begin{enumerate}
+  \item Schedule
+  \item Schedule deviation (AT?)
+  \item \alert<2>{Vehicle state}
+  \item \alert<2>{Road state}
+  \end{enumerate}
+
+  \pause
+  \alert<2>{3.\ and 4.\ include dwell time models}
+  
+  \pause
+  Some notation:
   \begin{itemize}
-  \item 
+  \item $S_j^t = $ scheduled arrival time at stop $j$
+  \item $\hat A_j = $ (predicted) arrival time at stop $j$
+  \item $\tilde T_{s_k}^a, \tilde T_{s_k}^d = $ observed arrival/departure delay at last stop\\
+    (from Auckland Transport's API)
+  \end{itemize}
+ 
+\end{frame}
+
+\begin{frame}
+  \frametitle{Prediction Arrival Time}
+  
+  \textbf{1. Schedule}
+  
+  \begin{itemize}    
+  \item $\hat A_j = S_j^t$
+    
+  \item Baseline for other predictors
   \end{itemize}
 \end{frame}
 
+
+\begin{frame}
+  \frametitle{Prediction Arrival Time}
+  
+  \textbf{2. Schedule deviation}
+  
+  \begin{itemize}    
+  \item $\hat A_j = 
+    \begin{cases}
+      S_j^t + \tilde T_{s_k}^d & \text{ if departed stop $s_k$}\\
+      S_j^t + \tilde T_{s_k}^a & \text{ if not departed stop $s_k$}
+    \end{cases}$
+    
+  \item Sensitive to delays
+    
+  \item Unable to incorporate intermediate uncertainty
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Prediction Arrival Time}
+  
+  \textbf{3. Vehicle state}
+  
+  \begin{itemize}[<+->]
+    \item $S_j^d = $ distance along route of stop $j$
+      
+      
+    \item $\hat A_j\only<3->{\alert<3>{^{(i)}}} = 
+      t_k + \frac{S_j^d - d_k\only<3->{\alert<3>{^{(i)}}}}{v_k\only<3->{\alert<3>{^{(i)}}}}
+      \only<4->{\alert<4>{+ \sum_{\ell = s_k+1}^{j-1} p_\ell^{(i)}(\gamma + \bar t_\ell^{(i)})}}$
+      
+    \item Prediction for each particle
+      
+    \item Allow for dwell time uncertainty
+      
+    \item Potentially multi-modal
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Prediction Arrival Time}
+  
+  \textbf{4. Road state}
+  
+  \begin{itemize}[<+->]
+    \item $r_k = $ route segment index\\
+      $R_b = $ distance along route of start of segment $b$
+      
+    \item $\hat A_j\only<6>{\alert<6>{^{(i)}}} = 
+      t_k + \only<3->{\alert<3>{ \frac{R_{s_k\only<6->{\alert<6>{^{(i)}}}+1} - d_k\only<6->{\alert<6>{^{(i)}}}}{\nu_{s_k\only<6->{\alert<6>{^{(i)}}}}} }+} 
+      \only<4->{\alert<4>{ \sum_{b\in B^\star} \frac{R_{b+1}-R_b}{\alt<6->{\alert<6>{v_b^{(i)}}}{\nu_b}}  }+}
+      \only<5->{\alert<5>{ \frac{S_j^d - R_{b'}}{\alt<6->{\alert<6>{v_{b'}^{(i)}}}{\nu_{b'}}} }}
+      \only<7->{\alert<7>{\linebreak\phantom{A_j = }\alert<6>{+ \sum_{\ell = s_k+1}^{j-1} p_\ell^{(i)}(\gamma + \bar t_\ell^{(i)})}}}$
+      
+    \only<3>{
+    \item travel time until end of current segment
+    }
+    \only<4>{
+    \item travel time through intermediate segments ($B^\star$)
+    }
+    \only<5>{
+    \item travel time along segment $b'$ to stop $j$
+    }
+  \item<6-> For each particle, sample $v_b^{(i)} \sim \mathcal{N}(\nu_b, \xi_b)$
+  \item<7-> Allow for dwell time uncertainty
+    
+  \item<8-> Uses most recent data
+    
+  \item<9-> Opportunity to extend model (e.g., changes in speed over time)
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Predicting Arrival Time}
+  
+  
+\end{frame}
 
 \end{document}

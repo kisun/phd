@@ -20,7 +20,7 @@ pf <- function(con, vid, N = 500,
                upsilon = 20,    ## average time a bus is stopped at "lights"
                draw = FALSE,
                SPEED.range = c(0, 110 * 1000 / 60^2),
-               info = NULL,
+               info = NULL, keep.proposal = FALSE,
                vp = dbGetQuery(con, sprintf("SELECT * FROM vehicle_positions WHERE vehicle_id='%s'", vid))) {
 
     ## Get vehicle's latest realtime state:
@@ -174,6 +174,7 @@ pf <- function(con, vid, N = 500,
 
     wi <- sample(nrow(particles), N, replace = TRUE, prob = wt)
     parents <- particles$id[wi]
+    if (keep.proposal) Proposal <- particles
     particles <- particles[wi, ]
     if (draw) {
         seekViewport("p1")
@@ -204,6 +205,7 @@ pf <- function(con, vid, N = 500,
                                collapse = ", ")))
     dbGetQuery(con, qry)
 
+    if (keep.proposal) return(Proposal)
     return(invisible(0))
 }
 
