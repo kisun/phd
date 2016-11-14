@@ -103,7 +103,7 @@ dev.off()
 ### FIGURE TWO
 dbGetQuery(con, sprintf("DELETE FROM particles WHERE timestamp >= %s", vps[ind[1], "timestamp"]))
 dbGetQuery(con, "UPDATE particles SET active = FALSE")
-set.seed(70)
+set.seed(1015) ############################################### SEEEEED: 1010
 ## run a few iterations to get going ...
 for (k in 1:8) {
     pf(con, vps[ind[k], "vehicle_id"], 10, sig.gps = 5,
@@ -218,10 +218,10 @@ dev.off()
 pdf(fileP("update-state-1.pdf"), width = 3, height = 3, bg = "transparent", pointsize = 6)
 with(p2, {
     plot(distance_into_trip, rep(0, nrow(p2)),
-         xlim = YLIM, yaxt = "n", bty = "n", xlab = "Distance into trip (m)", ylab = "",
-         pch = 19)
-    abline(h = 0)
-    abline(v = Sd, lty = 2, col = "#333333")
+         xlim = range(shape$dist_traveled), yaxt = "n", bty = "n", xlab = "Distance into trip (m)", ylab = "",
+         pch = 19, cex = 0.5)
+    lines(range(shape$dist_traveled), rep(0, 2))
+    abline(v = Sd[4], lty = 2, col = "#333333")
 })
 dev.off()
 
@@ -239,8 +239,8 @@ with(infoList[[1]]$shape, {
 dev.off()
 
 
-pdf(fileP("update-state-3.pdf"), width = 1.5, height = 3, bg = "transparent", pointsize = 6)
-with(infoList[[1]]$shape[140:450,],
+pdf(fileP("update-state-3.pdf"), width = 2.5, height = 3, bg = "transparent", pointsize = 6)
+with(infoList[[1]]$shape[shi <- 220:380,],
      plot(lon, lat, type = "l", xlab = expression(lambda), ylab = expression(phi),
           asp = 1.4)
      )
@@ -256,11 +256,12 @@ phi0 <- vps[ind[9], "position_latitude"] * pi/180
 pLL <- t(sapply(p2$distance_into_trip, h, shape = infoList[[1]]$shape)) * pi/180
 px <- R * (pLL[,2] - lam1) * cos(phi0)
 py <- R * (pLL[,1] - phi0)
-sLL <- infoList[[1]]$shape[, c("lon", "lat")] * pi/180
+sLL <- infoList[[1]]$shape[shi, c("lon", "lat")] * pi/180
 sx <- R * (sLL[,1] - lam1) * cos(phi0)
 sy <- R * (sLL[,2] - phi0)
-pdf(fileP("update-state-4.pdf"), width = 1.5, height = 3, bg = "transparent", pointsize = 6)
-plot(px, py, xlab = "West-East axis (m)", ylab = "North-South axis (m)", asp = 1, pch = 19)
+pdf(fileP("update-state-4.pdf"), width = 2.5, height = 3, bg = "transparent", pointsize = 6)
+plot(px, py, xlab = "West-East axis (m)", ylab = "North-South axis (m)", asp = 1, pch = 19,
+     xlim = range(sx), ylim = range(sy), cex = 0.5)
 lines(sx, sy)
 points(0, 0, col = "#990000", pch = 8, lwd = 2)
 dev.off()
@@ -273,9 +274,9 @@ lh <- exp(- 1 / (2 * 40^2) * diag(t(z) %*% z))
 wt <- lh / sum(lh)
 
 wi <- sample(nrow(p2), replace = TRUE, prob = wt)
-pdf(fileP("update-state-5.pdf"), width = 1.5, height = 3, bg = "transparent", pointsize = 6)
+pdf(fileP("update-state-5.pdf"), width = 2.5, height = 3, bg = "transparent", pointsize = 6)
 plot(px[wi], py[wi], xlab = "West-East axis (m)", ylab = "North-South axis (m)", asp = 1, pch = 19,
-     xlim = range(px), ylim = range(py))
+     xlim = range(sx), ylim = range(sy), cex = 0.5)
 lines(sx, sy)
 points(0, 0, col = "#990000", pch = 8, lwd = 2)
 dev.off()

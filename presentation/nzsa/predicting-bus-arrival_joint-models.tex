@@ -75,6 +75,9 @@
 \newcommand{\bz}{\mathbf{z}}
 \newcommand{\bnu}{\boldsymbol{\nu}}
 
+\usepackage{tikz}
+\usetikzlibrary{calc,positioning}
+
 
 \title{Real-time prediction of bus arrival using joint models for vehicle and road}
 %\subtitle{}
@@ -158,12 +161,14 @@
   \frametitle{Vehicle State Model}
   
   \centering
-  \hspace{2em}$\bY_k$\hspace{13em}$\bX_k$
-  
-  \vspace{-3em}
-  \includegraphics{figure/vehicle-state-1.pdf}
-  \includegraphics{figure/vehicle-state-2.pdf}
-
+  \begin{tikzpicture}    
+    \node (img1) at (0,0) {\includegraphics{figure/vehicle-state-1.pdf}};
+    \node[above of=img1, yshift=2.2cm, xshift=0.3cm] (yk) {$\bY_k$};
+    \node[right of=img1,xshift=4cm] (img2) {\includegraphics{figure/vehicle-state-2.pdf}};
+    \node[above of=img2, yshift=2.2cm, xshift=0.3cm] (xk) {$\bX_k$};
+  \end{tikzpicture}
+  es
+  \vspace{-1em}
   \scriptsize{Example: $d_k = 2000$}
 \end{frame}
 
@@ -346,20 +351,23 @@
   \begin{overprint}
     \onslide<1>
     \centering
-    \includegraphics{figure/update-state-1.pdf}
+    \includegraphics{figure/predict-state-3.pdf}
     \onslide<2>
     \centering
-    \includegraphics{figure/update-state-2.pdf}
+    \includegraphics{figure/update-state-1.pdf}
     \onslide<3>
     \centering
-    \includegraphics{figure/update-state-3.pdf}
+    \includegraphics{figure/update-state-2.pdf}
     \onslide<4>
     \centering
-    \includegraphics{figure/update-state-4.pdf}
+    \includegraphics{figure/update-state-3.pdf}
     \onslide<5>
     \centering
-    \includegraphics{figure/update-state-5.pdf}
+    \includegraphics{figure/update-state-4.pdf}
     \onslide<6>
+    \centering
+    \includegraphics{figure/update-state-5.pdf}
+    \onslide<7>
     \centering
     \includegraphics{figure/update-state-6.pdf}
   \end{overprint}
