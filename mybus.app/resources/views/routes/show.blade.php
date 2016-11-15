@@ -64,8 +64,10 @@
       // every 100 obs:
       var snappedPath = [];
       var M = Math.ceil(data.length / 99);
+      console.log("[0," + data.length + "] --------");
       for (var i = 0; i < M; i++) {
         // overlap: 0-99; 99-198; 198-297; ...
+        console.log("[ " + 99*i + "," + 99*(i+1) + "]");
         $.ajax({
           url: 'https://roads.googleapis.com/v1/snapToRoads',
           data: {
