@@ -71,7 +71,7 @@
           data: {
             interpolate: true,
             key: "{{ env('GOOGLE_API_KEY') }}",
-            path: pathValues.slice(99 * i, 99 * (i + 1) + 1).join('|')
+            path: pathValues.slice(99 * i, 99 * (i + 1)).join('|')
           },
           success: function(data) {
             for (j = 0; j < data.snappedPoints.length; j++) {
