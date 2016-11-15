@@ -60,13 +60,28 @@
 \begin{frame}
   \frametitle{What's wrong with the current\footnote{Auckland Transport} system?}
   
-  \begin{itemize}
+  \pause
+  \begin{itemize}[<+->]
   \item Prediction inaccuracy
     
   \item Prone to errors
     
-  \item Statistical model?
+  \item<7-> Recent modelling frameworks \emph{don't} make use of 
+    all real-time vehicle data
   \end{itemize}
+  
+  \begin{overprint}
+    \onslide<3-6>
+    \centering
+    \onslide<3->{\includegraphics[width=0.2\textwidth]{figure/colwill-1.jpg}\hspace{1em}}
+    \onslide<4->{\includegraphics[width=0.2\textwidth]{figure/colwill-2.jpg}\hspace{1em}}
+    \onslide<5->{\includegraphics[width=0.2\textwidth]{figure/colwill-3.jpg}\hspace{1em}}
+    \onslide<6->{\includegraphics[width=0.2\textwidth]{figure/colwill-4.jpg}}
+    
+    \onslide<7>
+    \centering
+    \includegraphics[width=0.8\textwidth,trim={0 0 0 0.6cm},clip]{figure/allbuses.pdf}
+  \end{overprint}
 \end{frame}
 
 
@@ -127,13 +142,13 @@
   \frametitle{Vehicle State Model: Particle Filter}
   
   \begin{itemize}
-  \item Represent $\bX_k$ by a \emph{sample} of point-estimates (particles) $\bxi$
+  \item Represent $\bX_k$ by a \emph{sample} of point-estimates (particles) $\bxi_k$
     
   \item Flexible modeling framework, fewer assumptions
     
-  \item Better coverage (\textbf{multimodality})
+  \item Better coverage of possible states (\textbf{multimodality})
     
-  \item Easy to compute likelihood
+  \item Intuitive likelihood function
   \end{itemize}
   
   
@@ -211,7 +226,8 @@
 \begin{frame}
   \frametitle{Vehicle State Model: Particle Filter}
   
-  \textbf{Step 1: predict}
+  \textbf{Step 1: predict}\\
+  Example ($N = 10$ particles)
   
   \vspace{-1em}
   \begin{overprint}
@@ -344,9 +360,22 @@
   
   \begin{enumerate}
   \item[2.] Identify segments of road common to multiple routes
+    
+    \pause
+    $\Rightarrow$ between intersections
   \end{enumerate}
   
   
+  \begin{overprint}
+    \onslide<2>
+    \centering
+    \includegraphics{figure/road-state-1.pdf}
+    \onslide<3>
+    \centering
+    \includegraphics{figure/road-state-2.pdf}
+  \end{overprint}
+
+    
 \end{frame}
 
 
@@ -421,12 +450,6 @@
   
 \end{frame}
 
-\begin{frame}
-  \frametitle{Road State Model: Kalman Filter}
-  
-  [[ something else here \ldots ]]
-  
-\end{frame}
 
 \section{Predicting Arrival Time}
 

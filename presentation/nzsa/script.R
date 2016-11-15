@@ -331,3 +331,29 @@ with(p2[wi,], {
            code = 0, length = 0.05, col = "#99000070")
 })
 dev.off()
+
+
+
+
+### FIGURE FOUR
+
+library(iNZightMaps)
+mobj <- iNZightMap(~lat, ~lon, data = infoList[[1]]$shape)
+
+pdf(fileP("road-state-1.pdf"), width = 1.5, height = 2.5, bg = "transparent", pointsize = 6)
+plot(mobj, join = TRUE, pch = NA, lwd = 2, col.line = "black", main = "")
+dev.off()
+
+pdf(fileP("road-state-2.pdf"), width = 1.5, height = 2.5, bg = "transparent", pointsize = 6)
+plot(mobj, pch = NA, main = "")
+with(mobj,
+     addLines(.latitude, .longitude, id = leg,
+              gpar = list(
+                  lwd = 2,
+                  col = ifelse(1:max(leg) %% 2 == 1, "black", "purple")
+              ))
+     )
+dev.off()
+
+
+
