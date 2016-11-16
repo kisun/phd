@@ -68,7 +68,11 @@ L <- nrow(schedule) ## number of STOPS
 ## H <- diag(nrow(speeds))
 ## delta <- 5 * 60
 ## speed <- list(B = B0, P = P0, N = N, M = M, A = A, H = H, t = kf.t, delta = delta)
-## ## PRED <- function(m, t) sprintf("predictions/method_%d/%d.csv", m, t)
+savePred <- function(pred, m, t)
+    write.table(pred, file = sprintf("predictions/method_%s/%d.csv", m, t),
+                quote = FALSE, row.names = FALSE, col.names = TRUE, sep = ",")
+sapply(c("schedule", "schedule_deviation", "vehicle_state", "road_state"),
+       function(x) system(sprintf("mkdir -p predictions/method_%s", x)))
 ## BHist <- list(mean = speed$B, var = cbind(diag(speed$P)), t = speed$t)
 speed <- list(t = vps[ind[1], "timestamp"], delta = 5 * 60)
 MAX.speed <- 60 * 1000 / 60^2
@@ -105,39 +109,72 @@ for (k in (k+1):length(ind)) {
               SPEED.range = c(MIN.speed, MAX.speed), draw = TRUE,
               rho = 0.5)
     dev.off()
-    ## if (res <= 0) {
-    ##     dat <- dbGetQuery(con,
-    ##                       sprintf("SELECT distance_into_trip, velocity, arrival_time, departure_time, segment FROM particles WHERE vehicle_id = '%s' AND active",
-    ##                               vps[ind[k], "vehicle_id"]))
-    ##     sk <- dat$segment
-    ##     St <- as.numeric(as.POSIXct(paste(vps$trip_start_date[1],
-    ##                                       infoList[[vps[ind[k], "trip_id"]]]$schedule$pivot.arrival_time)))
-    ##     tstart <- min(St)
-    ##     St <- St - tstart
-    ##     invisible(sapply(1:length(sk), function(i) {
-    ##         if (sk[i] < M) {
-    ##             PRED[-(1:sk[i]), i, k, 1] <<- St[-(1:sk[i])]
-    ##             PRED[-(1:sk[i]), i,  k, 2] <<-
-    ##                 St[-(1:sk[i])] + (ifelse(is.na(dat$departure_time[i]),
-    ##                                          dat$arrival_time[i], dat$departure_time[i]) - St[sk[i]]) - tstart
-    ##             PRED[-(1:sk[i]), i, k, 3] <<-
-    ##                 vps[ind[k], "timestamp"] + (ds[-(1:sk[i])] - dat$distance_into_trip[i]) / dat$velocity[i] +
-    ##                 cumsum(rbinom(M - sk[i], 1, 0.5) * (6 + rexp(M - sk[i], 1 / 5))) - tstart
-    ##             PRED[-(1:sk[i]), i, k, 4] <<-
-    ##                 vps[ind[k], "timestamp"] +
-    ##                 (ds[sk[i] + 1] - dat$distance_into_trip[i]) / msm::rtnorm(1, speed$B[sk[i]],
-    ##                                                                           diag(speed$P)[sk[i]],
-    ##                                                                           MIN.speed, MAX.speed) +
-    ##                 cumsum((ds[(sk[i]+1):M] - ds[sk[i]:(M-1)]) /
-    ##                        msm::rtnorm(M - sk[i], speed$B[sk[i]:M],
-    ##                                    diag(speed$P)[sk[i]:M], MIN.speed, MAX.speed)) +
-    ##                 cumsum(rbinom(M - sk[i], 1, 0.5) * (6 + rexp(M - sk[i], 1 / 5))) - tstart
-    ##         }
-    ##         NULL
-    ##     }))
-    ## }
+    if (res <= 0) {
+        dat <- dbGetQuery(con,
+                          sprintf("SELECT distance_into_trip, velocity, stop_index, arrival_time, departure_time, segment_index FROM particles WHERE vehicle_id = '%s' AND active",
+                                  vps[ind[k], "vehicle_id"]))
+        Speed <- dbGetQuery(con,
+                            sprintf("SELECT speed_mean, speed_var FROM segment_speeds WHERE current AND segment_id IN ('%s')", paste(with(infoList[[vps[ind[k], "trip_id"]]]$shape, tapply(segment_id, leg, min)), collapse = "','")))
+        sk <- dat$stop_index + 1 ## switching to R indexing
+        rk <- dat$segment_index + 1
+        St <- as.numeric(as.POSIXct(paste(vps$trip_start_date[1],
+                                          infoList[[vps[ind[k], "trip_id"]]]$schedule$pivot.arrival_time)))
+        Sd <- infoList[[vps[ind[k], "trip_id"]]]$schedule$pivot.shape_dist_traveled
+        Rd <- with(infoList[[vps[ind[k], "trip_id"]]]$shape,
+                   tapply(dist_traveled, leg, max))
+        tstart <- min(St)
+        St <- St - tstart
+        tk <- vps[ind[k], "timestamp"]
+        ## 1. Schedule prediction:
+        p1 <- matrix(St[-(1:min(sk))], nrow = 1)
+        colnames(p1) <- min(sk) + 1:ncol(p1)
+        savePred(p1, "schedule", tk)
+        ## 2. Schedule-deviation prediction:
+        delays <- ifelse(is.na(dat$departure_time), dat$arrival_time, dat$departure_time) - tstart - St[sk]
+        p2 <- sapply((min(sk)+1):length(St), function(j) ifelse(j > sk, St[j] + delays, NA))
+        colnames(p2) <- min(sk) + 1:ncol(p2)
+        savePred(p2, "schedule_deviation", tk)
+        ## 3. Vehicle-state prediction:
+        p3 <- (tk - tstart) +
+            sapply((min(sk)+1):length(St), function(j)
+                ifelse(j > sk, (Sd[j] - dat$distance_into_trip) / dat$velocity, NA))
+        dwell <- matrix(rbinom(prod(dim(p3)), 1, 0.5) * (6 + rexp(prod(dim(p3)), 1/5)),
+                        nrow = nrow(p3), ncol = ncol(p3))
+        if (ncol(p3) > 1)
+            p3 <- p3 + cbind(0, t(apply(dwell, 1, cumsum))[, -ncol(dwell)])
+        colnames(p3) <- min(sk) + 1:ncol(p3)
+        savePred(p3, "vehicle_state", tk)
+        ## 4. Road-state prediction:
+        skj <- (min(sk)+1):length(St)
+        rkj <- (min(rk)+1):length(Rd)
+        p4 <- t(sapply(1:length(sk), function(i) {
+            spds <- msm::rtnorm(nrow(Speed), Speed[, 1], Speed[, 2], MIN.speed, MAX.speed)
+            if (sk[i] == length(Sd)) return(rep(NA, length(skj)))
+            sapply(skj, function(j) {
+                if (j <= sk[i]) return(NA) ## stop behind bus
+                wseg <- Rd > Sd[sk[i]] & Rd < Sd[j]
+                ## next stop in same segment
+                if (sum(wseg) == 0) return((Sd[j] - dat$distance_into_trip[i]) / dat$velocity[i])
+                ## pass through intersections
+                tt1 <- (Rd[rk[i]] - dat$distance_into_trip[i]) / dat$velocity[i]
+                tt2 <- 0 ## intermediate segments
+                tt3 <- 0
+                if (Sd[j] < max(Rd))
+                    tt3 <- (Sd[j] - max(Rd[Rd < Sd[j]])) / spds[which.max(Rd[Rd < Sd[j]]) + 1]
+                wseg <- Rd > Sd[sk[i]] & Rd < max(Rd[Rd <= Sd[j]])
+                if (sum(wseg) > 0) ## sum travel time along intermediate segments
+                    tt2 <- tt2 + sum(diff(c(0, Rd)) / spds * wseg)
+                return(tt1 + tt2 + tt3)
+            })
+        }))
+        if (nrow(p4) == 1) p4 <- t(p4)
+        p4 <- (tk - tstart) + p4
+        if (ncol(p4) > 1)
+            p4 <- p4 + cbind(0, t(apply(dwell, 1, cumsum))[, -ncol(dwell)])
+        colnames(p4) <- min(sk) + 1:ncol(p4)
+        savePred(p4, "road_state", tk)
+    }
 }; close(pb);
-
 
 
 
@@ -156,3 +193,29 @@ invisible(apply(sp.hist, 1, function(x) {
 
 source("src/figures.R")
 drawSegments(shape, schedule, BHist, MAX.speed = MAX.speed)
+
+
+
+
+        dev.hold()
+        plot(NA, xlim = c(0, 90 * 60), ylim = c(0, M) + 0.5,
+             xlab = "Arrival Time (min after trip start)", xaxs = "i", xaxt = "n",
+             ylab = "Stop #", yaxs = "i", yaxt = "n")
+        abline(h = 2:M - 0.5, lty = 3, col = "#cccccc")
+        axis(2, at = 1:M, las = 1, tick = FALSE)
+        axis(1, at = pretty(c(0, 90)) * 60, labels = pretty(c(0, 90)))
+        for (mth in c("schedule", "schedule_deviation", "vehicle_state", "road_state")) {
+            pred <- read.csv(sprintf("predictions/method_%s/%d.csv", mth, tk), header = TRUE)
+            for (Sj in 1:ncol(pred)) {
+                points(pred[, Sj],
+                       rep(as.numeric(gsub("X", "", colnames(pred)[Sj])), nrow(pred)) +
+                       switch(mth, "schedule" = -0.5, "schedule_deviation" = -0.3,
+                              "vehicle_state" = -0.1, "road_state" = 0.1),
+                       pch = 19, cex = 0.4,
+                       col = switch(mth, "schedule" = "black", "schedule_deviation" = "orangered",
+                                    "vehicle_state" = "#009900", "road_state" = "#000099"))
+            }
+        }
+        legend("bottomright", legend = rev(c("Schedule", "Schedule Deviation", "Vehicle State", "Road State")),
+               col = rev(c("black", "#990000", "#009900", "#000099")), pch = 19, cex = 0.8, bty = "n")
+        dev.flush()

@@ -70,9 +70,9 @@ pf <- function(con, vid, N = 500,
 
         ## determine which segment of the route each particle is on
         particles$stop_index <- sapply(particles$distance_into_trip,
-                                       function(x) if (max(Rd) <= x) length(Rd) else which(Rd > x)[1L] - 1)
+                                       function(x) sum(Sd <= x) - 1)
         particles$segment_index <- sapply(particles$distance_into_trip,
-                                          function(x) if (max(Sd) <= x) length(Sd) else which(Sd > x)[1L] - 1)
+                                          function(x) sum(Rd <= x) - 1)
 
         particles$velocity <- msm::rtnorm(N, speeds$speed_mean[particles$segment_index],
                                           sqrt(speeds$speed_var[particles$segment_index]),
