@@ -79,31 +79,27 @@ MIN.speed <- 10 * 1000 / 60^2
 ############################################################################
 fileP <- function(x) file.path("../../presentation/nzsa/figure", x)
 ### FIGURE ONE
+library(iNZightMaps)
 
-pdf(fileP("vehicle-state-1.pdf"), width = 1.5, height = 3, bg = "transparent", pointsize = 6)
-with(infoList[[1]]$shape,
-     plot(lon, lat, type = "l", xlab = expression(lambda), ylab = expression(phi),
-          asp = 1.4)
-     )
-points(rbind(rev(h(2000, infoList[[1]]$shape))), pch = 19, col = "#990000")
-with(infoList[[1]]$shape, {
-    text(lon[1], lat[1], "Start", pos = 2, cex = 0.6)
-    text(lon[length(lon)], lat[length(lat)], "End", pos = 4, cex = 0.6)
-})
+pdf(fileP("vehicle-state-1.pdf"), width = 1.5, height = 2.5, bg = "transparent", pointsize = 6)
+mobj <- iNZightMap(~lat, ~lon, data = infoList[[1]]$shape)
+plot(mobj, pch = NA, join = TRUE, main = "", col.line = "purple")
+pt <- rbind(rev(h(2000, infoList[[1]]$shape)))
+addPoints(pt[2], pt[1], pch = 8, gpar = list(col = "#990000", cex = 0.6))
 dev.off()
 
-pdf(fileP("vehicle-state-2.pdf"), width = 3, height = 3, bg = "transparent", pointsize = 6)
+pdf(fileP("vehicle-state-2.pdf"), width = 3, height = 1.5, bg = "transparent", pointsize = 6)
 plot(range(infoList[[1]]$shape$dist_traveled), rep(0, 2), type = "l",
      yaxt = "n", bty = "n", xlab = "Distance into trip (m)", ylab = "")
-points(2000, 0, pch = 19, col = "#990000")
+points(2000, 0, pch = 8, col = "#990000")
 dev.off()
 
 
 
 ### FIGURE TWO
 dbGetQuery(con, sprintf("DELETE FROM particles WHERE timestamp >= %s", vps[ind[1], "timestamp"]))
-dbGetQuery(con, "UPDATE particles SET active = FALSE")
-set.seed(1015) ############################################### SEEEEED: 1010
+#dbGetQuery(con, "UPDATE particles SET active = FALSE")
+set.seed(2005) ############################################### SEEEEED: 1010, 1015
 ## run a few iterations to get going ...
 for (k in 1:8) {
     pf(con, vps[ind[k], "vehicle_id"], 10, sig.gps = 5,
@@ -111,7 +107,6 @@ for (k in 1:8) {
        SPEED.range = c(MIN.speed, MAX.speed), draw = TRUE,
        rho = 0.5)
 }
-
 ## a: particles with speed
 p1 <- dbGetQuery(con, sprintf("SELECT * FROM particles WHERE timestamp=%s", vps[ind[8], "timestamp"]))
 Sd <- infoList[[1]]$schedule$pivot.shape_dist_traveled
@@ -157,8 +152,8 @@ with(p1, {
          xlab = "Trip Time (sec)")
     xaxis(vps[ind[1], "timestamp"])
     abline(h = Sd, lty = 2, col = "#333333")
-    arrows(timestamp, distance_into_trip, timestamp + 10,
-           distance_into_trip + 10 * velocity, code = 2, length = 0.05)
+    arrows(timestamp, distance_into_trip, timestamp + 4,
+           distance_into_trip + 4 * velocity, code = 2, length = 0.05)
 })
 dev.off()
 
@@ -175,8 +170,8 @@ with(p1, {
     abline(h = Sd, lty = 2, col = "#333333")
 })
 with(p1, {
-    arrows(timestamp, distance_into_trip, timestamp + 10,
-           distance_into_trip + 10 * p2$velocity, code = 2, length = 0.05, col = "#00000070")    
+    arrows(timestamp, distance_into_trip, timestamp + 4,
+           distance_into_trip + 4 * p2$velocity, code = 2, length = 0.05, col = "#00000070")    
 })
 dev.off()
 

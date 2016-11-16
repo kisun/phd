@@ -195,27 +195,71 @@ source("src/figures.R")
 drawSegments(shape, schedule, BHist, MAX.speed = MAX.speed)
 
 
+arrivaltimes <- dbGetQuery(con2, sprintf("select distinct trip_id, stop_sequence, stop_id, arrival_delay, departure_delay from trip_updates as tu, stop_time_updates as stu where tu.oid=stu.trip_update_id and timestamp between %s and %s order by trip_id, stop_sequence", min(vps[ind, "timestamp"]), max(vps[ind, "timestamp"])))
 
+o <- with(vps[ind, ], tapply(trip_start_time, trip_id, unique))
+ORD <- order(factor(vps$trip_id[ind], levels = names(o)[order(o)]), vps$timestamp[ind])
 
+animation::saveHTML({
+    pb <- txtProgressBar(0, length(ind), style = 3)
+    dev.flush(dev.flush())
+    for (k in ORD) {
         dev.hold()
-        plot(NA, xlim = c(0, 90 * 60), ylim = c(0, M) + 0.5,
+        tk <- vps[ind[k], "timestamp"]
+        plot(NA, xlim = c(0, 90 * 60), ylim = c(1, M+1),
              xlab = "Arrival Time (min after trip start)", xaxs = "i", xaxt = "n",
-             ylab = "Stop #", yaxs = "i", yaxt = "n")
-        abline(h = 2:M - 0.5, lty = 3, col = "#cccccc")
-        axis(2, at = 1:M, las = 1, tick = FALSE)
+             ylab = "Stop #", yaxs = "i", yaxt = "n",
+             main = sprintf("2am trip"))
+        abline(h = 2:M, lty = 3, col = "#cccccc")
+        axis(2, at = 1:M + 0.5, labels = 1:M + 1, las = 1, tick = FALSE)
         axis(1, at = pretty(c(0, 90)) * 60, labels = pretty(c(0, 90)))
+        Ta <- arrivaltimes[arrivaltimes$trip_id == vps[ind[k], "trip_id"], ]
+        St <- infoList[[vps[ind[k], "trip_id"]]]$schedule[, c("pivot.arrival_time", "pivot.departure_time")]
+        St[, 1] <- as.numeric(as.POSIXct(paste(vps[ind[k], "trip_start_date"], St[, 1]), origin = "1970-01-01"))
+        St[, 2] <- as.numeric(as.POSIXct(paste(vps[ind[k], "trip_start_date"], St[, 2]), origin = "1970-01-01"))
+        St <- as.matrix(St)
+        abline(v = tk - St[1,1], lty = 3, col = "#33cccc")
+        if (nrow(Ta) > 0) {
+            sapply(unique(Ta$stop_sequence), function(s) {
+                arr <- Ta[Ta$stop_sequence == s & Ta$arrival_delay != 0, "arrival_delay"]
+                dep <- Ta[Ta$stop_sequence == s & Ta$departure_delay != 0, "departure_delay"]
+                if (length(arr) == 0 & length(dep) == 0) (c(NA, NA))
+                if (length(arr) == 0) return(rep(max(dep), 2))
+                if (length(dep) == 0) return(rep(max(arr), 2))
+                return(c(max(arr), max(dep)))
+            }) -> delays
+            dimnames(delays) <- list(c("arrival", "departure"), unique(Ta$stop_sequence))
+
+            
+            for (s in as.character(unique(Ta$stop_sequence))) {
+                delays[, s] <- St[s, ] + delays[, s] - min(St)
+                ##lines(delays[, s], rep(as.numeric(s), 2) - 0.9, col = "orangered", lwd = 2)
+                rect(delays[1, s], as.numeric(s) - 1, delays[2, s], as.numeric(s), col = "#cccccc",
+                     border = "#999999")
+            }
+        }
         for (mth in c("schedule", "schedule_deviation", "vehicle_state", "road_state")) {
-            pred <- read.csv(sprintf("predictions/method_%s/%d.csv", mth, tk), header = TRUE)
-            for (Sj in 1:ncol(pred)) {
-                points(pred[, Sj],
-                       rep(as.numeric(gsub("X", "", colnames(pred)[Sj])), nrow(pred)) +
-                       switch(mth, "schedule" = -0.5, "schedule_deviation" = -0.3,
-                              "vehicle_state" = -0.1, "road_state" = 0.1),
-                       pch = 19, cex = 0.4,
-                       col = switch(mth, "schedule" = "black", "schedule_deviation" = "orangered",
-                                    "vehicle_state" = "#009900", "road_state" = "#000099"))
+            file <- sprintf("predictions/method_%s/%d.csv", mth, tk)
+            if (file.exists(file)) {
+                pred <- read.csv(file, header = TRUE)
+                for (Sj in 1:ncol(pred)) {
+                    points(pred[, Sj],
+                           rep(as.numeric(gsub("X", "", colnames(pred)[Sj])), nrow(pred)) +
+                           switch(mth, "schedule" = -0.8, "schedule_deviation" = -0.6,
+                                  "vehicle_state" = -0.4, "road_state" = -0.2),
+                           pch = 19, cex = 0.4,
+                           col = switch(mth, "schedule" = "black", "schedule_deviation" = "orangered",
+                                        "vehicle_state" = "#009900", "road_state" = "#000099"))
+                }
+            } else {
+                next
             }
         }
         legend("bottomright", legend = rev(c("Schedule", "Schedule Deviation", "Vehicle State", "Road State")),
-               col = rev(c("black", "#990000", "#009900", "#000099")), pch = 19, cex = 0.8, bty = "n")
+               col = rev(c("black", "orangered", "#009900", "#000099")), pch = 19, cex = 0.8, bty = "n")
         dev.flush()
+        setTxtProgressBar(pb, which(ORD == k))
+        locator(1)
+    }
+    close(pb)
+}, "arrival_time_predictions", ani.width = 900, ani.height = 600)
