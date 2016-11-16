@@ -506,6 +506,9 @@
   \item Sensitive to delays
     
   \item Unable to incorporate intermediate uncertainty
+    
+  \item \textbf{OR} use particle estimates of arrival/departure delay, 
+    $\tilde A_{s_k}^{(i)}$ and $\tilde D_{s_k}^{(i)}$
   \end{itemize}
 \end{frame}
 
