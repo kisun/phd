@@ -200,6 +200,8 @@ arrivaltimes <- dbGetQuery(con2, sprintf("select distinct trip_id, stop_sequence
 o <- with(vps[ind, ], tapply(trip_start_time, trip_id, unique))
 ORD <- order(factor(vps$trip_id[ind], levels = names(o)[order(o)]), vps$timestamp[ind])
 
+install.packages("animation")
+
 animation::saveHTML({
     pb <- txtProgressBar(0, length(ind), style = 3)
     dev.flush(dev.flush())
@@ -259,7 +261,7 @@ animation::saveHTML({
                col = rev(c("black", "orangered", "#009900", "#000099")), pch = 19, cex = 0.8, bty = "n")
         dev.flush()
         setTxtProgressBar(pb, which(ORD == k))
-        locator(1)
+        #locator(1)
     }
     close(pb)
 }, "arrival_time_predictions", ani.width = 900, ani.height = 600)
