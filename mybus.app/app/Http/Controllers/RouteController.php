@@ -44,7 +44,7 @@ class RouteController extends Controller
         return view('routes.show', [
             'route' => $route,
             'shape' => $route->trips[0]->getShape(),
-            'stops' => $route->trips[0]->stop_times()->with('stop')->get(),
+            'stops' => $route->trips[0]->stop_times()->orderBy('stop_sequence')->with('stop')->get(),
             'dows' => ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
             'intersections' => \App\Intersection::all()
         ]);

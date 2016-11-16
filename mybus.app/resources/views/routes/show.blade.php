@@ -61,13 +61,12 @@
       for (var i = 0; i < data.length; i++) {
         pathValues.push(data[i].lat + ',' + data[i].lng);
       }
+
       // every 100 obs:
       var snappedPath = [];
       var M = Math.ceil(data.length / 99);
-      console.log("[0," + data.length + "] --------");
       for (var i = 0; i < M; i++) {
         // overlap: 0-99; 99-198; 198-297; ...
-        console.log("[ " + 99*i + "," + 99*(i+1) + "]");
         $.ajax({
           url: 'https://roads.googleapis.com/v1/snapToRoads',
           data: {
@@ -457,6 +456,7 @@
           });
 
           for (var j = 0; j < data.length - 1; j++) {
+//	for (var j = 1151; j < 1152; j++) {
             if (Data[j].lat() == Data[j+1].lat() &
                 Data[j].lng() == Data[j+1].lng()) {
               continue;
@@ -464,6 +464,9 @@
 
             var q1 = new LatLon(Data[j].lat(), Data[j].lng());
             var q2 = new LatLon(Data[j + 1].lat(), Data[j + 1].lng());
+            if (q1.bearingTo(q2) == 0 & q2.bearingTo(q1) == 0) {
+              continue;
+            }
 
             var Delta1 = q1.bearingTo(p) - q1.bearingTo(q2);
             var Delta2 = q2.bearingTo(p) - q2.bearingTo(q1);
@@ -483,7 +486,6 @@
               r = q2.distanceTo(p);
               dx = data[j+1].dist;
             }
-
             if (Math.abs(r) <= dist) {
               dist = Math.abs(r);
               dit = dx;
