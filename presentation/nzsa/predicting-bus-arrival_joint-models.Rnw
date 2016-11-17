@@ -11,6 +11,8 @@
   \alt#2{\beameroriginal{\sout}{#1}}{#1}
 }
 
+%\usepackage{animate}
+
 %\usepackage{xspace}
 %\newcommand{\themename}{\textbf{\textsc{metropolis}}\xspace}
 %\renewcommand\textbullet{\ensuremath{\bullet}}
@@ -114,7 +116,7 @@
     \begin{bmatrix}
       \text{distance into trip (meters)} \\
       \text{velocity/speed ($ms^{-1}$)} \\
-      \text{last visisted stop} \\
+      \text{last visited stop} \\
       \vdots
     \end{bmatrix}
   \end{equation*}
@@ -130,7 +132,7 @@
     \node (img1) at (0,0) {\includegraphics{figure/vehicle-state-1.pdf}};
     \node[above of=img1, yshift=2.2cm, xshift=0.3cm] (yk) {$\bY_k$};
     \node[right of=img1,xshift=4cm] (img2) {\includegraphics{figure/vehicle-state-2.pdf}};
-    \node[above of=img2, yshift=2.2cm, xshift=0.3cm] (xk) {$\bX_k$};
+    \node[above of=img2, yshift=2.2cm, xshift=1.3cm] (xk) {$\bX_k$ \scriptsize{(first component, $d_k$)}};
   \end{tikzpicture}
   
   \vspace{-1em}
@@ -408,47 +410,70 @@
   \end{equation*}
 \end{frame}
 
-
 \begin{frame}
   \frametitle{Road State Model: Kalman Filter}
   
   \textbf{Step 1: predict}
-  \pause
   \begin{equation*}
-    \bnu_\ell = \only<4->{I_M}\only<1-3>{\alert<3>{\mat{A}}} \bnu_{\ell-1} + \alert<5>{\bw_\ell}
+    \bnu_\ell = \bnu_{\ell-1} + \bw_\ell
   \end{equation*}
-  \pause
-  $\mat{A}$: \alert<3>{transition matrix} \pause $\Rightarrow$ Identity matrix $I_M$
-  
-  \pause
-  $\bw_\ell \sim \mathcal{N}(0, \mat{Q}_\ell)$: \alert<5>{Gaussian process noise},
+  $\bw_\ell \sim \mathcal{N}(0, \mat{Q}_\ell)$: process noise,
   $\mat{Q}_\ell = (t_\ell - t_{\ell - 1}) \sigma^2_\nu I_M$
+  
+  $\sigma^2_\nu = $ segment speed variability 
   
   \vspace{1em}
   \pause
   \textbf{Step 2: update}
-  \pause
   \begin{equation*}
-    \alert<11>{\mathbf{v}_\ell} = 
-    \only<9->{I_M}\only<7-8>{\alert<8>{\mat{H}}}\bnu_\ell + \alert<10>{\mathbf{r}_\ell}
+    \mathbf{v}_\ell = \bnu_\ell + \mathbf{r}_\ell
   \end{equation*}
-  \pause
-  $\mat{H}$: \alert<8>{measurement matrix} \pause $\Rightarrow$ Identity matrix $I_M$
   
-  \pause
-  $\mathbf{r}_\ell \sim \mathcal{N}(0, \alert<12>{\mat{R}_\ell})$: \alert<10>{measurement error}
+  $\mathbf{r}_\ell \sim \mathcal{N}(0, \mat{R}_\ell)$: measurement error
   
-  \pause
-  \begin{itemize}[<+- | alert@+>]
-  \item $\mathbf{v}_\ell$: mean speed of all particles from $t_{\ell-1}$ to $t_\ell$
-    
-  \item $\mat{R}_\ell$: estimated from variance of particles
-  \end{itemize}
-  
-  \onslide<+->
-  Standard Kalman filter algorithm to obtain $\bnu_\ell$ and $\Xi_\ell$.
-  
+  $\mathbf{v}_\ell$, $\mathbf{R}_\ell$ estimated using mean and variance of particles
 \end{frame}
+
+% \begin{frame}
+%   \frametitle{Road State Model: Kalman Filter}
+  
+%   \textbf{Step 1: predict}
+%   \pause
+%   \begin{equation*}
+%     \bnu_\ell = \only<4->{I_M}\only<1-3>{\alert<3>{\mat{A}}} \bnu_{\ell-1} + \alert<5>{\bw_\ell}
+%   \end{equation*}
+%   \pause
+%   $\mat{A}$: \alert<3>{transition matrix} \pause $\Rightarrow$ Identity matrix $I_M$
+  
+%   \pause
+%   $\bw_\ell \sim \mathcal{N}(0, \mat{Q}_\ell)$: \alert<5>{Gaussian process noise},
+%   $\mat{Q}_\ell = (t_\ell - t_{\ell - 1}) \sigma^2_\nu I_M$
+  
+%   \vspace{1em}
+%   \pause
+%   \textbf{Step 2: update}
+%   \pause
+%   \begin{equation*}
+%     \alert<11>{\mathbf{v}_\ell} = 
+%     \only<9->{I_M}\only<7-8>{\alert<8>{\mat{H}}}\bnu_\ell + \alert<10>{\mathbf{r}_\ell}
+%   \end{equation*}
+%   \pause
+%   $\mat{H}$: \alert<8>{measurement matrix} \pause $\Rightarrow$ Identity matrix $I_M$
+  
+%   \pause
+%   $\mathbf{r}_\ell \sim \mathcal{N}(0, \alert<12>{\mat{R}_\ell})$: \alert<10>{measurement error}
+  
+%   \pause
+%   \begin{itemize}[<+- | alert@+>]
+%   \item $\mathbf{v}_\ell$: mean speed of all particles from $t_{\ell-1}$ to $t_\ell$
+    
+%   \item $\mat{R}_\ell$: estimated from variance of particles
+%   \end{itemize}
+  
+%   \onslide<+->
+%   Standard Kalman filter algorithm to obtain $\bnu_\ell$ and $\Xi_\ell$.
+  
+% \end{frame}
 
 
 \section{Predicting Arrival Time}
@@ -460,12 +485,12 @@
   \begin{enumerate}
   \item Schedule
   \item Schedule deviation (AT?)
-  \item \alert<2>{Vehicle state}
-  \item \alert<2>{Road state}
+  \item Vehicle state
+  \item Road state
   \end{enumerate}
 
-  \pause
-  \alert<2>{3.\ and 4.\ include dwell time models}
+  % \pause
+  % \alert<2>{3.\ and 4.\ include dwell time models}
   
   \pause
   Some notation:
@@ -560,17 +585,55 @@
   \item<6-> For each particle, sample $v_b^{(i)} \sim \mathcal{N}(\nu_b, \xi_b)$
   \item<7-> Allow for dwell time uncertainty
     
-  \item<8-> Uses most recent data
+  % \item<8-> Uses most recent data
     
-  \item<9-> Opportunity to extend model (e.g., changes in speed over time)
+  % \item<9-> Opportunity to extend model (e.g., changes in speed over time)
   \end{itemize}
 \end{frame}
 
 
 \begin{frame}
   \frametitle{Predicting Arrival Time}
+
+  %\animategraphics{1}{figure/prediction_example_}{01}{39}
+
+    \foreach \x in {1,2,...,9} {
+      \only<\x>{
+        \includegraphics{figure/prediction_example_0\x.pdf}
+      }
+    }
+    \foreach \x in {10,11,...,39} {
+      \only<\x>{
+        \includegraphics{figure/prediction_example_\x.pdf}
+      }
+    }
+
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{What's Next?}
   
-  
+  \begin{itemize}[<+->]
+  \item Add more routes
+    
+  \item Collect historical data to estimate parameters
+    \begin{itemize}
+    \item Dwell times and stopping probabilties
+    \item Segment speed covariance matrix (including off-diagonals)
+    \end{itemize}
+    
+  \item Scale up: speed!
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}[standout]
+  Thank you!
+\end{frame}
+
+\begin{frame}[standout]
+  Questions?
 \end{frame}
 
 \end{document}

@@ -17,93 +17,6 @@
 </head>
 <body>
 
-	<div class="scianimator"><div id="arrival_time_predictions" style="display: inline-block;"></div></div>
-	<div class="scianimator" style="width: 900px; text-align: left"><pre><code class="r">## Animations generated in R version 3.2.5 (2016-04-14) using the package animation
-library(mvtnorm)
-library(iNZightMaps)
-library(iNZightPlots)
-library(jsonlite)
-library(RPostgreSQL)
-library(DBI)
-pb <- txtProgressBar(0, length(ind), style = 3)
-dev.flush(dev.flush())
-for (k in ORD) {
-    dev.hold()
-    tk <- vps[ind[k], "timestamp"]
-    St <- infoList[[vps[ind[k], "trip_id"]]]$schedule[, c("pivot.arrival_time", 
-        "pivot.departure_time")]
-    starttime <- substr(St[1, 1], 1, 5)
-    St[, 1] <- as.numeric(as.POSIXct(paste(vps[ind[k], "trip_start_date"], 
-        St[, 1]), origin = "1970-01-01"))
-    St[, 2] <- as.numeric(as.POSIXct(paste(vps[ind[k], "trip_start_date"], 
-        St[, 2]), origin = "1970-01-01"))
-    St <- as.matrix(St)
-    plot(NA, xlim = c(0, 90 * 60), ylim = c(1, M + 1), xlab = "Arrival Time (min after trip start)", 
-        xaxs = "i", xaxt = "n", ylab = "Stop #", yaxs = "i", 
-        yaxt = "n", main = sprintf("Trip commencing %s", 
-            starttime))
-    abline(h = 2:M, lty = 3, col = "#cccccc")
-    axis(2, at = 1:M + 0.5, labels = 1:M + 1, las = 1, tick = FALSE)
-    axis(1, at = pretty(c(0, 90)) * 60, labels = pretty(c(0, 
-        90)))
-    Ta <- arrivaltimes[arrivaltimes$trip_id == vps[ind[k], 
-        "trip_id"], ]
-    abline(v = tk - St[1, 1], lty = 3, col = "#33cccc")
-    if (nrow(Ta) > 0) {
-        delays <- sapply(unique(Ta$stop_sequence), function(s) {
-            arr <- Ta[Ta$stop_sequence == s & Ta$arrival_delay != 
-              0, "arrival_delay"]
-            dep <- Ta[Ta$stop_sequence == s & Ta$departure_delay != 
-              0, "departure_delay"]
-            if (length(arr) == 0 & length(dep) == 0) 
-              (c(NA, NA))
-            if (length(arr) == 0) 
-              return(rep(max(dep), 2))
-            if (length(dep) == 0) 
-              return(rep(max(arr), 2))
-            return(c(max(arr), max(dep)))
-        })
-        dimnames(delays) <- list(c("arrival", "departure"), 
-            unique(Ta$stop_sequence))
-        for (s in as.character(unique(Ta$stop_sequence))) {
-            delays[, s] <- St[s, ] + delays[, s] - min(St)
-            rect(delays[1, s], as.numeric(s) - 1, delays[2, 
-              s], as.numeric(s), col = "#cccccc", border = "#999999")
-        }
-    }
-    for (mth in c("schedule", "schedule_deviation", "vehicle_state", 
-        "road_state")) {
-        file <- sprintf("predictions/method_%s/%d.csv", mth, 
-            tk)
-        if (file.exists(file)) {
-            pred <- read.csv(file, header = TRUE)
-            for (Sj in 1:ncol(pred)) {
-              points(pred[, Sj], rep(as.numeric(gsub("X", 
-                "", colnames(pred)[Sj])), nrow(pred)) + switch(mth, 
-                schedule = -0.8, schedule_deviation = -0.6, 
-                vehicle_state = -0.4, road_state = -0.2), 
-                pch = 19, cex = 0.4, col = switch(mth, schedule = "black", 
-                  schedule_deviation = "orangered", vehicle_state = "#009900", 
-                  road_state = "#000099"))
-            }
-        }
-        else {
-            next
-        }
-    }
-    legend("bottomright", legend = rev(c("Schedule", "Schedule Deviation", 
-        "Vehicle State", "Road State")), col = rev(c("black", 
-        "orangered", "#009900", "#000099")), pch = 19, cex = 0.8, 
-        bty = "n")
-    dev.flush()
-    setTxtProgressBar(pb, which(ORD == k))
-}
-close(pb)
-## R version 3.2.5 (2016-04-14)
-## Platform: x86_64-pc-linux-gnu (64-bit)
-## Other packages: mvtnorm 1.0-4, iNZightMaps 1.1-1, iNZightPlots 2.5,
-## jsonlite 1.1, RPostgreSQL 0.4-1, DBI 0.5-1</code></pre></div>
-	<script src="js/arrival_time_predictions.js"></script>
 	<div class="scianimator"><div id="arrival_time_predictions_16_46" style="display: inline-block;"></div></div>
 	<div class="scianimator" style="width: 900px; text-align: left"><pre><code class="r">## Animations generated in R version 3.2.5 (2016-04-14) using the package animation
 library(animation)
@@ -139,8 +52,11 @@ if (nrow(Ta) > 0) {
         return(c(max(arr), max(dep)))
     })
     dimnames(delays) <- list(c("arrival", "departure"), unique(Ta$stop_sequence))
+    for (s in as.character(unique(Ta$stop_sequence))) {
+        delays[, s] <- St[s, ] + delays[, s] - min(St)
+    }
 }
-for (k in 1:nrow(VPS)) {
+for (k in c(9, 11:22, 24:31, 33:42, 44:51)) {
     dev.hold()
     tk <- VPS[k, "timestamp"]
     plot(NA, xlim = c(0, 90 * 60), ylim = c(1, M + 1), xlab = "Arrival Time (min after trip start)", 
@@ -154,7 +70,6 @@ for (k in 1:nrow(VPS)) {
     abline(v = tk - St[1, 1], lty = 3, col = "#33cccc")
     if (nrow(Ta) > 0) {
         for (s in as.character(unique(Ta$stop_sequence))) {
-            delays[, s] <- St[s, ] + delays[, s] - min(St)
             rect(delays[1, s], as.numeric(s) - 1, delays[2, 
               s], as.numeric(s), col = "#cccccc", border = "#999999")
         }

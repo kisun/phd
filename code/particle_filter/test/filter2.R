@@ -200,26 +200,25 @@ arrivaltimes <- dbGetQuery(con2, sprintf("select distinct trip_id, stop_sequence
 o <- with(vps[ind, ], tapply(trip_start_time, trip_id, unique))
 ORD <- order(factor(vps$trip_id[ind], levels = names(o)[order(o)]), vps$timestamp[ind])
 
-install.packages("animation")
-
 animation::saveHTML({
     pb <- txtProgressBar(0, length(ind), style = 3)
     dev.flush(dev.flush())
     for (k in ORD) {
         dev.hold()
         tk <- vps[ind[k], "timestamp"]
+        St <- infoList[[vps[ind[k], "trip_id"]]]$schedule[, c("pivot.arrival_time", "pivot.departure_time")]
+        starttime <- substr(St[1,1], 1, 5)
+        St[, 1] <- as.numeric(as.POSIXct(paste(vps[ind[k], "trip_start_date"], St[, 1]), origin = "1970-01-01"))
+        St[, 2] <- as.numeric(as.POSIXct(paste(vps[ind[k], "trip_start_date"], St[, 2]), origin = "1970-01-01"))
+        St <- as.matrix(St)
         plot(NA, xlim = c(0, 90 * 60), ylim = c(1, M+1),
              xlab = "Arrival Time (min after trip start)", xaxs = "i", xaxt = "n",
              ylab = "Stop #", yaxs = "i", yaxt = "n",
-             main = sprintf("2am trip"))
+             main = sprintf("Trip commencing %s", starttime))
         abline(h = 2:M, lty = 3, col = "#cccccc")
         axis(2, at = 1:M + 0.5, labels = 1:M + 1, las = 1, tick = FALSE)
         axis(1, at = pretty(c(0, 90)) * 60, labels = pretty(c(0, 90)))
         Ta <- arrivaltimes[arrivaltimes$trip_id == vps[ind[k], "trip_id"], ]
-        St <- infoList[[vps[ind[k], "trip_id"]]]$schedule[, c("pivot.arrival_time", "pivot.departure_time")]
-        St[, 1] <- as.numeric(as.POSIXct(paste(vps[ind[k], "trip_start_date"], St[, 1]), origin = "1970-01-01"))
-        St[, 2] <- as.numeric(as.POSIXct(paste(vps[ind[k], "trip_start_date"], St[, 2]), origin = "1970-01-01"))
-        St <- as.matrix(St)
         abline(v = tk - St[1,1], lty = 3, col = "#33cccc")
         if (nrow(Ta) > 0) {
             sapply(unique(Ta$stop_sequence), function(s) {
@@ -231,8 +230,6 @@ animation::saveHTML({
                 return(c(max(arr), max(dep)))
             }) -> delays
             dimnames(delays) <- list(c("arrival", "departure"), unique(Ta$stop_sequence))
-
-            
             for (s in as.character(unique(Ta$stop_sequence))) {
                 delays[, s] <- St[s, ] + delays[, s] - min(St)
                 ##lines(delays[, s], rep(as.numeric(s), 2) - 0.9, col = "orangered", lwd = 2)
@@ -265,3 +262,78 @@ animation::saveHTML({
     }
     close(pb)
 }, "arrival_time_predictions", ani.width = 900, ani.height = 600)
+
+## Good trips: 14:40, 16:46
+wt <- which(sapply(infoList, function(x) x$schedule$pivot.arrival_time[1]) == "16:46:00")
+VPS <- vps[ind, ]
+VPS <- VPS[VPS$trip_id == names(infoList)[wt], ]
+VPS <- VPS[tapply(1:nrow(VPS), VPS$timestamp, min), ]
+
+
+St <- infoList[[wt]]$schedule[, c("pivot.arrival_time", "pivot.departure_time")]
+starttime <- substr(St[1,1], 1, 5)
+St[, 1] <- as.numeric(as.POSIXct(paste(VPS[1, "trip_start_date"], St[, 1]), origin = "1970-01-01"))
+St[, 2] <- as.numeric(as.POSIXct(paste(VPS[1, "trip_start_date"], St[, 2]), origin = "1970-01-01"))
+St <- as.matrix(St)
+Ta <- arrivaltimes[arrivaltimes$trip_id == VPS[1, "trip_id"], ]
+if (nrow(Ta) > 0) {
+    sapply(unique(Ta$stop_sequence), function(s) {
+        arr <- Ta[Ta$stop_sequence == s & Ta$arrival_delay != 0, "arrival_delay"]
+        dep <- Ta[Ta$stop_sequence == s & Ta$departure_delay != 0, "departure_delay"]
+        if (length(arr) == 0 & length(dep) == 0) (c(NA, NA))
+        if (length(arr) == 0) return(rep(max(dep), 2))
+        if (length(dep) == 0) return(rep(max(arr), 2))
+        return(c(max(arr), max(dep)))
+    }) -> delays
+    dimnames(delays) <- list(c("arrival", "departure"), unique(Ta$stop_sequence))
+    for (s in as.character(unique(Ta$stop_sequence))) {
+        delays[, s] <- St[s, ] + delays[, s] - min(St)
+    }
+}
+pdf("../../presentation/nzsa/figure/prediction_example_%02d.pdf",
+    width = 4, height = 3, pointsize = 6, bg = "transparent", onefile = FALSE)
+for (k in c(9, 11:22, 24:31, 33:42, 44:51)) {
+    dev.hold()
+    tk <- VPS[k, "timestamp"]
+    plot(NA, xlim = c(0, 90 * 60), ylim = c(1, M+1),
+         xlab = "Arrival Time (min after trip start)", xaxs = "i", xaxt = "n",
+         ylab = "Stop #", yaxs = "i", yaxt = "n",
+         main = "")# sprintf("Trip commencing %s", starttime))
+    abline(h = 2:M, lty = 3, col = "#cccccc")
+    axis(2, at = 1:M + 0.5, labels = 1:M + 1, las = 1, tick = FALSE, cex.axis = 0.6)
+    axis(1, at = pretty(c(0, 90)) * 60, labels = pretty(c(0, 90)))
+    abline(v = tk - St[1,1], lty = 3, col = "#33cccc")
+    if (nrow(Ta) > 0) {
+        for (s in as.character(unique(Ta$stop_sequence))) {
+            ##lines(delays[, s], rep(as.numeric(s), 2) - 0.9, col = "orangered", lwd = 2)
+            rect(delays[1, s], as.numeric(s) - 1, delays[2, s], as.numeric(s), col = "#999999",
+                 border = "#999999")
+        }
+    }
+    for (mth in c("schedule", "schedule_deviation", "vehicle_state", "road_state")) {
+        file <- sprintf("predictions/method_%s/%d.csv", mth, tk)
+        if (file.exists(file)) {
+            pred <- read.csv(file, header = TRUE)
+            for (Sj in 1:ncol(pred)) {
+                points(pred[, Sj],
+                       rep(as.numeric(gsub("X", "", colnames(pred)[Sj])), nrow(pred)) +
+                       switch(mth, "schedule" = -0.8, "schedule_deviation" = -0.6,
+                              "vehicle_state" = -0.4, "road_state" = -0.2),
+                       pch = 19, cex = 0.2,
+                       col = switch(mth, "schedule" = "black", "schedule_deviation" = "orangered",
+                                    "vehicle_state" = "#009900", "road_state" = "#000099"))
+            }
+        } else {
+            next
+        }
+    }
+    legend("bottomright",
+           legend = rev(c("Schedule", "Schedule Deviation", "Vehicle State", "Road State",
+                          "'Actual' Arrival Time")),
+           col = rev(c("black", "orangered", "#009900", "#000099", "#999999")),
+           pch = c(15, rep(19, 4)), cex = 0.8, bty = "n")
+    dev.flush()
+}
+dev.off()
+
+
