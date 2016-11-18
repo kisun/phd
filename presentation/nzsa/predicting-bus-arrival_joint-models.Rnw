@@ -387,52 +387,75 @@
   \begin{enumerate}
   \item[3.] Use speed information from \emph{all busses} to estimate
     speed along a given road segment
-    
-    \pause
-    $\Rightarrow$ \textbf{Kalman filter}
-    
-  \end{enumerate}
 
+  \end{enumerate}
+  
   \pause
-  \textbf{Road state:} mean speed for all $M$ road segments at time $t_\ell$
+  $\Rightarrow$ \textbf{Kalman filter}
+    
+
+
+  \only<3>{
+    \textbf{Road state:} mean speed for all $M$ road segments at time $t_\ell$
     \begin{equation*}
       \bnu_\ell = \left[ \nu_{1\ell}\ \nu_{2\ell}\ \cdots\ \nu_{M\ell} \right]^T
     \end{equation*}
-  with associated covariance matrix
-  \begin{equation*}
-    \Xi_\ell =
-    \begin{bmatrix}
-    \xi_{1\ell} & 0 & \cdots & 0 \\
-    0 & \xi_{2\ell} & \cdots & 0 \\
-    \vdots & \vdots & \ddots & \vdots \\
-    0 & 0 & \cdots & \xi_{M\ell}
-  \end{bmatrix}
-  \end{equation*}
+    with associated covariance matrix
+    \begin{equation*}
+      \Xi_\ell =
+      \begin{bmatrix}
+        \xi_{1\ell} & 0 & \cdots & 0 \\
+        0 & \xi_{2\ell} & \cdots & 0 \\
+        \vdots & \vdots & \ddots & \vdots \\
+        0 & 0 & \cdots & \xi_{M\ell}
+      \end{bmatrix}
+    \end{equation*}
+  }
+  
+  \only<4->{
+    \begin{itemize}
+    \item<4-> no complex model necessary (Normal distribution adequate)
+      
+    \item<5-> updated using particle filter estimates
+      
+      \begin{equation*}
+        \mathbf{v}_\ell = \bnu_\ell + \mathbf{r}_\ell
+      \end{equation*}
+
+      \begin{itemize}
+      \item $\mathbf{v}_\ell$: mean speed of particles
+      
+      \item $\mathbf{r}_\ell \sim \mathcal{N}(0, \mat{R}_\ell)$, $\mat{R}_\ell$: variance of particle speeds
+      \end{itemize}
+
+    \end{itemize}
+  }
+
 \end{frame}
 
-\begin{frame}
-  \frametitle{Road State Model: Kalman Filter}
+% \begin{frame}
+%   \frametitle{Road State Model: Kalman Filter}
   
-  \textbf{Step 1: predict}
-  \begin{equation*}
-    \bnu_\ell = \bnu_{\ell-1} + \bw_\ell
-  \end{equation*}
-  $\bw_\ell \sim \mathcal{N}(0, \mat{Q}_\ell)$: process noise,
-  $\mat{Q}_\ell = (t_\ell - t_{\ell - 1}) \sigma^2_\nu I_M$
+%   \textbf{Step 1: predict}
+%   \begin{equation*}
+%     \bnu_\ell = \bnu_{\ell-1} + \bw_\ell
+%   \end{equation*}
+%   $\bw_\ell \sim \mathcal{N}(0, \mat{Q}_\ell)$: process noise,
+%   $\mat{Q}_\ell = (t_\ell - t_{\ell - 1}) \sigma^2_\nu I_M$
   
-  $\sigma^2_\nu = $ segment speed variability 
+%   $\sigma^2_\nu = $ segment speed variability 
   
-  \vspace{1em}
-  \pause
-  \textbf{Step 2: update}
-  \begin{equation*}
-    \mathbf{v}_\ell = \bnu_\ell + \mathbf{r}_\ell
-  \end{equation*}
+%   \vspace{1em}
+%   \pause
+%   \textbf{Step 2: update}
+%   \begin{equation*}
+%     \mathbf{v}_\ell = \bnu_\ell + \mathbf{r}_\ell
+%   \end{equation*}
   
-  $\mathbf{r}_\ell \sim \mathcal{N}(0, \mat{R}_\ell)$: measurement error
+%   $\mathbf{r}_\ell \sim \mathcal{N}(0, \mat{R}_\ell)$: measurement error
   
-  $\mathbf{v}_\ell$, $\mathbf{R}_\ell$ estimated using mean and variance of particles
-\end{frame}
+%   $\mathbf{v}_\ell$, $\mathbf{R}_\ell$ estimated using mean and variance of particles
+% \end{frame}
 
 % \begin{frame}
 %   \frametitle{Road State Model: Kalman Filter}
@@ -594,22 +617,59 @@
 
 \begin{frame}
   \frametitle{Predicting Arrival Time}
-
+    
   %\animategraphics{1}{figure/prediction_example_}{01}{39}
 
-    \foreach \x in {1,2,...,9} {
-      \only<\x>{
-        \includegraphics{figure/prediction_example_0\x.pdf}
-      }
+  \foreach \x in {1,2,...,8} {
+    \only<\x>{
+      \includegraphics{figure/prediction_example_0\x.pdf}
     }
-    \foreach \x in {10,11,...,39} {
-      \only<\x>{
-        \includegraphics{figure/prediction_example_\x.pdf}
-      }
+  }
+  \foreach \x in {9,10,...,38} {
+    \pgfmathsetmacro\result{\x + 1}
+    \pgfmathtruncatemacro{\xi}{\x + 1}
+    \only<\x>{
+      \includegraphics{figure/prediction_example_\xi.pdf}
     }
+  }
+
 
 \end{frame}
 
+\begin{frame}
+  \frametitle{Predicting Arrival Time}
+  
+  Conclusions:
+  \begin{itemize}[<+->]
+  \item \textbf{Schedule:} \ldots
+    
+  \item \textbf{Schedule deviation:} OK for very short-range prediction; relies on time table accuracy
+    
+  \item \textbf{Vehicle state:} high variability; OK for short-range prediction
+    
+  \item \alert<5->{\textbf{Road state:} little variability; performs well at long-range prediction}
+  \end{itemize}
+  
+\end{frame}
+
+\begin{frame}
+  \frametitle{Predicting Arrival Time: Intervals}
+  
+  How do we communicate estimate + uncertainty to commuters?
+  
+  \pause
+  $\Rightarrow$ \textbf{Prediction intervals}
+  \begin{itemize}
+  \item easy to compute from particle sample
+    
+  \item intuitive: ETA 5~min versus ETA 3--8~min
+    
+  \item Need to decide on best quantiles
+    
+    $\mathbb{P}(\text{real ETA} < \text{3~min}) \approx
+    \mathbb{P}(\text{passenger arrives ``on time'' and misses bus})$
+  \end{itemize}
+\end{frame}
 
 \begin{frame}
   \frametitle{What's Next?}
