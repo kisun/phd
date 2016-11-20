@@ -352,3 +352,33 @@ dev.off()
 
 
 
+
+
+
+### FIGURE FIVE
+
+## prediction interval
+
+set.seed(34720)
+Ta <- rnorm(100, 60 * 5.8, 85) / 60
+pl <- function()
+    plot(Ta, rep(0.6, length(Ta)), xlim = c(0, 10.5), ylim = c(0, 2),
+         xlab = "ETA (min)", ylab = "", yaxt = "n", bty = "n", pch = 19)
+pl()
+
+pdf(fileP("eta-pred-1.pdf"), width = 3, height = 1.5, bg = "transparent", pointsize = 6)
+pl()
+dev.off()
+
+pdf(fileP("eta-pred-2.pdf"), width = 3, height = 1.5, bg = "transparent", pointsize = 6)
+pl()
+text(3, 1.2, "No passengers on/off\nNo red lights")
+text(8.5, 1.2, "Many passengers on/off\nEvery red light")
+dev.off()
+
+pdf(fileP("eta-pred-3.pdf"), width = 3, height = 1.5, bg = "transparent", pointsize = 6)
+pl()
+abline(v = c(3, 8), col = "#990000", lty = 2)
+abline(v = 6, col = "#000099", lty = 3)
+dev.off()
+

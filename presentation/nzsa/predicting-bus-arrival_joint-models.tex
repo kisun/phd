@@ -81,7 +81,7 @@
 \usetikzlibrary{calc,positioning}
 
 
-\title{Real-time prediction of bus arrival using joint models for vehicle and road}
+\title{Real-time prediction of bus arrival using joint models for vehicle and road state}
 %\subtitle{}
 \author{Tom Elliott}
 \date{}
@@ -707,18 +707,26 @@
   
   How do we communicate estimate + uncertainty to commuters?
   
-  \pause
-  $\Rightarrow$ \textbf{Prediction intervals}
+  \onslide<3->{$\Rightarrow$ \textbf{Prediction intervals}}
   \begin{itemize}
-  \item easy to compute from particle sample
+  \item<4-> easy to compute from particle sample
     
-  \item intuitive: ETA 5~min versus ETA 3--8~min
+  \item<5-> intuitive: ETA 6~min (mean) versus ETA 3--8~min
     
-  \item Need to decide on best quantiles
-    
-    $\mathbb{P}(\text{real ETA} < \text{3~min}) \approx
-    \mathbb{P}(\text{passenger arrives ``on time'' and misses bus})$
+  \item<6-> Biased to reduce chance of missing bus
   \end{itemize}
+  
+  \begin{overprint}
+    \onslide<1>
+    \centering
+    \includegraphics{figure/eta-pred-1.pdf}
+    \onslide<2>
+    \centering
+    \includegraphics{figure/eta-pred-2.pdf}
+    \onslide<3->
+    \centering
+    \includegraphics{figure/eta-pred-3.pdf}
+  \end{overprint}
 \end{frame}
 
 \begin{frame}
@@ -727,13 +735,18 @@
   \begin{itemize}[<+->]
   \item Add more routes
     
+  \item Incorporate $\tilde T_j^a$/$\tilde T_j^d$ into likelihood
+    
+    $\Rightarrow$ depending on it's reliability
+    
   \item Collect historical data to estimate parameters
     \begin{itemize}
     \item Dwell times and stopping probabilties
     \item Segment speed covariance matrix (including off-diagonals)
     \end{itemize}
     
-  \item Scale up: speed!
+  \item Scale up: \emph{ALL routes/busses} $\Rightarrow$ computational speed
+    
   \end{itemize}
 \end{frame}
 
