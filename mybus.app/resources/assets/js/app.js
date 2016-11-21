@@ -6,6 +6,9 @@
  */
 
 require('./bootstrap');
+window.moment = require('moment');
+require("moment-duration-format");
+
 
 /**
  * Next, we will create a fresh Vue application instance and attach it to

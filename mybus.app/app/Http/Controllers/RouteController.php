@@ -12,7 +12,10 @@ class RouteController extends Controller
 {
     public function index()
     {
-        $latest = \App\Version::orderBy('startdate', 'desc')->first();
+        $today = \Carbon\Carbon::now()->toDateString();
+        $latest = \App\Version::where('startdate', '<=', $today)
+                    ->where('enddate', '>=', $today)
+                    ->orderBy('startdate', 'desc')->first();
         $routes = Route::where('version_id', $latest->id)->orderBy('short_name')->get();
 
         return view('routes.index', [
@@ -22,7 +25,10 @@ class RouteController extends Controller
 
     public function show($route_id)
     {
-        $latest = \App\Version::orderBy('startdate', 'desc')->first();
+        $today = \Carbon\Carbon::now()->toDateString();
+        $latest = \App\Version::where('startdate', '<=', $today)
+                    ->where('enddate', '>=', $today)
+                    ->orderBy('startdate', 'desc')->first();
         $route = Route::where('route_id', $route_id)
                     ->where('version_id', $latest->id)
                     ->with(['trips' => function($query) {
@@ -38,8 +44,9 @@ class RouteController extends Controller
         return view('routes.show', [
             'route' => $route,
             'shape' => $route->trips[0]->getShape(),
-            'stops' => $route->trips[0]->stop_times()->with('stop')->get(),
-            'dows' => ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            'stops' => $route->trips[0]->stop_times()->orderBy('stop_sequence')->with('stop')->get(),
+            'dows' => ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            'intersections' => \App\Intersection::all()
         ]);
     }
 }

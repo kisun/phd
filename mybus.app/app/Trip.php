@@ -64,8 +64,12 @@ class Trip extends Model
      */
     public function getShape()
     {
-        $shape = \App\Shape::where('id', $this->shape_id)->orderBy('pt_sequence');
-        return $shape->get();
+        $shape = \App\SegmentShape::where('id', $this->shape_id)->orderBy('leg')->get();
+        if (count($shape) > 0) {
+            return $shape->load('segment_info.shape_points');
+        } else {
+            return \App\Shape::where('id', $this->shape_id)->orderBy('pt_sequence')->get();
+        }
     }
 
     /**
@@ -89,6 +93,28 @@ class Trip extends Model
     public function vehicle_position()
     {
         return $this->hasOne('App\VehiclePosition');
+    }
+
+
+    /**
+     * Get the trip_update record associated with the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne
+     */
+    public function trip_update()
+    {
+        return $this->hasOne('App\TripUpdate');
+    }
+
+
+    /**
+     * Get the segments for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function segments()
+    {
+        return $this->hasMany('App\SegmentShape', 'id', 'shape_id');
     }
 
 }

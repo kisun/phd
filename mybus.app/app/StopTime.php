@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class StopTime extends Model
 {
   // These do not have IDs
+  protected $primaryKey = null;
+  public $incrementing = false;
+  public $timestamps = false;
+
   /**
    * Get the trip that owns the model.
    *

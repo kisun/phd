@@ -24,7 +24,7 @@
     </script>
 </head>
 <body>
-  <div class="container-fluid fullpage-app">
+  <div class="container-fluid @yield('container-class', 'fullpage-app')">
     <div class="row fullpage-row">
       {{-- @if (Session::has('status'))
         <alert msg="{{ Session::get('status') }}"></alert>

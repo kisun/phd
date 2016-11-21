@@ -1,0 +1,533 @@
+\documentclass[14paper,twoside]{article}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{bbm}
+
+
+\usepackage[hidelinks]{hyperref}
+\usepackage{cleveref}
+
+\usepackage{fullpage}
+
+
+\newcommand{\bX}{\mathbf{X}}
+\newcommand{\bY}{\mathbf{Y}}
+\newcommand{\bZ}{\mathbf{Z}}
+\newcommand{\bnu}{\boldsymbol{\nu}}
+\newcommand{\bw}{\mathbf{w}}
+\newcommand{\bQ}{\mathbf{Q}}
+\newcommand{\bR}{\mathbf{R}}
+\newcommand{\bz}{\mathbf{z}}
+\newcommand{\bv}{\mathbf{v}}
+\newcommand{\br}{\mathbf{r}}
+\newcommand{\bS}{\mathbf{S}}
+\newcommand{\bK}{\mathbf{K}}
+
+\newcommand{\f}[1]{f\left(#1\right)}
+\newcommand{\g}[1]{g\left(#1\right)}
+\newcommand{\lhood}[1]{\ell\left(#1\right)}
+
+
+\title{Real-time Bus Model Algorithm}
+\author{Tom Elliott}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Outline}
+\label{sec:outline}
+
+The algorithm runs in real-time\footnote{or at least in chronological sequence in the case of testing}
+and ``simultaneously'' models the state of vehicles (\cref{sec:bus}),
+and the state of route segments (\cref{sec:speed}).
+
+
+
+\section{Vehicle State Model: Particle Filter}
+\label{sec:bus}
+
+
+The vehicle state is modeled using a particle filter, 
+as this gives good coverage of all plausible states.
+Assuming we are only interested in a single vehicle,
+we have unknown state $\bX_k$ associated with observation $\bY_k$,
+at time $t_k$.
+
+
+The vehicle state is
+\begin{equation}
+  \label{eq:vehicle_state}
+  \bX_k = 
+  \begin{bmatrix}
+    d_k \\ v_k \\ s_k \\ A_{s_k} \\ D_{s_k} \\ r_k
+  \end{bmatrix} =
+  \left[
+    \begin{array}{l}
+      \text{distance into trip (m)} \\
+      \text{velocity (speed) of the vehicle } (ms^{-1}) \\
+      \text{stop index} \\
+      \text{arrival time at the last stop} \\
+      \text{departure time from the last stop} \\
+      \text{segment index}
+    \end{array}
+  \right].
+\end{equation}
+Within the framework of the particle filter, the state is represented by a sample of \emph{particles},
+each with it's own state estimate, denoted by a superscript: $\bX_k^{(i)}$.
+
+The observations are GPS coordinates plus a timestamp,
+\begin{equation}
+  \label{eq:vehicle_observation}
+  \bY_k =
+  \begin{bmatrix}
+    \phi_k \\ \lambda_k \\ t_k
+  \end{bmatrix} =
+  \left[
+    \begin{array}{l}
+      \text{latitude (degrees north/south)} \\
+      \text{longitude (degrees east/west)} \\
+      \text{timestamp (seconds since 12am 01/01/1970)}
+    \end{array}
+  \right]
+\end{equation}
+
+
+To compare the state to the observation, 
+we transform the particles states into a coordinate space using the function $h$.
+This uses the shape information to transform the distance into trip measurment for particle $i$, $d_k^{(i)}$,
+into a GPS coordinate $\bY_k^{(i)}$;
+we then use an equirectangular projection 
+$\left\{g : \bY_k^{(i)} \,|\, \bY_k \mapsto \bZ_k^{(i)} \right\}$ 
+on the particles, centered on the observation, to obtain 
+\begin{equation}
+  \label{eq:transform}
+  \g{\bY_k^{(i)} | \bY_k, \sigma^2_y} = \bZ_k^{(i)} =
+  \begin{bmatrix}
+    x_k^{(i)} \\ y_k^{(i)}
+  \end{bmatrix} =
+  \begin{bmatrix}
+    \left( \Lambda_k^{(i)} - \Lambda_k \right) \cos \left( \Phi_k \right) \\
+    \Phi_k^{(i)} - \Phi_k
+  \end{bmatrix}
+\end{equation}
+where $\Phi = \frac{\pi}{180} \phi$ and $\Lambda = \frac{\pi}{180} \lambda$ 
+(i.e., the latitude and longitude in radians).
+Note that $g(\bY_k) = \left[0\ 0\right]^T$.
+We can therefore use a bivariate normal to compute the likelihood of each particle
+using $\boldsymbol{\mu} = \begin{bmatrix} 0 \\ 0 \end{bmatrix}$
+and $\Sigma = \frac{\sigma^2_y}{R} I_2$ where $I_n$ is an $n\times n$ identity matrix:
+\begin{align}
+  \label{eq:particle_likelihood}
+  \g{h(\bX_k^{(i)}) \,|\, \bY_k, \sigma^2_y} = \bZ_k^{(i)} 
+  &\sim  \mathcal{N}\left(
+    \begin{bmatrix}
+      0 \\ 0
+    \end{bmatrix},
+    \frac{\sigma_y^2}{R}\cdot I_2
+  \right) \\
+  \lhood{\bX_k^{(i)}| \bY_k, \sigma^2_y} 
+  &= \frac{1}{\sqrt{\left(2\pi\right)^2 \left| \boldsymbol{\Sigma} \right|}}
+    e^{-\frac{1}{2}\left(g(h(\bX_k^{(i)})|\bY_k) - \boldsymbol{\mu}\right)^T\boldsymbol\Sigma^{-1}\left(g(h(\bX_k^{(i)})|\bY_k) - 
+    \boldsymbol{\mu}\right)} \nonumber \\
+  &\propto
+    e^{-\frac{1}{2}  \left(g(h(\bX_k^{(i)})|\bY_k)\right)^T \left(\frac{\sigma^2_y}{R} I_2 \right)^{-1} \left(g(h(\bX_k^{(i)})|\bY_k)\right) } \nonumber \\
+  \label{eq:particle_likelihood_final}
+  \lhood{\bX_k^{(i)}| \bY_k, \sigma^2_y} 
+  &\propto e^{-\frac{R}{2\sigma^2}\left((x_k^{(i)})^2 + (y_k^{(i)})^2\right)}
+\end{align}
+where $x_k^{(i)}$ and $y_k^{(i)}$ are as defined in \cref{eq:transform},
+and we can drop the constant since it is common to all particles,
+so is not required for computing weights.
+
+The weight of each particle is simply computed as
+\begin{equation}
+  \label{eq:particle_weights}
+  w_i = \frac{\lhood{\bX_k^{(i)} | \bY_k, \sigma^2_y}}{\sum_{j=1}^M \lhood{\bX_k^{(j)} | \bY_k, \sigma^2_y}}
+  = \frac{e^{-\frac{R}{2\sigma^2}\left((x_k^{(i)})^2 + (y_k^{(i)})^2\right)}}{\sum_{j=1}^M e^{-\frac{R}{2\sigma^2}\left((x_k^{(j)})^2 + (y_k^{(j)})^2\right)}}.
+\end{equation}
+
+
+The last step is the transition function $\left\{ f : \bX_{k-1}^{(i)} \mapsto \bX_k^{(i)} \right \}$,
+which effectively describes the behaviour of the vehicle.
+There are several components we must consider:
+\begin{enumerate}
+\item is the bus at a stop? (or perhaps stopped at an intersection?)
+\item will the bus pass one or more stops during the next time step?
+\item if it does, does it stop?
+\item if it stops, how long does it wait there?
+\end{enumerate}
+
+First we define $\delta_k = t_k - t_{k-1}$.
+
+\subsection{Is the bus at a stop?}
+
+At the start of each iteration, we first decide whether the bus still stay where it is,
+and if so for how long.
+The values used depend on whether the bus is at a stop or not (in which case it \emph{could} be 
+at an intersection).
+
+First off, if the bus \emph{is not} at a bus stop, we define $\rho$ as the probability that is
+is currently stopped.
+Then we define $\nu$ as the average time spent stopped due to, for example, traffic lights.
+Thus, at the beginning of an iteration, we reduce the time available to travel $\tilde \delta_k$ 
+by sampling $q_i \sim \mathrm{Bernoulli}(\rho)$ and $c_i \sim \mathcal{E}\left(\frac{1}{\upsilon}\right)$,
+leaving us with
+\begin{equation}
+  \label{eq:start_intersection}
+  \tilde\delta_k = 
+  \begin{cases}
+    \delta_k - q_i c_i & q_i c_i \leq \delta_k, \\
+    0 & \text{otherwise}.
+  \end{cases}
+\end{equation}
+
+Alternatively, if the bus \emph{is} at a stop, we detect this by checking if $A_{s_k}^{(i)}$ is set, 
+and $D_{s_k}^{(i)}$ is not.
+When the vehicle is at a stop, we must ensure that is stays for \emph{at least} $\gamma$ seconds
+($\gamma$ is the time taken to decelerate, open doors, close doors, and accelerate, 
+i.e., the minimum dwell time).
+Then, since the exponential distribution is memoryless, we simply draw a new dwell time for each particle,
+$c_k^{(i)} \sim \mathcal{E}\left(\frac{1}{\tau_{s_k}}\right)$,
+where $\tau_j$ is the average dwell time at stop $j$.
+\begin{equation}
+  \label{eq:start_stop}
+  \tilde\delta_k =
+  \begin{cases}
+    t_k + c_k^{(i)} & t_k - T_{s_k}^{(i)} \geq \gamma, \\
+    T_{s_k} + \gamma + c_k^{(i)} & \text{otherwise}.
+  \end{cases}
+\end{equation}
+
+Each particle then moves on to the next step with $\tilde\delta_k$ time remaining to travel.
+
+
+\subsection{Setting Particle Speed: will it pass any stops?}
+\label{sec:speed_pass}
+
+The first step is to add noise to the system.
+This is done by adjusting the speed of each particle.
+However, instead of adding random noise, 
+we actually want to make use of the speed distribution of the current segment,
+which has a mean and variance as estimated by the Kalman filter (\cref{sec:speed}).
+
+To do this, we can use a Metropolis-type step, in which we add noise to each particle,
+and then accept the new state with probability $\alpha_i$.
+Let $v_{k-1}^{(i)}$ be the initial speed of each particle,
+and $v_k^{(i)\star}$ be the proposed speed, then we define
+\begin{equation}
+  \label{eq:speed_alpha_proposal}
+  \alpha_i = \min\left\{
+    1, \frac{p\left(v_k^{(i)\star}\,|\, \nu_{s_k}, \xi_{s_k}^2 \right)}{p\left(v_{k-1}^{(i)}\,|\, \nu_{s_k}, \xi_{s_k}^2 \right)}
+  \right\},
+\end{equation}
+where $\nu_{s_k}$ and $\xi_{s_k}^2$ are estimated by the Kalman filter in \cref{sec:speed}.
+Then we set $v_k^{(i)} = v_k^{(i)\star}$ with probability $\alpha_i$, otherwise it is set to $v_{k-1}^{(i)}$.
+
+
+Once the particles have a new speed, we can begin moving them.
+First, let $\mathbf{S}^d = \left\{ S_j^d : j = 1, \ldots, M \right\}$ be the distance into trip
+of the stops along the route.
+We then determine the time until arrival (in seconds) at the next stop, $s_{k-1}^{(i)} + 1$,
+\begin{equation}
+  \label{eq:time_till_arrival}
+  \mathrm{ETA}_{s_{k-1}^{(i)} + 1} = \frac{S^d_{s_{k-1}^{(i)} + 1} - d_{k-1}^{(i)}}{v_k^{(i)}}.
+\end{equation}
+
+If the travel time remaining is greater than the ETA, i.e., if $\tilde\delta_k \geq \mathrm{ETA}_{s_{k-1}^{(i)} + 1}$.
+then the particle will reach the next stop.
+
+If the particle \emph{does not} reach the next stop, we simply compute the distance into trip for the particle
+\begin{equation}
+  \label{eq:distance_into_trip_traveled}
+  d_k^{(i)} = d_{k-1}^{(i)} + \tilde\delta_k v_k^{(i)}
+\end{equation}
+and then we are done transitioning the given particle (the remaining steps are skipped).
+
+
+
+\subsection{Stop arrival: does it stop?}
+
+At this stage, we assume the bus reaches the next stop.
+We therefore set $s_k = s_{k-1} + 1$.
+The arrival time is then computed as
+\begin{equation}
+  \label{eq:arrival_time}
+  A_{s_k}^{(i)} = t_{k-1} + \mathrm{ETA}_{s_{k}^{(i)} + 1}
+  = t_{k-1} + \frac{S^d_{s_{k}^{(i)} + 1} - d_{k-1}^{(i)}}{v_k^{(i)}}.
+\end{equation}
+
+We now determine whether or not the bus stops.
+This is simply a Bernoulli random variable, sampled for each particle,
+with a probability $\pi_{\ell|r}$, which is the probability
+of stopping at stop $\ell$, given that the trip is $r$:
+\begin{equation}
+  \label{eq:bus_stopped}
+  p_{s_k}^{(i)} \sim \mathrm{Bernoilli}\left(\pi_{\ell|r}\right)
+\end{equation}
+Here, $\pi_{\ell|r}$ can be modelled using a random effects model,
+such that
+\begin{equation}
+  \label{eq:pi_model}
+  \mathrm{logit}\left(\pi_{\ell|r}\right) \sim \mathcal{N}\left(\eta_\ell, \sigma_\pi \right).
+\end{equation}
+More details later.
+
+
+
+\subsection{Stop dwell time}
+
+Now we determine the dwell time for each particle,
+which is conditionaly on the bus stopping (i.e., $p_j^{(i)} = 1$).
+First we define $\gamma$ as the \emph{minimum dwell time},
+which encorporates decelleration, opening and closing doors, and acceleration.
+$\gamma$ is common for all stops and trips (for now).
+
+The dwell time $\bar t_{s_k}^{(i)}$ is the total dwell time at stop $s_k$,
+and is exponentially distributed with expected dwell time $\tau_{\ell|r}$.
+Therefore, the total dwell time is
+\begin{equation}
+  \label{eq:total_dwell_time}
+  \gamma + \bar t_{s_k}^{(i)}, \qquad \bar t_{s_k}^{(i)} \sim \mathcal{E}\left(\frac{1}{\tau_{\ell|r}}\right)
+\end{equation}
+
+
+\subsection{Departure time and repeat}
+
+Finally, we compute the departure time.
+This combines the above two steps, so that 
+\begin{equation}
+  \label{eq:departure_time}
+  D_{s_k}^{(i)\star} = A_{s_k}^{(i)} + p_{s_k}^{(i)} \left( \gamma + \bar t_{s_k}^{(i)} \right).
+\end{equation}
+
+Now, if $D_{s_k}^{(i)\star} < t_k$, then there is still time remaining to continue traveling,
+so we set $D_{s_k}^{(i)} = D_{s_k}^{(i)\star}$ and $\tilde\delta_k = t_k - D_{s_k}^{(i)}$,
+and then repeat from \cref{sec:speed_pass}.
+If $D_{s_k}^{(i)\star} < t_k$, then we leave $D_{s_k}^{(i)}$ unset and end the transition.
+In both cases, we set $d_k^{(i)} = S_{s_k}^d$ (i.e., position the particle at the stop).
+
+
+\section{Route Segment Speed: Kalman Filter}
+\label{sec:speed}
+
+
+The Gaussian assumptions make a lot more sense for speed along a segment;
+the only potential cause for concern is the truncation at 0
+and $\approx$ 50 or 100 km/h.
+
+The state is
+\begin{equation}
+  \label{eq:speed_state}
+  \bnu_k = 
+  \begin{bmatrix}
+    \nu_1 \\ \nu_2 \\ \vdots \\ \nu_M
+  \end{bmatrix},
+\end{equation}
+where each $b_j$ is the mean speed along segment $j$.
+The state estimate has covariance matrix 
+\begin{equation}
+  \label{eq:state_cov}
+  \Xi_k = 
+  \begin{bmatrix}
+    \xi_1 & 0 & \cdots & 0 \\
+    0 & \xi_2 & \cdots & 0 \\
+    \vdots & \vdots & \ddots & \vdots \\
+    0 & 0 & \cdots & \xi_M
+  \end{bmatrix}
+\end{equation}
+i.e., it is diagnoal, with all other covariances 0 (for now).
+
+The transition function is simply the identity matrix, $I_M$,
+and the system noise is $\bw_k \sim \mathcal{N}(\mathbf{0}, \bQ_k)$,
+where $\bQ_k = \Delta_k \sigma_\nu I_M$,
+i.e., the average variance in speed per interval of length $\Delta_k$,
+and $\sigma_\nu$ is the variation per minute.
+The value of $\sigma_\nu$ determines how quickly the speeds can change,
+and is therefore rather important\ldots
+
+The transition model is thus
+\begin{equation}
+  \label{eq:speed_transition_function}
+  \bnu_k = I_M \bnu_{k-1} + \bw_k
+\end{equation}
+
+
+For the observations, we simply average over \emph{all} particles that were positioned in
+each segment over the past $\Delta_k$ interval,
+and also use the sample variance as an estimate for $\bR_k$.
+
+The mean speed in segment $j$ is $\bar z_j$, with variance $\hat v_j^2$.
+Therefore, the measurement matrix is also the identity $I_M$.
+So the measurement model is
+\begin{equation}
+  \label{eq:speed_measurement_model}
+  \bz_k = I_M \bnu_k + \bv_k,
+\end{equation}
+where $\bv_k \sim \mathcal{N}(\mathbf{0}, \bR_k)$,
+and
+\begin{equation}
+  \label{eq:speed_covariance_obs}
+  \bR_k =
+  \begin{bmatrix}
+    \hat v_1 & 0 & \cdots & 0 \\
+    0 & \hat v_2 & \cdots & 0 \\
+    \vdots & \vdots & \ddots & \vdots \\
+    0 & 0 & \cdots & \hat v_M
+  \end{bmatrix}
+\end{equation}
+
+The estimations become fairly simple due to the identity matrices.
+
+\textbf{Predict:}
+\begin{align}
+  \label{eq:speed_predict1}
+  \hat \bnu_{k|k-1} &= \hat\bnu_{k-1|k-1} \\
+  \label{eq:speed_predict2}
+  \Xi_{k|k-1} &= \Xi_{k-1|k-1} + \bQ_k
+\end{align}
+
+\textbf{Update:}
+\begin{align}
+  \label{eq:speed_update1}
+  \tilde\br_k &= \bz_k - \hat\bnu_{k|k-1} \\
+  \label{eq:speed_update2}
+  \bS_k &= \Xi_{k|k-1} + \bR_k \\
+  \label{eq:speed_update3}
+  \bK_k &= \Xi_{k|k-1} \bS_k^{-1} \\
+  \label{eq:speed_update4}
+  \hat\bnu_{k|k} &= \hat\bnu_{k|k-1} + \bK_k \tilde\br_k \\
+  \label{eq:speed_update5}
+  \Xi_{k|k} &= \left(I_M - \bK_k\right) \Xi_{k|k-1}
+\end{align}
+
+
+In situations where there are no observations in a given segment, 
+we just use the previous estimate of $\nu_{j,k-1}$ with a large variance (e.g., $1\times 10^6$).
+
+
+
+\section{Arrival Time Prediction}
+\label{sec:arrival-time-pred}
+
+The last part consists of predicting arrival times at the remaining stops along the route.
+This will be done using a combination of schedule, vehicle state (PF),
+and road congestion (KF).
+
+
+We propose several alternative prediction methods:
+\begin{enumerate}
+\item \textbf{Schedule}: i.e., disregard all data and just use the static scheduled arrival times.
+  This will be our baseline.
+
+\item \textbf{Schedule adherance}: this takes the arrival/departure delay at the most recent stop,
+  and applies it to the subsequence stops.
+
+\item \textbf{Current vehicle state}: use the current state (i.e., speed) of the bus and use it to 
+  predict the travel time to subsequent stops.
+  This will include uncertainty allowing for dwell times at intermediate stops.
+
+\item \textbf{Current traffic state}: instead of using the vehicle state, this method will use the 
+  estimated traffic speed for each segment (from the Kalman filter).
+  Again, dwell times included as uncertainty.
+
+\item \textbf{Headway}: use the previous bus(es)' travel times to predict arrival times for the current bus.
+
+\item \textbf{Combinations}: compare the accuracy and precision of the above methods,
+  and explore combinations of them to predict arrival times.
+\end{enumerate}
+
+Methods 2--4 will make explicit use of the particle filter to obtain a distribution of arrival times.
+Method 5 could too, but it'll be more complicated because of the historical particle trajectories too.
+
+
+\subsection{Schedule}
+\label{sec:pred-schedule}
+
+Given a vehicle with state $\bX_k$ (see \cref{eq:vehicle_state} on \cpageref{eq:vehicle_state}) 
+on a particular trip with $M$ stops,
+the scheduled arrival times at stops are $\bS^t = \left\{S_j^t : j = 1, \ldots, M\right\}$.
+Then the arrival time prediction at stops $j = s_k + 1, \ldots, M$ are
+\begin{equation}
+  \label{eq:pred-schedule}
+  \hat A_j^{[1]} = S_j^t.
+\end{equation}
+
+As a measure of uncertainty, we could use historical data on arrival time variability.
+Of course, this could be extended to use \emph{historical} arrival time averages
+instead of scheduled, but that data is difficult to obtain.
+
+
+\subsection{Schedule adherance}
+\label{sec:pred-schedule-adherance}
+
+Given a vehicle with state $\bX_k$ on a trip with $M$ stops,
+the arrival and departure time delay at stop $j$ are respectively defined as 
+\begin{equation}
+  \label{eq:arrival-departure-delay}
+  \tilde A_j = A_j - S_j^t \qquad \text{and} \qquad \tilde D_j = D_j - S_j^t.
+\end{equation}
+Note that both use the schedule \emph{arrival} time: this is true for most stops,
+except layovers, which have a specific departure time which the bus will wait for.
+We will account for these later on;
+for now, the routes we work with wont have layovers.
+
+
+Therefore, the arrival time predictions at stops $j = s_k + 1, \ldots, M$ are
+\begin{equation}
+  \label{eq:pred-schedule-adherance}
+  \hat A_j^{[2]} = 
+  \begin{cases}
+    S_j^t + \tilde A_{s_k} & \text{if bus is still at stop $s_k$} \\
+    S_j^t + \tilde D_{s_k} & \text{if bus has departed stop $s_k$}
+  \end{cases}.
+\end{equation}
+This is done for each particle, generating a distribution of arrival times.
+
+Again, as with the schedule prediction, we could use historical averages in place of scheduled times,
+and thus arrival/departure delay would be relative to the average historical arrival/departure time.
+
+
+
+\subsection{Current vehicle state}
+\label{sec:pred-vehicle-state}
+
+Given a vehicle with state $\bX_k$ on a trip with $M$ stops with distances
+$\bS^d = \left\{S_j^d : j = 1, \ldots, M\right\}$ along the route,
+the predicted arrival time to each of stops $j = s_k + 1, \ldots, M$ for each particle is given as
+\begin{equation}
+  \label{eq:pred-vehicle-state}
+  \hat A_j^{[3]} = t_k + \frac{S_j^d - d_k}{v_k} + 
+  \sum_{\ell = s_k}^{j-1} p_\ell \left( \gamma + \bar t_\ell \right)
+\end{equation}
+where the summation is simply the accumulated dwell time at intermediate stops
+(as defined in \cref{sec:speed_pass}).
+Note that if the bus has departed the last stop, then $p_{s_k} = 0$;
+otherwise, $p_{s_k} = 1$ and dwell time \emph{remaining} is computed as before.
+Also note that to reduce clutter, the superscripts (e.g., $v_k^{(i)}$) have been removed from parameters.
+
+$p_\ell$ and $\bar t_\ell$ will be sampled for each particle, 
+based on parameters that are updated using historical data.
+An alternative would be to record the mean and variability of historical dwell times,
+and use this instead if computational efficiency becomes a problem.
+
+
+\subsection{Current traffic state}
+\label{sec:pred-traffic-state}
+
+Given a vehicle with state $\bX_k$ on a trip with $M$ stops and 
+a traffic state represented by $\hat \nu$ and $\Xi$,
+we can sample speed $\dot v_j \sim \mathcal{N}(\hat\nu_j, \Xi_{j,j})$ (and therefore travel time) for each particle 
+to predict arrival time:
+\begin{equation}
+  \label{eq:pred-traffic-state}
+  \hat A_j^{[4]} = t_k 
+  + \underbrace{\frac{S_{s_k + 1}^d - d_k}{\dot v_{s_k}}}_{\text{time to next stop}}
+  + \underbrace{\sum_{\ell = s_k + 1}^{j - 1} \frac{S_{\ell + 1}^d - S_\ell^d}{\dot v_\ell}}_{\text{intermediate travel times}}
+  + \underbrace{\sum_{\ell = s_k}^{j-1} p_\ell \left( \gamma + \bar t_\ell \right)}_{\text{dwell times}}
+\end{equation}
+
+
+\end{document}

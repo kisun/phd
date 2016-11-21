@@ -62,8 +62,7 @@ class UpdateGTFS extends Command
 
 
         foreach ($new_versions as $new_version) {
-
-            $version = App\Version::firstOrNew($new_version);
+            $version = App\Version::where('version', $new_version['version'])->firstOrNew($new_version);
             if (is_null($version->id)) {
                 echo "*** Adding version $version->version\n\n";
 
@@ -196,11 +195,14 @@ class UpdateGTFS extends Command
                 fwrite($shapes, Zipper::make(storage_path() . '/gtfs.zip')->getFileContent('shapes.txt'));
                 fclose($shapes);
 
-                DB::statement('CREATE TABLE raw_shapes ( shape_id VARCHAR(255), ' .
-                              'shape_pt_lat VARCHAR(255), shape_pt_lon VARCHAR(255), shape_pt_sequence INTEGER, ' .
-                              'shape_dist_traveled DOUBLE PRECISION );');
-
-                echo "-> table ";
+                try {
+                    DB::statement('CREATE TABLE raw_shapes ( shape_id VARCHAR(255), ' .
+                                  'shape_pt_lat VARCHAR(255), shape_pt_lon VARCHAR(255), shape_pt_sequence INTEGER, ' .
+                                  'shape_dist_traveled DOUBLE PRECISION );');
+                    echo "-> table ";
+                } catch (Exception $e) {
+                    echo "-> table exists ";
+                }
                 DB::statement("COPY raw_shapes FROM '" . storage_path() . "/shapes.csv' CSV HEADER;");
                 unlink(storage_path() . '/shapes.csv');
 
@@ -260,13 +262,17 @@ class UpdateGTFS extends Command
                                       ->getFileContent('stop_times.txt'));
                 fclose($stop_times);
 
-                DB::statement('CREATE TABLE tmp ( trip_id VARCHAR(255), ' .
-                              'arrival_time VARCHAR(255), departure_time VARCHAR(255), '.
-                              'stop_id VARCHAR(255), stop_sequence INTEGER, stop_headsign VARCHAR(255), ' .
-                              'pickup_type VARCHAR(255), drop_off_type VARCHAR(255), '.
-                              'shape_dist_traveled DOUBLE PRECISION)');
+                try {
+                    DB::statement('CREATE TABLE tmp ( trip_id VARCHAR(255), ' .
+                                  'arrival_time VARCHAR(255), departure_time VARCHAR(255), '.
+                                  'stop_id VARCHAR(255), stop_sequence INTEGER, stop_headsign VARCHAR(255), ' .
+                                  'pickup_type VARCHAR(255), drop_off_type VARCHAR(255), '.
+                                  'shape_dist_traveled DOUBLE PRECISION)');
+                    echo "-> table ";
+                } catch (Exception $e) {
+                    echo '-> table exists ';
+                }
 
-                echo "-> table ";
                 DB::statement("COPY tmp FROM '" . storage_path() . "/stop_times.csv' CSV HEADER;");
                 unlink(storage_path() . '/stop_times.csv');
 
@@ -340,8 +346,11 @@ class UpdateGTFS extends Command
                 DB::statement('DROP TABLE tmp');
                 echo "done.\n";
             }
+
         }
 
-        unlink(storage_path() . '/gtfs.zip');
+        if ( file_exists(storage_path() . '/gtfs.zip' )) {
+            unlink(storage_path() . '/gtfs.zip');
+        }
     }
 }

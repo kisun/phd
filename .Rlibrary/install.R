@@ -11,6 +11,7 @@ packages = c(
     "msm",
     "colorspace", "dichromat", "viridis",
     "RPostgreSQL", "jsonlite",
+    "RgoogleMaps",
     "iNZightRegression", "iNZightMR", "iNZightPlots", "iNZightMaps"
 )
 

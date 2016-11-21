@@ -12,7 +12,10 @@ class TripController extends Controller
 {
     public function show($trip_id)
     {
-        $latest = \App\Version::orderBy('startdate', 'desc')->first();
+        $today = \Carbon\Carbon::now()->toDateString();
+        $latest = \App\Version::where('startdate', '<=', $today)
+                    ->where('enddate', '>=', $today)
+                    ->orderBy('startdate', 'desc')->first();
         $trip = Trip::where('trip_id', $trip_id)
                     ->where('version_id', $latest->id)
                     ->with('vehicle_position.particles')

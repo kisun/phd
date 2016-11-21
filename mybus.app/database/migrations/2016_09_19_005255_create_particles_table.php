@@ -19,9 +19,14 @@ class CreateParticlesTable extends Migration
             $table->float('distance_into_trip');
             $table->float('velocity');
             $table->integer('segment');
+            $table->bigInteger('arrival_time')->unsigned()->nullable();
+            $table->bigInteger('departure_time')->unsigned()->nullable();
+            $table->integer('parent')->unsigned()->nullable();
             $table->float('lat');
             $table->float('lon');
+            $table->string('trip_id');
             $table->bigInteger('timestamp')->unsigned();
+            $table->boolean('active');
         });
     }
 
