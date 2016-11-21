@@ -207,9 +207,11 @@
   \pause
   \textbf{Step 1: predict}
   
-  $\Rightarrow$ independently predict each particle 
+  %$\Rightarrow$ independently predict each particle 
   
-  $\Rightarrow$ sample of plausible vehicle states
+  %$\Rightarrow$ sample of plausible vehicle states
+  
+  $\Rightarrow$ generate sample of possible vehicle states
   
   % \
   
@@ -217,9 +219,13 @@
   \pause
   \textbf{Step 2: update}
   
-  $\Rightarrow$ compute likelihood of each particle
+  $\Rightarrow$ compare predictions to observation, remove those no longer plausible
   
-  $\Rightarrow$ weighted resample (with replacement)
+  
+  
+  %$\Rightarrow$ compute likelihood of each particle
+  
+  %$\Rightarrow$ weighted resample (with replacement)
   % \begin{equation*}
   %   \bY_k = h(\bX_k) + e_k
   % \end{equation*}
@@ -321,9 +327,9 @@
       }
       
       \only<6-7>{
-      \item Bivariate normal likelihood
+      \item Bivariate normal likelihood, $g(\bY_k | \bY_k) = \boldsymbol{0}$
         \begin{align*}
-          \bY_k | \bz_k^{(i)} \sim \bz_k^{(i)} | \bY_k \sim \mathcal{N}_2 (\bY_k, \sigma_y^2 I_2)
+          \bY_k | \bz_k^{(i)} \sim \bz_k^{(i)} | \bY_k \sim \mathcal{N}_2 (\boldsymbol{0}, \sigma_y^2 I_2)
           \qquad
           \text{(\scriptsize $\sigma_y^2$ = GPS error)}
         \end{align*}        
@@ -354,7 +360,8 @@
       
     \item<9-> Weighted resample with replacement
       
-      \onslide<10->{$\Rightarrow$ Cull the imaginary busses that are no longer plausible}
+      \onslide<10->{$\Rightarrow$ keep particles plausible given data}
+      %\onslide<10->{$\Rightarrow$ Cull the imaginary busses that are no longer plausible}
     }
     
   \end{itemize}
@@ -601,9 +608,9 @@
       S_j^t + \tilde T_{s_k}^a & \text{ if not departed stop $s_k$}
     \end{cases}$
     
-  \item Sensitive to delays
+  % \item Sensitive to delays
     
-  \item Unable to incorporate intermediate uncertainty
+  % \item Unable to incorporate intermediate uncertainty
     
   \item \textbf{OR} use particle estimates of arrival/departure delay, 
     $\tilde A_{s_k}^{(i)}$ and $\tilde D_{s_k}^{(i)}$
@@ -732,12 +739,13 @@
 \begin{frame}
   \frametitle{What's Next?}
   
+  \onslide<+->
   \begin{itemize}[<+->]
   \item Add more routes
     
-  \item Incorporate $\tilde T_j^a$/$\tilde T_j^d$ into likelihood
+  %\item Incorporate $\tilde T_j^a$/$\tilde T_j^d$ into likelihood
     
-    $\Rightarrow$ depending on it's reliability
+  %  $\Rightarrow$ depending on it's reliability
     
   \item Collect historical data to estimate parameters
     \begin{itemize}
