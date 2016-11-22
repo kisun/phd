@@ -81,15 +81,12 @@
 \usetikzlibrary{calc,positioning}
 
 
-\title{Real-time prediction of bus arrival using joint models for vehicle and road state}
+\title{Real-time prediction of bus arrival using joint models of vehicle and road states}
 %\subtitle{}
-\author{Tom Elliott\\\url{tom.elliott@auckland.ac.nz}}
+\author{Tom Elliott\\\scriptsize{\url{tomelliott.co.nz}}}
 \date{}
 \institute{Supervisor: Professor Thomas Lumley\\[2em]
-\includegraphics[height=1.5cm,width=3.8cm]{stat-logo.png}}
-
-%Department of Statistics\\University of Auckland}
-%\titlegraphic{\hfill\includegraphics[height=1.5cm]{stat-logo.png}}
+  \includegraphics[height=1.5cm,width=3.8cm]{stat-logo.png}}
 \IfFileExists{upquote.sty}{\usepackage{upquote}}{}
 \begin{document}
 
@@ -110,27 +107,32 @@
 
 
 \begin{frame}
-  \frametitle{What's wrong with the current\footnote{Auckland Transport} system?}
+  \frametitle{What's wrong with the current$^\dagger$ system?}
   
-  \pause
-  \begin{itemize}[<+->]
-  \item Prediction inaccuracy
+  \only<2>{
+    $\dagger$ Dealing specifically with Auckland Transport
     
-  \item Prone to errors
+    $\Rightarrow$ applicable to any public transport system using GTFS
+  }
+  \onslide<3->
+  \begin{itemize}
+  \item<3-> Prediction inaccuracy
     
-  \item<7-> Recent modelling frameworks \emph{don't} make use of 
+  \item<4-> Prone to errors
+    
+  \item<8-> Recent modelling frameworks \emph{don't} make use of 
     all real-time vehicle data
   \end{itemize}
   
   \begin{overprint}
-    \onslide<3-6>
+    \onslide<3-7>
     \centering
-    \onslide<3->{\includegraphics[width=0.2\textwidth]{figure/colwill-1.jpg}\hspace{1em}}
-    \onslide<4->{\includegraphics[width=0.2\textwidth]{figure/colwill-2.jpg}\hspace{1em}}
-    \onslide<5->{\includegraphics[width=0.2\textwidth]{figure/colwill-3.jpg}\hspace{1em}}
-    \onslide<6->{\includegraphics[width=0.2\textwidth]{figure/colwill-4.jpg}}
+    \onslide<5->{\includegraphics[width=0.2\textwidth]{figure/colwill-1.jpg}\hspace{1em}}
+    \onslide<6->{\includegraphics[width=0.2\textwidth]{figure/colwill-2.jpg}\hspace{1em}}
+    \onslide<7->{\includegraphics[width=0.2\textwidth]{figure/colwill-3.jpg}\hspace{1em}}
+    \onslide<7->{\includegraphics[width=0.2\textwidth]{figure/colwill-4.jpg}}
     
-    \onslide<7>
+    \onslide<8>
     \centering
     \includegraphics[width=0.8\textwidth,trim={0 0 0 0.6cm},clip]{figure/allbuses.pdf}
   \end{overprint}
