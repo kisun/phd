@@ -99,7 +99,7 @@ dev.off()
 ### FIGURE TWO
 dbGetQuery(con, sprintf("DELETE FROM particles WHERE timestamp >= %s", vps[ind[1], "timestamp"]))
 #dbGetQuery(con, "UPDATE particles SET active = FALSE")
-set.seed(2005) ############################################### SEEEEED: 1010, 1015
+set.seed(4004) ############################################### SEEEEED: 1010, 1015
 ## run a few iterations to get going ...
 for (k in 1:8) {
     pf(con, vps[ind[k], "vehicle_id"], 10, sig.gps = 5,
@@ -202,7 +202,7 @@ with(p2, {
            timestamp, distance_into_trip,
            code = 0, length = 0.05, col = "#00000070")
     arrows(arrival_time, Sd[stop_index+1],
-           departure_time, Sd[stop_index+1],
+           ifelse(is.na(departure_time), timestamp, departure_time), Sd[stop_index+1],
            code = 0, length = 0.05, col = "#00000070")
 })
 dev.off()
@@ -262,18 +262,46 @@ points(0, 0, col = "#990000", pch = 8, lwd = 2)
 dev.off()
 
 
-
-## e: after culling D:
-z <- rbind(px, py)
-lh <- exp(- 1 / (2 * 40^2) * diag(t(z) %*% z))
-wt <- lh / sum(lh)
-
-wi <- sample(nrow(p2), replace = TRUE, prob = wt)
-pdf(fileP("update-state-5.pdf"), width = 2.5, height = 3, bg = "transparent", pointsize = 6)
-plot(px[wi], py[wi], xlab = "West-East axis (m)", ylab = "North-South axis (m)", asp = 1, pch = 19,
+## d-2: likelihood
+pdf(fileP("update-state-4b.pdf"), width = 2.5, height = 3, bg = "transparent", pointsize = 6)
+plot(px, py, xlab = "West-East axis (m)", ylab = "North-South axis (m)", asp = 1, pch = 19,
      xlim = range(sx), ylim = range(sy), cex = 0.5)
 lines(sx, sy)
 points(0, 0, col = "#990000", pch = 8, lwd = 2)
+ex <- 7
+ex.d <- sqrt(px[ex]^2 + py[ex]^2)
+shape::filledcircle(ex.d, ex.d, mid = c(px[ex], py[ex]), col = "#33333380", lty = 2)
+shape::filledcircle(ex.d, ex.d, mid = c(0, 0), col = "#cc000080", lty = 2)
+dev.off()
+
+
+## d-3: weights
+pdf(fileP("update-state-4c.pdf"), width = 2.5, height = 3, bg = "transparent", pointsize = 6)
+z <- rbind(px, py)
+lh <- exp(- 1 / (2 * 80^2) * diag(t(z) %*% z))
+wt <- lh / sum(lh)
+wi <- sample(nrow(p2), replace = TRUE, prob = wt)
+plot(px, py, xlab = "West-East axis (m)", ylab = "North-South axis (m)", asp = 1,
+     xlim = range(sx), ylim = range(sy), cex = (wt+0.1) * 4)
+abline(h = 0, v = 0, col = "#99000070", lty = 2)
+lines(sx, sy)
+##points(0, 0, col = "#990000", pch = 8, lwd = 2)
+dev.off()
+
+
+
+
+
+## e: after culling D:
+pdf(fileP("update-state-5.pdf"), width = 2.5, height = 3, bg = "transparent", pointsize = 6)
+lh <- exp(- 1 / (2 * 40^2) * diag(t(z) %*% z))
+wt <- lh / sum(lh)
+wi <- sample(nrow(p2), replace = TRUE, prob = wt)
+plot(px[wi], py[wi], xlab = "West-East axis (m)", ylab = "North-South axis (m)", asp = 1, pch = 19,
+     xlim = range(sx), ylim = range(sy), cex = 0.5)
+abline(h = 0, v = 0, col = "#99000070", lty = 2)
+lines(sx, sy)
+#points(0, 0, col = "#990000", pch = 8, lwd = 2)
 dev.off()
 
 
@@ -283,14 +311,14 @@ with(p1, {
     plot(timestamp, distance_into_trip,
          xlim = vps[ind[8:9], "timestamp"],
          ylim = YLIM,
-         pch = 19, cex = 0.6, col = "666666",
+         pch = 19, cex = 0.6, col = "#666666",
          xaxt = "n", ylab = "Distance into trip (m)",
          xlab = "Trip Time (sec)")
     xaxis(vps[ind[1], "timestamp"])
     abline(h = Sd, lty = 2, col = "#333333")
 })
 with(p2, {
-    points(timestamp, distance_into_trip, pch = 19, cex = 0.6)
+    points(timestamp, distance_into_trip, pch = 19, cex = 0.6, col = "#999999")
     before <- !is.na(arrival_time) & !is.na(departure_time) & p1$stop_index == stop_index
     after <- !is.na(arrival_time) & !is.na(departure_time) & p1$stop_index < stop_index
     at <- !is.na(arrival_time) & is.na(departure_time)
@@ -322,7 +350,7 @@ with(p2[wi,], {
            timestamp, distance_into_trip,
            code = 0, length = 0.05, col = "#99000070")
     arrows(arrival_time, Sd[stop_index+1],
-           departure_time, Sd[stop_index+1],
+           ifelse(is.na(departure_time), timestamp, departure_time), Sd[stop_index+1],
            code = 0, length = 0.05, col = "#99000070")
 })
 dev.off()
@@ -335,24 +363,103 @@ dev.off()
 library(iNZightMaps)
 mobj <- iNZightMap(~lat, ~lon, data = infoList[[1]]$shape)
 
-pdf(fileP("road-state-1.pdf"), width = 1.5, height = 2.5, bg = "transparent", pointsize = 6)
+pdf(fileP("road-state-1.pdf"), width = 4, height = 2.5, bg = "transparent", pointsize = 6)
 plot(mobj, join = TRUE, pch = NA, lwd = 2, col.line = "black", main = "")
 dev.off()
 
-pdf(fileP("road-state-2.pdf"), width = 1.5, height = 2.5, bg = "transparent", pointsize = 6)
+pdf(fileP("road-state-2.pdf"), width = 4, height = 2.5, bg = "transparent", pointsize = 6)
 plot(mobj, pch = NA, main = "")
 with(mobj,
      addLines(.latitude, .longitude, id = leg,
               gpar = list(
                   lwd = 2,
-                  col = ifelse(1:max(leg) %% 2 == 1, "black", "purple")
+                  col = ifelse(1:max(leg) %% 2 == 1, "black", "orangered")
+              ))
+     )
+dev.off()
+
+pdf(fileP("road-state-3.pdf"), width = 4, height = 2.5, bg = "transparent", pointsize = 6)
+plot(mobj, pch = NA, main = "", lwd = 2, col.line = "black", main = "")
+with(mobj,
+     addLines(.latitude, .longitude, id = leg,
+              gpar = list(
+                  lwd = 2,
+                  col = ifelse(1:max(leg) %% 2 == 1, "black", "orangered")
+              ))
+     )
+route2 <- hist[grep("25802", hist$route_id), "route_id"]
+trip21 <- dbGetQuery(con, sprintf("SELECT id FROM trips WHERE route_id='%s' LIMIT 1", route2))$id
+res <- fromJSON(sprintf("http://130.216.50.187:8000/api/shape_schedule/%s", trip21), flatten = TRUE)
+shape <- res$shape
+if ("segment_info.id" %in% names(shape)) {
+    Shape <- shape$segment_info.shape_points
+    dmax <- cumsum(c(0, sapply(Shape, function(x) max(x$dist_traveled))))
+    invisible(lapply(1:length(Shape), function(i) {
+        Shape[[i]]$dist_traveled <<- Shape[[i]]$dist_traveled + dmax[i]
+        Shape[[i]]$leg <<- i
+    }))
+    shape <- do.call(rbind, Shape)
+    rm(Shape)
+} else {
+    shape$segment <-
+        sapply(shape$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
+}
+res$shape <- shape
+mobj2 <- iNZightMap(~lat, ~lon, data = res$shape)
+with(mobj2,
+     addLines(.latitude, .longitude, id = leg,
+              gpar = list(
+                  lwd = 2,
+                  col = ifelse(1:max(leg) %% 2 == 0, "black", "orangered")
               ))
      )
 dev.off()
 
 
 
-
+pdf(fileP("road-state-4.pdf"), width = 4, height = 2.5, bg = "transparent", pointsize = 6)
+plot(mobj, pch = NA, main = "", lwd = 2, col.line = "black", main = "")
+with(mobj,
+     addLines(.latitude, .longitude, id = leg,
+              gpar = list(
+                  lwd = 2,
+                  col = ifelse(1:max(leg) %% 2 == 1, "black", "orangered")
+              ))
+     )
+route2 <- hist[grep("60502", hist$route_id), "route_id"]
+trip21 <- dbGetQuery(con, sprintf("SELECT id FROM trips WHERE route_id='%s' LIMIT 1", route2))$id
+res <- fromJSON(sprintf("http://130.216.50.187:8000/api/shape_schedule/%s", trip21), flatten = TRUE)
+shape <- res$shape
+if ("segment_info.id" %in% names(shape)) {
+    Shape <- shape$segment_info.shape_points
+    dmax <- cumsum(c(0, sapply(Shape, function(x) max(x$dist_traveled))))
+    invisible(lapply(1:length(Shape), function(i) {
+        Shape[[i]]$dist_traveled <<- Shape[[i]]$dist_traveled + dmax[i]
+        Shape[[i]]$leg <<- i
+    }))
+    shape <- do.call(rbind, Shape)
+    rm(Shape)
+} else {
+    shape$segment <-
+        sapply(shape$dist_traveled, function(x) which(shape$schedule$pivot.shape_dist_traveled >= x)[1])
+}
+res$shape <- shape
+with(mobj2,
+     addLines(.latitude, .longitude, id = leg,
+              gpar = list(
+                  lwd = 2,
+                  col = ifelse(1:max(leg) %% 2 == 0, "black", "orangered")
+              ))
+     )
+mobj3 <- iNZightMap(~lat, ~lon, data = res$shape)
+with(mobj3,
+     addLines(.latitude, .longitude, id = leg,
+              gpar = list(
+                  lwd = 2,
+                  col = ifelse(1:max(leg) %% 2 == 1, "black", "orangered")
+              ))
+     )
+dev.off()
 
 
 ### FIGURE FIVE
@@ -379,6 +486,5 @@ dev.off()
 pdf(fileP("eta-pred-3.pdf"), width = 3, height = 1.5, bg = "transparent", pointsize = 6)
 pl()
 abline(v = c(3, 8), col = "#990000", lty = 2)
-abline(v = 6, col = "#000099", lty = 3)
 dev.off()
 

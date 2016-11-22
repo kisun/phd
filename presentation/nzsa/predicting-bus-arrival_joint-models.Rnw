@@ -33,7 +33,7 @@
 
 \title{Real-time prediction of bus arrival using joint models for vehicle and road state}
 %\subtitle{}
-\author{Tom Elliott}
+\author{Tom Elliott\\\url{tom.elliott@auckland.ac.nz}}
 \date{}
 \institute{Supervisor: Professor Thomas Lumley\\[2em]
 \includegraphics[height=1.5cm,width=3.8cm]{stat-logo.png}}
@@ -93,7 +93,7 @@
   \frametitle{Vehicle State Model}
   
   \textbf{Goal:} use observations of bus location (GPS) \ldots
-  \pause
+
   \begin{equation*}
     \bY_k = 
     \begin{bmatrix}
@@ -107,7 +107,7 @@
   \end{equation*}
   \pause
   \ldots to infer \textbf{unobservable vehicle state} \ldots
-  \pause
+
   \begin{equation*}
     \bX_k =
     \begin{bmatrix}
@@ -146,6 +146,11 @@
   \begin{itemize}
   \item Represent $\bX_k$ by a \emph{sample} of point-estimates (particles) $\bxi_k$
     
+    \begin{enumerate}
+    \item generate sample of plausible vehicle state predictions
+    \item remove predictions no longer plausible, given observation
+    \end{enumerate}
+    
   \item Flexible modeling framework, fewer assumptions
     
   \item Better coverage of possible states (\textbf{multimodality})
@@ -154,22 +159,22 @@
   \end{itemize}
   
   
-  \pause
-  \textbf{Step 1: predict}
+  % \pause
+  % \textbf{Step 1: predict}
   
-  %$\Rightarrow$ independently predict each particle 
+  % %$\Rightarrow$ independently predict each particle 
   
-  %$\Rightarrow$ sample of plausible vehicle states
+  % %$\Rightarrow$ sample of plausible vehicle states
   
-  $\Rightarrow$ generate sample of possible vehicle states
+  % $\Rightarrow$ generate sample of possible vehicle states
   
-  % \
+  % % \
   
   
-  \pause
-  \textbf{Step 2: update}
+  % \pause
+  % \textbf{Step 2: update}
   
-  $\Rightarrow$ compare predictions to observation, remove those no longer plausible
+  % $\Rightarrow$ compare predictions to observation, remove those no longer plausible
   
   
   
@@ -188,38 +193,37 @@
   
   \textbf{Step 1: predict}
   
-  \onslide<+->
   \begin{itemize}
-  \item<+-> Start with ``known'' vehicle state, $\bX_{k-1} = \{\bxi_{k-1} : i=1, \ldots, N\}$
+  \item<+-> Start with vehicle state at previous observation, $\bX_{k-1} = \{\bxi_{k-1} : i=1, \ldots, N\}$
     
   \item<+-> \textbf{Transition} each particle independently
     \begin{equation*}
-      \bxi_k = f(\bxi_{k-1}, \alert<4>{\sigma_v^2}, \ldots)
+      \bxi_k = f(\bxi_{k-1}, \alert<3>{\sigma_v^2}, \ldots)
     \end{equation*}
     
     \begin{enumerate}
     \item<+-> Add system noise
-      \only<4>{
+      \only<3>{
       \begin{equation*}
-        v_k^{(i)} \sim \mathcal{N}_T(v_{k-1}^{(i)}, \alert<4>{\sigma^2_v}),
+        v_k^{(i)} \sim \mathcal{N}_T(v_{k-1}^{(i)}, \alert<3>{\sigma^2_v}),
         \qquad 0 \leq v_k^{(i)} \leq \mathbf{v}_{\text{max}}
       \end{equation*}
       $\mathbf{v}_{\text{max}} \approx$ road speed limit
       }
-    \item<+-> Move particles along route \only<5>{(Law of Motion)}
-      \only<5-6>{
+    \item<+-> Move particles along route (Law of Motion)
+      \only<4>{
       \begin{equation*}
-        d_k^{(i)} \alt<6->{\alert{\leq}}{=} d_{k-1}^{(i)} + (t_k - t_{k-1}) v_k^{(i)}
+        d_k^{(i)} \alt<5->{\alert{\leq}}{=} d_{k-1}^{(i)} + (t_k - t_{k-1}) v_k^{(i)}
       \end{equation*}
       }
-    \item<6-> What about intermediate stop(s)?
-      \only<7->{
+    \item<5-> What about intermediate stop(s)?
+      \only<5->{
       \begin{itemize}
-      \item<7-> Does the particle stop? $p_{s_k}^{(i)} \sim \mathrm{Bernoulli}(\pi_{s_k})$
+      \item Does the particle stop? $p_{s_k}^{(i)} \sim \mathrm{Bernoulli}(\pi_{s_k})$
         
-      \item<8-> If so, for how long? $\bar t_{s_k} \sim \mathcal{E}(\tau_{s_k})$
+      \item If so, for how long? $\bar t_{s_k} \sim \mathcal{E}(\tau_{s_k})$
         
-      \item<9-> \textbf{Dwell time} $ = p_{s_k}^{(i)} \left(\gamma + \bar t_{s_k}\right)$
+      \item<6-> \textbf{Dwell time} $ = p_{s_k}^{(i)} \left(\gamma + \bar t_{s_k}\right)$
         
         {\scriptsize $\gamma$ = minimum dwell time (deccelerate/accelerate, open/close doors)}
         
@@ -253,66 +257,91 @@
   
   \textbf{Step 2: update}
   
-  \onslide<+->
   \begin{itemize}
    
   \item<+-> Likelihood function 
-    \only<1-7>{$\ell(\bY_k | \bx_k^{(i)} \only<4-7>{,\alert<4>{h}} \only<5-7>{,\alert<5>{g}})$}
-    \only<3-7>{
+    $\ell(\bY_k | \bx_k^{(i)}, \sigma_y^2 \only<3->{,\alert<3>{h}} \only<4->{,\alert<4>{g}})$
+    \only<2-6>{
     \begin{itemize}
-      \only<3-7>{ 
+      \only<2-6>{ 
       \item Transform particles onto flat plane
+        \only<2-4>{
         \begin{equation*}
-          \bz_k^{(i)} = \alert<5>{g(}\alert<4>{h(\bxi_k)} \alert<5>{| \bY_k)}
+          \bz_k^{(i)} = \alert<4>{g(}\alert<3>{h(\bxi_k)} \alert<4>{| \bY_k)}
         \end{equation*}
+        }
         
-        \only<4>{
+        \only<3>{
           \alert{$h$: measurement function} (distance into trip $\rightarrow$ lat/lon)
         }
-        \only<5>{
+        \only<4>{
           \alert{$g(\cdot|\bY_k)$: projection}
-        
           centered on $\bY_k$,  1~unit = 1~meter in all directions
         }
       }
       
-      \only<6-7>{
+      \only<5-6>{
       \item Bivariate normal likelihood, $g(\bY_k | \bY_k) = \boldsymbol{0}$
         \begin{align*}
-          \bY_k | \bz_k^{(i)} \sim \bz_k^{(i)} | \bY_k \sim \mathcal{N}_2 (\boldsymbol{0}, \sigma_y^2 I_2)
+          \bY_k | \bz_k^{(i)}, \sigma_y^2 \sim \bz_k^{(i)} | \bY_k, \sigma_y^2 
+          \sim \mathcal{N}_2 (\boldsymbol{0}, \sigma_y^2 I_2)
           \qquad
           \text{(\scriptsize $\sigma_y^2$ = GPS error)}
         \end{align*}        
       }
       
-      \only<7>{
+      \only<6>{
       \item For each particle
         \begin{equation*}
-          \ell(\bY_k | \bxi_k, h, g) \propto 
+          \ell(\bY_k | \bxi_k, \sigma^2_y, h, g) \propto 
           e^{-\frac{1}{2\sigma^2}\left( (\bz_k^{(i)})^T \bz_k^{(i)} \right)}
         \end{equation*}
       }
     \end{itemize}
     }
     
-    \only<8->{
-    \begin{equation*}
-      \ell(\bY_k | \bxi_k, h, g) \propto 
-      e^{-\frac{1}{2\sigma^2}\left( (\bz_k^{(i)})^T \bz_k^{(i)} \right)}
-    \end{equation*}
+    \only<7->{    
     
-    
-    \item<8-> Compute weights
-      
+    \item Compute weights
+      \only<7>{
       \begin{equation*}
         w_i = \frac{\ell(\bY_k | \bxi_k)}{\sum_{j=1}^N \ell(\bY_k | \bx_k^{(j)})}
       \end{equation*}
       
-    \item<9-> Weighted resample with replacement
+      \centering
+      \includegraphics[scale=0.7]{figure/update-state-4c.pdf}
+      }
       
-      \onslide<10->{$\Rightarrow$ keep particles plausible given data}
-      %\onslide<10->{$\Rightarrow$ Cull the imaginary busses that are no longer plausible}
+    \item<8-> Weighted resample with replacement
+      
+      \onslide<9->{$\Rightarrow$ keep particles plausible given data}
+      
+      \only<8->{
+        \centering
+        \vspace{0.75em}
+        \includegraphics[scale=0.7]{figure/update-state-5.pdf}
+      }
     }
+    
+    \begin{overprint}
+      \onslide<2>
+      \centering
+      \vspace{1em}
+      \includegraphics[scale=0.7]{figure/update-state-1.pdf}
+      \onslide<3>
+      \centering
+      \hspace{-4em}
+      \includegraphics[scale=0.7]{figure/update-state-1.pdf}
+      \includegraphics[scale=0.7]{figure/update-state-2.pdf}
+      \onslide<4>
+      \centering
+      \vspace{-1em}
+      \includegraphics[scale=0.7]{figure/update-state-3.pdf}
+      \includegraphics[scale=0.7]{figure/update-state-4.pdf}
+      \onslide<5>
+      \centering
+      \includegraphics[scale=0.7]{figure/update-state-4b.pdf}
+    \end{overprint}
     
   \end{itemize}
 \end{frame}
@@ -327,22 +356,22 @@
     \onslide<1>
     \centering
     \includegraphics{figure/predict-state-3.pdf}
+    % \onslide<2>
+    % \centering
+    % \includegraphics{figure/update-state-1.pdf}
+    % \onslide<3>
+    % \centering
+    % \includegraphics{figure/update-state-2.pdf}
+    % \onslide<4>
+    % \centering
+    % \includegraphics{figure/update-state-3.pdf}
+    % \onslide<5>
+    % \centering
+    % \includegraphics{figure/update-state-4.pdf}
+    % \onslide<6>
+    % \centering
+    % \includegraphics{figure/update-state-5.pdf}
     \onslide<2>
-    \centering
-    \includegraphics{figure/update-state-1.pdf}
-    \onslide<3>
-    \centering
-    \includegraphics{figure/update-state-2.pdf}
-    \onslide<4>
-    \centering
-    \includegraphics{figure/update-state-3.pdf}
-    \onslide<5>
-    \centering
-    \includegraphics{figure/update-state-4.pdf}
-    \onslide<6>
-    \centering
-    \includegraphics{figure/update-state-5.pdf}
-    \onslide<7>
     \centering
     \includegraphics{figure/update-state-6.pdf}
   \end{overprint}
@@ -354,13 +383,12 @@
 \begin{frame}
   \frametitle{Road State Model}
   
-  \begin{enumerate}[<+->]
-  \item \sout<4>{Particle filter $\Rightarrow$ speed estimates for a given bus}
+  \begin{enumerate}
+  \item \sout<2>{Particle filter $\Rightarrow$ speed estimates for a given bus}
     
   \item Identify segments of road common to multiple routes
     
-  \item Use speed information from \emph{all busses} to estimate
-    speed along a given road segment
+  \item Estimate speed along road segments using \emph{all busses}
   \end{enumerate}
 \end{frame}
 
@@ -370,18 +398,23 @@
   \begin{enumerate}
   \item[2.] Identify segments of road common to multiple routes
     
-    \pause
-    $\Rightarrow$ between intersections
+    \onslide<2->{$\Rightarrow$ between (major) intersections}
   \end{enumerate}
   
   
   \begin{overprint}
-    \onslide<2>
+    \onslide<1>
     \centering
     \includegraphics{figure/road-state-1.pdf}
-    \onslide<3>
+    \onslide<2>
     \centering
     \includegraphics{figure/road-state-2.pdf}
+    \onslide<3>
+    \centering
+    \includegraphics{figure/road-state-3.pdf}
+    \onslide<4>
+    \centering
+    \includegraphics{figure/road-state-4.pdf}
   \end{overprint}
 
     
@@ -392,8 +425,7 @@
   \frametitle{Road State Model}
   
   \begin{enumerate}
-  \item[3.] Use speed information from \emph{all busses} to estimate
-    speed along a given road segment
+  \item[3.] Estimate speed along road segments using \emph{all busses}
 
   \end{enumerate}
   
@@ -402,7 +434,7 @@
     
 
 
-  \only<3>{
+  \only<2>{
     \textbf{Road state:} mean speed for all $M$ road segments at time $t_\ell$
     \begin{equation*}
       \bnu_\ell = \left[ \nu_{1\ell}\ \nu_{2\ell}\ \cdots\ \nu_{M\ell} \right]^T
@@ -419,11 +451,11 @@
     \end{equation*}
   }
   
-  \only<4->{
+  \only<3->{
     \begin{itemize}
-    \item<4-> no complex model necessary (Normal distribution adequate)
+    \item<3-> no complex model necessary (Normal distribution adequate)
       
-    \item<5-> updated using particle filter estimates
+    \item<4-> updated using particle filter estimates
       
       \begin{equation*}
         \mathbf{v}_\ell = \bnu_\ell + \mathbf{r}_\ell
@@ -432,7 +464,8 @@
       \begin{itemize}
       \item $\mathbf{v}_\ell$: mean speed of particles
       
-      \item $\mathbf{r}_\ell \sim \mathcal{N}(0, \mat{R}_\ell)$, $\mat{R}_\ell$: variance of particle speeds
+      \item $\mathbf{r}_\ell \sim \mathcal{N}(0, \hat{\mat{R}}_\ell)$, $\hat{\mat{R}}_\ell$: 
+        variance of particle speeds
       \end{itemize}
 
     \end{itemize}
@@ -584,7 +617,6 @@
       
     \item Allow for dwell time uncertainty
       
-    \item Potentially multi-modal
   \end{itemize}
 \end{frame}
 
@@ -598,7 +630,12 @@
       $R_b = $ distance along route of start of segment $b$
       
     \item $\hat A_j\only<6>{\alert<6>{^{(i)}}} = 
-      t_k + \only<3->{\alert<3>{ \frac{R_{s_k\only<6->{\alert<6>{^{(i)}}}+1} - d_k\only<6->{\alert<6>{^{(i)}}}}{\nu_{s_k\only<6->{\alert<6>{^{(i)}}}}} }+} 
+      t_k + \only<3->{\alert<3>{ \frac{R_{s_k\only<6->{\alert<6>{^{(i)}}}+1} - 
+            d_k\only<6->{\alert<6>{^{(i)}}}}{\alt<6->{
+              \alert<6>{v_{s_k}^{(i)}}
+            }{
+              \nu_{s_k}
+            }} +}}
       \only<4->{\alert<4>{ \sum_{b\in B^\star} \frac{R_{b+1}-R_b}{\alt<6->{\alert<6>{v_b^{(i)}}}{\nu_b}}  }+}
       \only<5->{\alert<5>{ \frac{S_j^d - R_{b'}}{\alt<6->{\alert<6>{v_{b'}^{(i)}}}{\nu_{b'}}} }}
       \only<7->{\alert<7>{\linebreak\phantom{A_j = }\alert<6>{+ \sum_{\ell = s_k+1}^{j-1} p_\ell^{(i)}(\gamma + \bar t_\ell^{(i)})}}}$
@@ -668,9 +705,9 @@
   \begin{itemize}
   \item<4-> easy to compute from particle sample
     
-  \item<5-> intuitive: ETA 6~min (mean) versus ETA 3--8~min
+  \item<4-> intuitive\footnote{arguably}: ETA 6~min (mean) versus ETA 3--8~min
     
-  \item<6-> Biased to reduce chance of missing bus
+  \item<4-> Biased to reduce chance of missing bus
   \end{itemize}
   
   \begin{overprint}
@@ -690,20 +727,35 @@
   \frametitle{What's Next?}
   
   \onslide<+->
-  \begin{itemize}[<+->]
+  \begin{itemize}
   \item Add more routes
+    \begin{itemize}
+      \item[$\Rightarrow$] automate intersection detection
+    \end{itemize}
+
     
   %\item Incorporate $\tilde T_j^a$/$\tilde T_j^d$ into likelihood
     
   %  $\Rightarrow$ depending on it's reliability
     
-  \item Collect historical data to estimate parameters
+  \item Historical data to estimate parameters
     \begin{itemize}
-    \item Dwell times and stopping probabilties
-    \item Segment speed covariance matrix (including off-diagonals)
+    \item[$\Rightarrow$] Dwell times, stopping probabilties
+    \item[$\Rightarrow$] Segment speed covariance matrix (including off-diagonals)
+    \item[$\Rightarrow$] Model wait time at intersections
     \end{itemize}
     
-  \item Scale up: \emph{ALL routes/busses} $\Rightarrow$ computational speed
+  \item Scale up: \emph{ALL routes/busses} 
+    \begin{itemize}
+    \item[$\Rightarrow$] computational speed
+    \item[$\Rightarrow$] run in real-time
+    \end{itemize}
+
+    
+  \item Selection of ``best'' quantiles for prediction intervals
+    
+    
+  \item \ldots
     
   \end{itemize}
 \end{frame}
