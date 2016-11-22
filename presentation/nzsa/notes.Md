@@ -18,15 +18,18 @@ Then discuss how they can be used to make predictions ...
 
 # What's wrong with the current system?
 
+First - note 'current' = AT system
+-> but hope is that appliable to PT systems around world using GTFS - a class of API
+
 Main problem is inaccuracy
-Typically ETA's are underestimates - leads to frustration
+- arrive at stop - 5 min ETA - 8 min later still waiting
+
 Current system not robust - as in the following example
 - we see app reporting "7 stops away" - the loop is anti-clockwise
 - but then it appears bus gone around loop, departed from stop!
 - but actually second observation was an error - carried forward -> still departed
+
 Another shortcoming - all this data available - only use a fraction of it for predictions!
-- some models (not used by AT) that use all busses on a common route
-- none that seem to use generic road state that's not directly paired with particular routes
 
 -> intention to improve accuracy
 -> our model solves "departed" issue and several others for free!
@@ -51,21 +54,19 @@ first component of X, which is simply a point on a line, 1D
 Easy to see how distance corresponds to point on route
 However - observations of Y are noisy - GPS error, interference etc
 
-Important point: many models first "guess" what X is - use as data
-We instead can transform X into observation space to compute likelihood - shown later
--> solves the "bus has departed" error
 
 ## slide 3
 
 We are using PF - which represents X by a sample of points referred to as particles
+- predict all states where bus COULD be before looking at observation
+- compare predictions to true observation - effectively remove particles no longer plausible
+
 Provides us with very flexibile framework - no assumptions such as symmetry, unimodality
 Provided model sufficient, good coverage of state space -
 - at this stage, want good coverage, NOT accuracy - ensure we capture "true" state in sample
 see later - likelihood is intuitive
 
-Involves two steps
-Prediction step - predict all states where bus COULD be before looking at observation
-Update step - compare predictions to true observation - effectively remove particles no longer plausible
+
 
 
 ## slide 4 - Step 1: predict
@@ -76,10 +77,12 @@ Transition function f - starts at previous state,
 - adds system noise - allow speed to vary - a simple truncated normal distribution
  so vehicles can't go backwards
 - determine location after travelling at speed for amount of time
+
 need to account for possiblity of stopping at stops along the way
 - for each particle, Bernoulli probability of stopping
-- and how long it waits at the stop
-- overall dwell time - time lost due to stopping - has minimum value "gamma"
+- and exponential - determine for how long
+- overall dwell time - time lost due to stopping
+- gamma - minimum stopping time
 
 ## slide 5 -pictures!
 
@@ -164,7 +167,7 @@ effectively - deviation from schedule at last stop carried forward to upcoming s
 simply uses current speed to determine how long to travel to stop
 - for each particle to get a distribution
 - include dwell time uncertainty
-- thus can be multimodal!
+
 
 ## 4. road state
 instead of uses PF speed, use KF speed
@@ -222,4 +225,3 @@ Build up a historical database
 In order to scale up to all routes, need to increase performance of model
 -> every second = faster prediction = more up-to-date!
 -> don't want predictions to be 30 seconds old by the time they are released!
-
