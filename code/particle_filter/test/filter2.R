@@ -23,14 +23,17 @@ con2 = dbConnect(drv, dbname = "historical", host = host,
                  user = user, port = port, password = pass)
 
 hist <- dbGetQuery(con2, "SELECT route_id, count(route_id) as n FROM vehicle_positions WHERE route_id LIKE '%v46.25' group by route_id order by n")
-rid <- "27402-20161011151756_v46.25"
+#rid <- "27402-20161011151756_v46.25"
+rids <- c("27402", "25802")
 #vid <- "3A9A"
 vps <- dbGetQuery(
     con2,
-    sprintf("SELECT * FROM vehicle_positions WHERE route_id='%s' ORDER BY timestamp", rid))
+    sprintf("SELECT * FROM vehicle_positions WHERE route_id IN ('%s') ORDER BY timestamp",
+            paste0(rids, "-20161011151756_v46.25", collapse = "','")))
 vps$trip_start_date <- format(as.POSIXct(vps$timestamp, origin = "1970-01-01"), "%Y-%m-%d")
+vps <- vps[vps$trip_start_date == "2016-10-26", ]
 
-ind <- which(vps$trip_start_date == "2016-10-26")
+ind <- which(vps$timestamp < vps$timestamp[1] + 3*60*60)
 infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
     res <- fromJSON(sprintf("http://130.216.50.187:8000/api/shape_schedule/%s", ID), flatten = TRUE)
     shape <- res$shape
@@ -101,14 +104,14 @@ for (k in (k+1):length(ind)) {
         updateSpeeds(con, q = 1, t2 = speed$t + speed$delta)
         speed$t <- vps[ind[k], "timestamp"]
     }
-    jpeg(sprintf("figures_2/r274_2016-10-26_v%s_t%d.jpg",
-                 vps[ind[k], "vehicle_id"], vps[ind[k], "timestamp"]),
-         width = 600, height = 1000)
+    #jpeg(sprintf("figures_2/r274_2016-10-26_v%s_t%d.jpg",
+    #             vps[ind[k], "vehicle_id"], vps[ind[k], "timestamp"]),
+    #     width = 600, height = 1000)
     res <- pf(con, vps[ind[k], "vehicle_id"], 500, sig.gps = 5,
               vp = vps[ind[k], ],  info = infoList[[vps[ind[k], "trip_id"]]],
               SPEED.range = c(MIN.speed, MAX.speed), draw = TRUE,
               rho = 0.5)
-    dev.off()
+    #dev.off()
     if (res <= 0) {
         dat <- dbGetQuery(con,
                           sprintf("SELECT distance_into_trip, velocity, stop_index, arrival_time, departure_time, segment_index FROM particles WHERE vehicle_id = '%s' AND active",
@@ -125,6 +128,8 @@ for (k in (k+1):length(ind)) {
         tstart <- min(St)
         St <- St - tstart
         tk <- vps[ind[k], "timestamp"]
+        if (min(sk) >= length(St)) next
+        
         ## 1. Schedule prediction:
         p1 <- matrix(St[-(1:min(sk))], nrow = 1)
         colnames(p1) <- min(sk) + 1:ncol(p1)
