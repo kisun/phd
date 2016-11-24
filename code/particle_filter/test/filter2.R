@@ -205,8 +205,10 @@ route.segments <- dbGetQuery(con, "SELECT * FROM segments ORDER BY segment_id, p
 mode(route.segments$lat) <- mode(route.segments$lon) <- "numeric"
 routemap <- iNZightMap(~lat, ~lon, data = route.segments)
 
-colfn <- function(speed, min = min(BHist$mean), max = max(BHist$mean)) {
-    spd <- round(speed / MAX.speed * 100)
+speed.min <- min(BHist$mean)
+speed.max <- max(BHist$mean)
+colfn <- function(speed, min = speed.min, max = speed.max) {
+    spd <- round(speed / max * 100)
     viridis::inferno(100)[spd]
 }
 
@@ -214,7 +216,8 @@ colfn <- function(speed, min = min(BHist$mean), max = max(BHist$mean)) {
 for (i in 1:length(BHist$t)) {
     suppressWarnings({
         plot(routemap, pch = NA, main = format(as.POSIXct(BHist$t[i], origin = "1970-01-01"), "%I:%M%P"),
-             colby = seq(min(BHist$mean), max(BHist$mean), length = nrow(routemap)), varnames = list(colby = "Speed"),
+             colby = seq(min(BHist$mean), max(BHist$mean), length = nrow(routemap)),
+             varnames = list(colby = "Speed"),
              col.fun = viridis::inferno)
     })
     with(route.segments,
