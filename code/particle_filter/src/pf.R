@@ -94,13 +94,14 @@ pf <- function(con, vid, N = 500,
 
         particles$distance_into_trip <-
             runif(nrow(particles), min(sh.near$dist_traveled), max(sh.near$dist_traveled))
-        particles$velocity <- msm::rtnorm(N, speeds$speed_mean[particles$segment_index],
-                                          sqrt(speeds$speed_var[particles$segment_index]),
-                                          lower = SPEED.range[1], upper = SPEED.range[2])
 
         particles$stop_index <- sapply(particles$distance_into_trip, function(x) sum(Sd <= x) - 1)
         particles$segment_index <- sapply(particles$distance_into_trip, function(x) sum(Rd <= x) - 1)
         particles$arrival_time <- particles$departure_time <- NaN
+        
+        particles$velocity <- msm::rtnorm(N, speeds$speed_mean[particles$segment_index],
+                                          sqrt(speeds$speed_var[particles$segment_index]),
+                                          lower = SPEED.range[1], upper = SPEED.range[2])
     } else {
         delta <- vp$timestamp - particles$timestamp[1L]
         if (delta <= 0) return(invisible(-1))
