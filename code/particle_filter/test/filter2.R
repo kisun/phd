@@ -93,7 +93,10 @@ if (FALSE){
 
 
 ## DELETE PARTICLES!!!!!
-del <- dbGetQuery(con, "DELETE FROM particles")
+if (FALSE) {
+    del <- dbGetQuery(con, "DELETE FROM particles")
+    dbGetQuery(con, "ALTER SEQUENCE particles_id_seq RESTART WITH 1")
+}
 k <- 0
 pb <- txtProgressBar(0, length(ind), style = 3)
 ##pdf("figures_1/trial1.pdf", width = 6, height = 10)
@@ -104,14 +107,14 @@ for (k in (k+1):length(ind)) {
         updateSpeeds(con, q = 1, t2 = speed$t + speed$delta)
         speed$t <- vps[ind[k], "timestamp"]
     }
-    #jpeg(sprintf("figures_2/r274_2016-10-26_v%s_t%d.jpg",
-    #             vps[ind[k], "vehicle_id"], vps[ind[k], "timestamp"]),
-    #     width = 600, height = 1000)
+    jpeg(sprintf("figures_3/r274_2016-10-26_v%s_t%d.jpg",
+                 vps[ind[k], "vehicle_id"], vps[ind[k], "timestamp"]),
+         width = 600, height = 1000)
     res <- pf(con, vps[ind[k], "vehicle_id"], 500, sig.gps = 5,
               vp = vps[ind[k], ],  info = infoList[[vps[ind[k], "trip_id"]]],
               SPEED.range = c(MIN.speed, MAX.speed), draw = TRUE,
               rho = 0.5)
-    #dev.off()
+    dev.off()
     if (res <= 0) {
         dat <- dbGetQuery(con,
                           sprintf("SELECT distance_into_trip, velocity, stop_index, arrival_time, departure_time, segment_index FROM particles WHERE vehicle_id = '%s' AND active",
@@ -129,7 +132,6 @@ for (k in (k+1):length(ind)) {
         St <- St - tstart
         tk <- vps[ind[k], "timestamp"]
         if (min(sk) >= length(St)) next
-        
         ## 1. Schedule prediction:
         p1 <- matrix(St[-(1:min(sk))], nrow = 1)
         colnames(p1) <- min(sk) + 1:ncol(p1)
@@ -197,7 +199,29 @@ invisible(apply(sp.hist, 1, function(x) {
 
 
 source("src/figures.R")
-drawSegments(shape, schedule, BHist, MAX.speed = MAX.speed)
+##drawSegments(shape, schedule, BHist, MAX.speed = MAX.speed)
+
+route.segments <- dbGetQuery(con, "SELECT * FROM segments ORDER BY segment_id, pt_sequence")
+mode(route.segments$lat) <- mode(route.segments$lon) <- "numeric"
+routemap <- iNZightMap(~lat, ~lon, data = route.segments)
+
+colfn <- function(speed, min = min(BHist$mean), max = max(BHist$mean)) {
+    spd <- round(speed / MAX.speed * 100)
+    viridis::inferno(100)[spd]
+}
+
+
+for (i in 1:length(BHist$t)) {
+    suppressWarnings({
+        plot(routemap, pch = NA, main = format(as.POSIXct(BHist$t[i], origin = "1970-01-01"), "%I:%M%P"),
+             colby = seq(min(BHist$mean), max(BHist$mean), length = nrow(routemap)), varnames = list(colby = "Speed"),
+             col.fun = viridis::inferno)
+    })
+    with(route.segments,
+         addLines(lat, lon, id = segment_id,
+                  gpar = list(lwd = 5, lineend = "butt", col = colfn(BHist$mean[,i]))))
+    grid.locator()
+}
 
 
 arrivaltimes <- dbGetQuery(con2, sprintf("select distinct trip_id, stop_sequence, stop_id, arrival_delay, departure_delay from trip_updates as tu, stop_time_updates as stu where tu.oid=stu.trip_update_id and timestamp between %s and %s order by trip_id, stop_sequence", min(vps[ind, "timestamp"]), max(vps[ind, "timestamp"])))
