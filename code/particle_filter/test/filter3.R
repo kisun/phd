@@ -188,7 +188,8 @@ for (k in (k+1):length(ind)) {
 
 
 
-sp.hist <- dbGetQuery(con, "SELECT * FROM segment_speeds ORDER BY segment_id")
+sp.hist <- dbGetQuery(con, sprintf("SELECT * FROM segment_speeds WHERE timestamp>%s ORDER BY segment_id",
+                                   as.numeric(as.POSIXct("2016-10-27"))))
 
 ns <- length(segs <- unique(sp.hist$segment_id))
 nt <- length(ts <- sort(unique(sp.hist$timestamp)))
@@ -203,6 +204,13 @@ invisible(apply(sp.hist, 1, function(x) {
 
 source("src/figures.R")
 ##drawSegments(shape, schedule, BHist, MAX.speed = MAX.speed)
+
+## data <- t(BHist$mean[apply(BHist$mean, 1, function(x) !all(x == 10)), ])
+## colnames(data) <- NULL
+## library(ggplot2)
+## library(reshape2)
+## qplot(x=Var1, y=Var2, data=melt(cor(data, use="p")), fill=value, geom="tile") +
+##    scale_fill_gradient2(limits=c(-1, 1))
 
 route.segments <- dbGetQuery(con, "SELECT * FROM segments ORDER BY segment_id, pt_sequence")
 mode(route.segments$lat) <- mode(route.segments$lon) <- "numeric"
