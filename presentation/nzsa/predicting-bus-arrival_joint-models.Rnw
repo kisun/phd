@@ -33,10 +33,11 @@
 
 \title{Real-time prediction of bus arrival using joint models of vehicle and road states}
 %\subtitle{}
-\author{Tom Elliott\\\scriptsize{\url{tomelliott.co.nz}}}
-\date{}
+\author{Tom Elliott}
+\date{NZSA+ORSNZ 2016}
 \institute{Supervisor: Professor Thomas Lumley\\[2em]
-  \includegraphics[height=1.5cm,width=3.8cm]{stat-logo.png}}
+  \includegraphics[height=1.5cm,width=3.8cm]{stat-logo.png}\\[3em]
+  \scriptsize{\url{tomelliott.co.nz} \hspace{2em} \url{@tomelliottnz}}}
 
 \begin{document}
 
@@ -60,7 +61,7 @@
   \frametitle{What's wrong with the current$^\dagger$ system?}
   
   \only<2>{
-    $\dagger$ Dealing specifically with Auckland Transport
+    $\dagger$ Specifically Auckland Transport
     
     $\Rightarrow$ applicable to any public transport system using GTFS
   }
@@ -70,8 +71,9 @@
     
   \item<4-> Prone to errors
     
-  \item<8-> Recent modelling frameworks \emph{don't} make use of 
-    all real-time vehicle data
+  \item<8-> Only specific (small) subsets used --- if any!
+    %Recent modelling frameworks \emph{don't} make use of 
+    %all real-time vehicle data
   \end{itemize}
   
   \begin{overprint}
@@ -155,7 +157,7 @@
     
   \item Flexible modeling framework, fewer assumptions
     
-  \item Better coverage of possible states (\textbf{multimodality})
+  \item Better coverage of possible states (\textbf{multimodality}, robust)
     
   \item Intuitive likelihood function
   \end{itemize}
@@ -225,7 +227,7 @@
         
       \item If so, for how long? $\bar t_{s_k} \sim \mathcal{E}(\tau_{s_k})$
         
-      \item<6-> \textbf{Dwell time} $ = p_{s_k}^{(i)} \left(\gamma + \bar t_{s_k}\right)$
+      \item \textbf{Dwell time} $ = p_{s_k}^{(i)} \left(\gamma + \bar t_{s_k}\right)$
         
         {\scriptsize $\gamma$ = minimum dwell time (deccelerate/accelerate, open/close doors)}
         
@@ -309,7 +311,9 @@
       \begin{equation*}
         w_i = \frac{\ell(\bY_k | \bxi_k)}{\sum_{j=1}^N \ell(\bY_k | \bx_k^{(j)})}
       \end{equation*}
+      }
       
+      \only<7>{
       \centering
       \includegraphics[scale=0.7]{figure/update-state-4c.pdf}
       }
@@ -707,7 +711,7 @@
   \begin{itemize}
   \item<4-> easy to compute from particle sample
     
-  \item<4-> intuitive\footnote{arguably}: ETA 6~min (mean) versus ETA 3--8~min
+  \item<4-> (arguably) intuitive: ETA 6~min (mean) versus ETA 3--8~min
     
   \item<4-> Biased to reduce chance of missing bus
   \end{itemize}
