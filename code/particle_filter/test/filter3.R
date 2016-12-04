@@ -103,7 +103,14 @@ if (FALSE) {
 k <- 0
 pb <- txtProgressBar(0, length(ind), style = 3)
 ##pdf("figures_1/trial1.pdf", width = 6, height = 10)
-for (k in (k+1):length(ind)) {
+##for (k in (k+1):length(ind)) {
+
+library(compiler)
+pfc <- cmpfun(pf)
+
+pt <- proc.time()
+pb <- txtProgressBar(1, 20, style = 3)
+for (k in 1:20) {
     setTxtProgressBar(pb, k)
     ## update the speed KF:
     if (vps[ind[k], "timestamp"] > speed$t + speed$delta) {
@@ -113,7 +120,8 @@ for (k in (k+1):length(ind)) {
     jpeg(sprintf("figures_4/r274_2016-10-26_v%s_t%d.jpg",
                  vps[ind[k], "vehicle_id"], vps[ind[k], "timestamp"]),
          width = 600, height = 1000)
-    res <- pf(con, vps[ind[k], "vehicle_id"], 500, sig.gps = 5,
+    ##res <- pf(con, vps[ind[k], "vehicle_id"], 500, sig.gps = 5,
+    res <- pfc(con, vps[ind[k], "vehicle_id"], 500, sig.gps = 5,
               vp = vps[ind[k], ],  info = infoList[[vps[ind[k], "trip_id"]]],
               SPEED.range = c(MIN.speed, MAX.speed), draw = TRUE,
               rho = 0.5)
@@ -185,7 +193,15 @@ for (k in (k+1):length(ind)) {
         savePred(p4, "road_state", tk)
     }
 }; close(pb);
+proc.time() - pt
 
+### without compilation
+##   user  system elapsed 
+## 13.912   0.044  34.893
+
+### with compiler --- not much point :(
+##   user  system elapsed 
+## 13.880   0.036  23.399 
 
 
 sp.hist <- dbGetQuery(con, sprintf("SELECT * FROM segment_speeds WHERE timestamp>%s ORDER BY segment_id",
