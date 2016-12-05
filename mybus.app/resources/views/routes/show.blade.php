@@ -63,43 +63,63 @@
       }
 
       // every 100 obs:
-      var snappedPath = [];
-      var M = Math.ceil(data.length / 99);
-      for (var i = 0; i < M; i++) {
-        // overlap: 0-99; 99-198; 198-297; ...
-        $.ajax({
-          url: 'https://roads.googleapis.com/v1/snapToRoads',
-          data: {
-            interpolate: true,
-            key: "{{ env('GOOGLE_API_KEY') }}",
-            path: pathValues.slice(99 * i, 99 * (i + 1)).join('|')
-          },
-          success: function(data) {
-            for (j = 0; j < data.snappedPoints.length; j++) {
-              snappedPath.push({lat: data.snappedPoints[j].location.latitude,
-                                lng: data.snappedPoints[j].location.longitude});
-            }
-          },
-          async: false
-        });
-      }
-      // directions? YES ! but waypoints at each stop.
-      var directionsService = new google.maps.DirectionsService(),
-          directionsDisplay = new google.maps.DirectionsRenderer();
-      directionsService.route({
-        origin: { lat: data[0].lat, lng: data[0].lng },
-        destination: { lat: data[data.length - 1].lat, lng: data[data.length - 1].lng },
-        travelMode: 'TRANSIT'
-      }, function(result, status) {
-        if (status == 'OK') {
-          console.log('OK');
-          directionsDisplay.setDirections(result);
-        } else {
-          console.log(status);
-        }
-      });
+      // var M = Math.ceil(data.length / 99);
+      // for (var i = 0; i < M; i++) {
+      //   // overlap: 0-99; 99-198; 198-297; ...
+      //   $.ajax({
+      //     url: 'https://roads.googleapis.com/v1/snapToRoads',
+      //     data: {
+      //       interpolate: true,
+      //       key: "{{ env('GOOGLE_API_KEY') }}",
+      //       path: pathValues.slice(99 * i, 99 * (i + 1)).join('|')
+      //     },
+      //     success: function(data) {
+      //       for (j = 0; j < data.snappedPoints.length; j++) {
+      //         snappedPath.push({lat: data.snappedPoints[j].location.latitude,
+      //                           lng: data.snappedPoints[j].location.longitude});
+      //       }
+      //     },
+      //     async: false
+      //   });
+      // }
+      // directions? YES ! but waypoints at each stop - 23 at a time.
+      // var directionsService = new google.maps.DirectionsService(),
+      //     directionsDisplay = new google.maps.DirectionsRenderer();
+      //
+      // var snappedPath = [];
+      // directionsService.route({
+      //   origin: { lat: parseFloat(stops[0].stop.lat),
+      //             lng: parseFloat(stops[0].stop.lon) },
+      //   destination: { lat: parseFloat(stops[stops.length-1].stop.lat),
+      //                  lng: parseFloat(stops[stops.length-1].stop.lon) },
+      //   travelMode: 'TRANSIT',
+      //   transitOptions: {
+      //     routingPreference: 'LESS_WALKING'
+      //   },
+      //   provideRouteAlternatives: true
+      // }, function(result, status) {
+      //   if (status == 'OK') {
+      //     var num = 0, routeN = {{ $route->short_name }};
+      //     console.log(result);
+      //     for (var j = 0; j < result.routes.length; j++) {
+      //       for (var k = 0; k < result.routes[j].legs[0].steps.length; k++) {
+      //         if (result.routes[j].legs[0].steps[k].travel_mode != "TRANSIT") {
+      //           continue;
+      //         }
+      //         if (result.routes[j].legs[0].steps[k].transit.line.short_name == "{{ $route->short_name }}") {
+      //           num = j;
+      //           break;
+      //         }
+      //       }
+      //     }
+      //     directionsDisplay.setDirections(result);
+      //   } else {
+      //     console.log(status);
+      //   }
+      // });
 
-      var data = [], cdist = 0;
+
+      var snappedPath = data, data = [], cdist = 0;
       for (var i = 0; i < snappedPath.length; i++) {
         data[i] = {lat: snappedPath[i].lat, lng: snappedPath[i].lng, dist: cdist};
         if (i < snappedPath.length - 1) {
@@ -121,7 +141,7 @@
         path: data,
         geodesic: true,
         strokeColor: '{{ ($route->color) ? $route->color : "#000099" }}',
-        strokeOpacity: 1.0,
+        strokeOpacity: 0.4,
         strokeWeight: 5
       });
       shapePath.setMap(map);
