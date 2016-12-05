@@ -168,6 +168,7 @@ return [
          */
 
         Chumper\Zipper\ZipperServiceProvider::class,
+        BackupManager\Laravel\Laravel5ServiceProvider::class,
 
         /*
          * Application Service Providers...
