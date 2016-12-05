@@ -38,10 +38,10 @@
         @foreach ($shape as $segment)
           @if (get_class($segment) == "App\SegmentShape")
             @foreach ($segment->segment_info->shape_points as $point)
-              { lat: {{ $point->lat }}, lng: {{ $point->lon }}, dist: {{ $point->dist_traveled }} },
+              { lat: {{ $point->lat }}, lng: {{ $point->lon }} },
             @endforeach
           @else
-            { lat: {{ $segment->lat }}, lng: {{ $segment->lon }}, dist: {{ $segment->dist_traveled }} },
+            { lat: {{ $segment->lat }}, lng: {{ $segment->lon }} },
           @endif
         @endforeach
       ];
