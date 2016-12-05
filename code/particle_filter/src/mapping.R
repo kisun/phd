@@ -50,7 +50,7 @@ setVP <- function() {
     lim <- iNZightMaps:::map.xylim(grid::current.viewport()$yscale,
                                    grid::current.viewport()$xscale,
                                    SCALE = 2)$window.lim
-    grid::pushViewport(grid::viewport(xscale = lim[1:2], yscale = lim[3:4]))
+    grid::pushViewport(grid::viewport(xscale = lim[1:2], yscale = lim[3:4], clip = TRUE))
 
     invisible(NULL)
 }

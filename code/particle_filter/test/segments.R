@@ -29,5 +29,22 @@ shobj <- iNZightMap(~lat, ~lon, data = shapepoints[c(which.min(shapepoints$lat),
                                                      which.max(shapepoints$lat), which.max(shapepoints$lon)),],
                     name = "Route Shapes")
 
-plot(shobj, pch = NA)
-with(shapepoints, addLines(lat, lon, id = as.numeric(as.factor(id))))
+plot(shobj, pch = NA); rezoom(0.4)
+with(shapepoints, addLines(lat, lon, id = as.numeric(as.factor(id)), gpar = list(col = rgb(0,0,0,0.05))))
+
+
+## Chop down to subset of segmented shapes:
+segments <- dbGetQuery(con, "SELECT * FROM segments")
+mode(segments$lat) <- mode(segments$lon) <- "numeric"
+counts <- dbGetQuery(con,
+                     sprintf("SELECT segment_id, COUNT(*) FROM segment_shapes WHERE version_id = (SELECT id FROM gtfs_versions ORDER BY startdate DESC LIMIT 1) GROUP BY segment_id ORDER BY segment_id", vlatest))
+rownames(counts) <- counts$segment_id
+
+segobj <- iNZightMap(~lat, ~lon, data = segments)
+plot(segobj, pch = 1, alpha=0, colby = as.factor(counts[segments$segment_id, "count"]),
+     varnames = list(colby = "Count"), col.fun = function(n) viridis::inferno(n, begin = 0.2, end = 0.8))
+with(segments, addLines(lat, lon, id = segment_id,
+                        gpar = list(lwd = 5, lineend = "butt",
+                                    col = viridis::inferno(max(counts$count), begin = 0.2, end = 0.8)[counts$count])))
+                                    #col = rgb(0, 0, 0, counts$count / max(counts$count)))))
+                                    #col = sample(viridis::plasma(max(segment_id), alpha = 0.7)))))
