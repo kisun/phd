@@ -83,21 +83,21 @@
           async: false
         });
       }
-      // directions?
-      // var directionsService = new google.maps.DirectionsService(),
-      //     directionsDisplay = new google.maps.DirectionsRenderer();
-      // directionsService.route({
-      //   origin: { lat: data[0].lat, lng: data[0].lng },
-      //   destination: { lat: data[data.length - 1].lat, lng: data[data.length - 1].lng },
-      //   travelMode: 'TRANSIT'
-      // }, function(result, status) {
-      //   if (status == 'OK') {
-      //     console.log('OK');
-      //     directionsDisplay.setDirections(result);
-      //   } else {
-      //     console.log(status);
-      //   }
-      // });
+      // directions? YES ! but waypoints at each stop.
+      var directionsService = new google.maps.DirectionsService(),
+          directionsDisplay = new google.maps.DirectionsRenderer();
+      directionsService.route({
+        origin: { lat: data[0].lat, lng: data[0].lng },
+        destination: { lat: data[data.length - 1].lat, lng: data[data.length - 1].lng },
+        travelMode: 'TRANSIT'
+      }, function(result, status) {
+        if (status == 'OK') {
+          console.log('OK');
+          directionsDisplay.setDirections(result);
+        } else {
+          console.log(status);
+        }
+      });
 
       var data = [], cdist = 0;
       for (var i = 0; i < snappedPath.length; i++) {
