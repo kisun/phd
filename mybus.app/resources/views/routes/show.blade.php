@@ -89,7 +89,7 @@
       // directionsService.route({
       //   origin: { lat: data[0].lat, lng: data[0].lng },
       //   destination: { lat: data[data.length - 1].lat, lng: data[data.length - 1].lng },
-      //   travelMode: 'DRIVING'
+      //   travelMode: 'TRANSIT'
       // }, function(result, status) {
       //   if (status == 'OK') {
       //     console.log('OK');
@@ -125,6 +125,7 @@
         strokeWeight: 5
       });
       shapePath.setMap(map);
+      // directionsDisplay.setMap(map);
 
       var infoWindow = new google.maps.InfoWindow,
           stopmarkers = [],
