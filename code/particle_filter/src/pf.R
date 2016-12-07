@@ -31,9 +31,9 @@ pf <- function(con, vid, N = 500,
     ## Get vehicle's shape and schedule:
     if (is.null(info)) {
         qry <- sprintf("http://mybus.app/api/shape_schedule/%s", vp$trip_id)
-        info <- fromJSON(qry, flatten = TRUE)
+        info <- jsonlite::fromJSON(qry, flatten = TRUE)
     }
-    schedule <- flatten(info$schedule)
+    schedule <- jsonlite::flatten(info$schedule)
 
     colnames(schedule) <- gsub("pivot.", "", colnames(schedule))
     shape <- info$shape
@@ -98,7 +98,7 @@ pf <- function(con, vid, N = 500,
         particles$stop_index <- sapply(particles$distance_into_trip, function(x) sum(Sd <= x) - 1)
         particles$segment_index <- sapply(particles$distance_into_trip, function(x) sum(Rd <= x) - 1)
         particles$arrival_time <- particles$departure_time <- NaN
-        
+
         particles$velocity <- msm::rtnorm(N, speeds$speed_mean[particles$segment_index],
                                           sqrt(speeds$speed_var[particles$segment_index]),
                                           lower = SPEED.range[1], upper = SPEED.range[2])

@@ -32,7 +32,8 @@ clean:
 	-rm src/*.o
 
 
-
+realtime: pf.so
+	R --slave -f "src/realtime.R"
 
 
 upload:

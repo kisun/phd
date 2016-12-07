@@ -37,7 +37,7 @@ vps <- vps[vps$trip_start_date == "2016-10-27", ]
 tsStart <- as.numeric(as.POSIXct("2016-10-27 12:00:00"))
 tsEnd <- as.numeric(as.POSIXct("2016-10-27 17:00:00"))
 ind <- which(vps$timestamp >= tsStart & vps$timestamp <= tsEnd)
-infoList <- lapply(unique(vps$trip_id[ind]), function(ID) {
+infoList <- lapply(unique(vps$trip_id), function(ID) {
     res <- fromJSON(sprintf("http://130.216.50.187:8000/api/shape_schedule/%s", ID), flatten = TRUE)
     shape <- res$shape
     if ("segment_info.id" %in% names(shape)) {
@@ -196,12 +196,12 @@ for (k in 1:20) {
 proc.time() - pt
 
 ### without compilation
-##   user  system elapsed 
+##   user  system elapsed
 ## 13.912   0.044  34.893
 
 ### with compiler --- not much point :(
-##   user  system elapsed 
-## 13.880   0.036  23.399 
+##   user  system elapsed
+## 13.880   0.036  23.399
 
 
 sp.hist <- dbGetQuery(con, sprintf("SELECT * FROM segment_speeds WHERE timestamp>%s ORDER BY segment_id",
@@ -394,5 +394,3 @@ for (k in c(9, 11:22, 24:31, 33:42, 44:51)) {
     dev.flush()
 }
 dev.off()
-
-
